@@ -12,6 +12,7 @@
         <label>Email address<input id="loginEmail" type="email" autocomplete="username" required placeholder="Enter your email"></label>
         <label>Password<input id="loginPassword" type="password" autocomplete="current-password" required placeholder="Enter your password"></label>
         <button class="button button-primary" id="loginButton" type="submit">Sign in securely</button>
+        <button class="auth-forgot" id="forgotPasswordButton" type="button">Forgot password?</button>
         <div class="auth-message" id="authMessage" role="status"></div>
       </form>
       <div class="auth-note">Use the account created for you by the DISCIPLINE administrator. Your dashboard is selected automatically according to your assigned role.</div>
@@ -28,6 +29,64 @@
   const form = document.getElementById("loginForm");
   const message = document.getElementById("authMessage");
   const button = document.getElementById("loginButton");
+  const forgotButton = document.getElementById("forgotPasswordButton");
+  let isPasswordRecovery = false;
+
+  forgotButton.addEventListener("click", async () => {
+    const email = document.getElementById("loginEmail").value.trim();
+    if (!email) {
+      message.textContent = "Enter your account email address first.";
+      document.getElementById("loginEmail").focus();
+      return;
+    }
+    forgotButton.disabled = true;
+    message.textContent = "Sending password reset email…";
+    const { error } = await client.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname
+    });
+    message.textContent = error
+      ? "Could not send the reset email. Check the email address and try again."
+      : "If an account exists for this email, a password reset link has been sent. Check your inbox and spam folder.";
+    forgotButton.disabled = false;
+  });
+
+  function showNewPasswordForm() {
+    isPasswordRecovery = true;
+    gate.style.display = "grid";
+    const card = gate.querySelector(".auth-card");
+    card.querySelector("h1").textContent = "Choose a new password";
+    card.querySelector("p").textContent = "Enter and confirm your new password.";
+    form.innerHTML = `
+      <label>New password<input id="newPassword" type="password" minlength="8" autocomplete="new-password" required placeholder="At least 8 characters"></label>
+      <label>Confirm new password<input id="confirmPassword" type="password" minlength="8" autocomplete="new-password" required placeholder="Enter it again"></label>
+      <button class="button button-primary" id="saveNewPassword" type="submit">Update password</button>
+      <div class="auth-message" id="authMessage" role="status"></div>`;
+    const recoveryMessage = document.getElementById("authMessage");
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      const password = document.getElementById("newPassword").value;
+      const confirm = document.getElementById("confirmPassword").value;
+      if (password.length < 8) { recoveryMessage.textContent = "Use at least 8 characters."; return; }
+      if (password !== confirm) { recoveryMessage.textContent = "The passwords do not match."; return; }
+      const save = document.getElementById("saveNewPassword");
+      save.disabled = true;
+      save.textContent = "Updating…";
+      const { error } = await client.auth.updateUser({ password });
+      if (error) {
+        recoveryMessage.textContent = "Password update failed. Please request a new reset link.";
+        save.disabled = false;
+        save.textContent = "Update password";
+      } else {
+        await client.auth.signOut();
+        recoveryMessage.textContent = "Password updated successfully. You can now sign in with your new password.";
+        form.innerHTML = '<a class="button button-primary" href="' + window.location.pathname + '">Return to sign in</a><div class="auth-message" id="authMessage" role="status">Your password has been changed.</div>';
+      }
+    });
+  }
+
+  client.auth.onAuthStateChange((event) => {
+    if (event === "PASSWORD_RECOVERY") showNewPasswordForm();
+  });
 
   function esc(v) {
     return String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
@@ -95,7 +154,7 @@
   }
 
   async function openForSession(session) {
-    if (!session || !session.user) return false;
+    if (isPasswordRecovery || !session || !session.user) return false;
     const {data:profile,error}=await client.from("profiles").select("role,is_active,display_name").eq("user_id",session.user.id).maybeSingle();
     if(error||!profile||profile.is_active!==true||!["admin","student","parent"].includes(profile.role)){
       await client.auth.signOut();

@@ -172,6 +172,7 @@
   }
 
   form.addEventListener("submit",async event=>{
+    if (isPasswordRecovery) return;
     event.preventDefault();
     message.textContent="";
     button.disabled=true;

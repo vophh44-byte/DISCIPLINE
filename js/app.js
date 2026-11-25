@@ -60,121 +60,178 @@ function renderDashboard(){
     <footer class="page-footer"><span>© 2026 DISCIPLINE. Built for better journeys.</span><span>LOCAL PREVIEW · NOT CONNECTED TO DATABASE</span></footer>`;
 }
 
-function getStudents(){
-  try { return JSON.parse(localStorage.getItem("discipline_students") || "[]"); }
-  catch { return []; }
-}
-function saveStudents(records){
-  localStorage.setItem("discipline_students", JSON.stringify(records));
-}
 function escapeHTML(value){
   return String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch]));
 }
-function renderStudents(){
-  const records = getStudents();
-  const active = records.filter(s=>!s.archived);
+
+async function renderStudents(){
+  const db = window.disciplineSupabase;
   pageContent.innerHTML = `
     <div class="registry-head">
-      <div><div class="eyebrow"><span class="eyebrow-line"></span> WORKSPACE / STUDENTS</div><h1>Student Registry</h1><p class="page-intro">Create and manage student profiles in this browser preview.</p></div>
-      <span class="demo-pill"><span class="pulse-dot"></span> LOCAL PREVIEW</span>
+      <div><div class="eyebrow"><span class="eyebrow-line"></span> WORKSPACE / STUDENTS</div><h1>Student Registry</h1><p class="page-intro">Manage student profiles and guardian contacts in the secure database.</p></div>
+      <span class="demo-pill"><span class="pulse-dot"></span> ONLINE DATABASE</span>
     </div>
     <div class="registry-stats">
-      <article class="stat-card"><div class="stat-label">Active students</div><div class="stat-value">${active.length}</div></article>
-      <article class="stat-card"><div class="stat-label">Archived profiles</div><div class="stat-value">${records.length-active.length}</div></article>
+      <article class="stat-card"><div class="stat-label">Active students</div><div class="stat-value" id="activeStudentCount">—</div></article>
+      <article class="stat-card"><div class="stat-label">Archived profiles</div><div class="stat-value" id="archivedStudentCount">—</div></article>
     </div>
     <section class="panel registry-panel">
-      <div class="panel-heading"><div><h3 id="studentFormHeading">Register a student</h3><p>Enter the student's profile and parent contact details</p></div></div>
+      <div class="panel-heading"><div><h3 id="studentFormHeading">Register a student</h3><p>Guardian contact details are stored separately and visible only to administrators.</p></div></div>
       <form id="studentForm" class="registry-form">
         <input type="hidden" id="editingStudentId">
         <div class="form-grid">
-          <div class="field"><label for="studentName">Student full name *</label><input id="studentName" name="studentName" required maxlength="100" placeholder="Enter full name"></div>
-          <div class="field"><label for="studentCode">Student ID *</label><input id="studentCode" name="studentCode" required maxlength="30" placeholder="e.g. STU-001"></div>
-          <div class="field"><label for="studentClass">Class / group *</label><input id="studentClass" name="studentClass" required maxlength="60" placeholder="e.g. Grade 8"></div>
-          <div class="field"><label for="parentName">Parent / guardian name *</label><input id="parentName" name="parentName" required maxlength="100" placeholder="Parent or guardian"></div>
-          <div class="field"><label for="parentPhone">Parent phone *</label><input id="parentPhone" name="parentPhone" type="tel" required maxlength="25" placeholder="Contact number"></div>
-          <div class="field"><label for="parentEmail">Parent email</label><input id="parentEmail" name="parentEmail" type="email" maxlength="120" placeholder="parent@example.com"></div>
+          <div class="field"><label for="studentName">Student full name *</label><input id="studentName" required maxlength="100" placeholder="Enter full name"></div>
+          <div class="field"><label for="studentCode">Student ID *</label><input id="studentCode" required maxlength="30" placeholder="e.g. STU-001"></div>
+          <div class="field"><label for="studentClass">Class / group</label><input id="studentClass" maxlength="60" placeholder="e.g. Grade 8"></div>
+          <div class="field"><label for="parentName">Parent / guardian name *</label><input id="parentName" required maxlength="100" placeholder="Parent or guardian"></div>
+          <div class="field"><label for="parentPhone">Parent phone *</label><input id="parentPhone" type="tel" required maxlength="25" placeholder="Contact number"></div>
+          <div class="field"><label for="parentEmail">Parent email</label><input id="parentEmail" type="email" maxlength="120" placeholder="parent@example.com"></div>
         </div>
-        <div class="registry-form-actions"><button class="button button-primary" type="submit" id="studentSaveButton">Save student</button><button class="button button-secondary" type="button" id="studentCancelEdit" hidden>Cancel edit</button></div>
-        <p class="registry-disclaimer">Prototype only: records are stored in this browser's local storage, not in a secure online database. Use fictional test details only until Supabase authentication and privacy rules are connected.</p>
+        <div class="registry-form-actions"><button class="button button-primary" type="submit" id="studentSaveButton">Save student online</button><button class="button button-secondary" type="button" id="studentCancelEdit" hidden>Cancel edit</button></div>
+        <p class="registry-disclaimer">Student records are saved to Supabase. Use genuine student details only after confirming your privacy and access settings. Parent login accounts are created separately; entering an email here does not invite a parent.</p>
       </form>
     </section>
     <section class="panel registry-panel">
-      <div class="panel-heading"><div><h3>Student profiles</h3><p>${active.length} active profile(s)</p></div><input class="registry-search" id="studentSearch" type="search" placeholder="Search name, ID or class…" aria-label="Search students"></div>
+      <div class="panel-heading"><div><h3>Student profiles</h3><p id="studentListCaption">Loading records…</p></div><input class="registry-search" id="studentSearch" type="search" placeholder="Search name, ID or class…" aria-label="Search students"></div>
       <div class="table-scroll"><table class="registry-table"><thead><tr><th>STUDENT</th><th>STUDENT ID</th><th>CLASS / GROUP</th><th>PARENT / GUARDIAN</th><th>CONTACT</th><th>STATUS</th><th>ACTIONS</th></tr></thead><tbody id="studentRows"></tbody></table></div>
-      <p class="registry-empty" id="studentEmpty" hidden>No student profiles found. Add a student using the form above.</p>
+      <p class="registry-empty" id="studentEmpty" hidden>No student profiles found.</p>
     </section>
-    <footer class="page-footer"><span>© 2026 DISCIPLINE. Built for better journeys.</span><span>LOCAL PREVIEW · BROWSER STORAGE ONLY</span></footer>`;
+    <footer class="page-footer"><span>© 2026 DISCIPLINE. Built for better journeys.</span><span>SUPABASE · ADMINISTRATOR ACCESS</span></footer>`;
+
+  if(!db){ showToast("Database client is unavailable. Refresh and sign in again."); return; }
   const form=document.getElementById("studentForm");
   const rows=document.getElementById("studentRows");
   const search=document.getElementById("studentSearch");
+  let records=[];
+
+  function guardianOf(s){
+    const g=Array.isArray(s.student_guardians)?s.student_guardians[0]:s.student_guardians;
+    return g||{};
+  }
   function drawRows(){
     const q=search.value.trim().toLowerCase();
-    const list=getStudents().filter(s=>!s.archived).filter(s=>[s.name,s.code,s.group,s.parent,s.phone,s.email].join(" ").toLowerCase().includes(q));
-    rows.innerHTML=list.map(s=>`<tr>
-      <td><strong>${escapeHTML(s.name)}</strong></td><td>${escapeHTML(s.code)}</td><td>${escapeHTML(s.group)}</td>
-      <td>${escapeHTML(s.parent)}</td><td>${escapeHTML(s.phone)}<small class="registry-email">${escapeHTML(s.email||"")}</small></td>
-      <td><span class="session-status completed">Active</span></td>
-      <td><div class="registry-actions"><button type="button" class="button button-quiet" data-edit-student="${escapeHTML(s.id)}">Edit</button><button type="button" class="button button-quiet registry-archive" data-archive-student="${escapeHTML(s.id)}">Archive</button></div></td>
-    </tr>`).join("");
+    const list=records.filter(s=>s.is_active).filter(s=>{
+      const g=guardianOf(s);
+      return [s.full_name,s.student_code,s.class_group,g.guardian_name,g.phone,g.email].join(" ").toLowerCase().includes(q);
+    });
+    rows.innerHTML=list.map(s=>{
+      const g=guardianOf(s);
+      return `<tr>
+        <td><strong>${escapeHTML(s.full_name)}</strong></td>
+        <td>${escapeHTML(s.student_code)}</td>
+        <td>${escapeHTML(s.class_group||"—")}</td>
+        <td>${escapeHTML(g.guardian_name||"—")}</td>
+        <td>${escapeHTML(g.phone||"—")}<small class="registry-email">${escapeHTML(g.email||"")}</small></td>
+        <td><span class="session-status completed">Active</span></td>
+        <td><div class="registry-actions"><button type="button" class="button button-quiet" data-edit-student="${escapeHTML(s.id)}">Edit</button><button type="button" class="button button-quiet registry-archive" data-archive-student="${escapeHTML(s.id)}">Archive</button></div></td>
+      </tr>`;
+    }).join("");
     document.getElementById("studentEmpty").hidden=list.length>0;
+    document.getElementById("studentListCaption").textContent=list.length+" active profile(s)";
   }
+
+  async function loadRecords(){
+    rows.innerHTML='<tr><td colspan="7">Loading…</td></tr>';
+    const {data,error}=await db.from("students")
+      .select("id,student_code,full_name,class_group,is_active,created_at,student_guardians(guardian_name,phone,email)")
+      .order("created_at",{ascending:false});
+    if(error){
+      rows.innerHTML='<tr><td colspan="7">Could not load records. Check your administrator session and database permissions.</td></tr>';
+      showToast("Could not load students: "+error.message);
+      return;
+    }
+    records=data||[];
+    document.getElementById("activeStudentCount").textContent=records.filter(s=>s.is_active).length;
+    document.getElementById("archivedStudentCount").textContent=records.filter(s=>!s.is_active).length;
+    drawRows();
+  }
+
   function resetForm(){
-    form.reset(); document.getElementById("editingStudentId").value="";
+    form.reset();
+    document.getElementById("editingStudentId").value="";
     document.getElementById("studentFormHeading").textContent="Register a student";
-    document.getElementById("studentSaveButton").textContent="Save student";
+    document.getElementById("studentSaveButton").textContent="Save student online";
     document.getElementById("studentCancelEdit").hidden=true;
   }
-  form.addEventListener("submit",e=>{
+
+  form.addEventListener("submit",async e=>{
     e.preventDefault();
     const id=document.getElementById("editingStudentId").value;
-    const data={
-      id:id||("stu_"+Date.now()),
-      name:document.getElementById("studentName").value.trim(),
-      code:document.getElementById("studentCode").value.trim(),
-      group:document.getElementById("studentClass").value.trim(),
-      parent:document.getElementById("parentName").value.trim(),
-      phone:document.getElementById("parentPhone").value.trim(),
-      email:document.getElementById("parentEmail").value.trim(),
-      archived:false
+    const student={
+      full_name:document.getElementById("studentName").value.trim(),
+      student_code:document.getElementById("studentCode").value.trim(),
+      class_group:document.getElementById("studentClass").value.trim()||null,
+      is_active:true
     };
-    if(!data.name||!data.code||!data.group||!data.parent||!data.phone){showToast("Please complete all required fields.");return;}
-    const all=getStudents();
-    if(all.some(s=>s.code.toLowerCase()===data.code.toLowerCase()&&s.id!==id)){showToast("That student ID is already in use.");return;}
-    const index=all.findIndex(s=>s.id===id);
-    if(index>=0) all[index]={...all[index],...data}; else all.unshift(data);
-    try { saveStudents(all); } catch(err) { showToast("Could not save in this browser. Storage may be full or disabled."); return; }
-    resetForm(); drawRows(); showToast(index>=0?"Student profile updated.":"Student profile saved in this browser.");
-    const count=pageContent.querySelector(".registry-stats .stat-card .stat-value");
-    if(count) count.textContent=all.filter(s=>!s.archived).length;
+    const guardian={
+      guardian_name:document.getElementById("parentName").value.trim(),
+      phone:document.getElementById("parentPhone").value.trim(),
+      email:document.getElementById("parentEmail").value.trim()||null
+    };
+    if(!student.full_name||!student.student_code||!guardian.guardian_name||!guardian.phone){
+      showToast("Complete all required fields."); return;
+    }
+    const saveButton=document.getElementById("studentSaveButton");
+    saveButton.disabled=true; saveButton.textContent="Saving…";
+    let studentId=id;
+    let studentError=null;
+    if(id){
+      const result=await db.from("students").update(student).eq("id",id).select("id").single();
+      studentError=result.error;
+    }else{
+      const result=await db.from("students").insert(student).select("id").single();
+      studentError=result.error;
+      if(!studentError) studentId=result.data.id;
+    }
+    if(studentError){
+      showToast(studentError.code==="23505"?"That student ID is already in use.":"Could not save student: "+studentError.message);
+    }else{
+      const guardianResult=await db.from("student_guardians").upsert(
+        {...guardian,student_id:studentId},{onConflict:"student_id"}
+      );
+      if(guardianResult.error){
+        showToast("Student profile saved, but guardian contact did not save. Please edit and retry. "+guardianResult.error.message);
+      }else{
+        resetForm();
+        await loadRecords();
+        showToast(id?"Student profile updated online.":"Student profile saved online.");
+      }
+    }
+    saveButton.disabled=false;
+    saveButton.textContent=id?"Update student online":"Save student online";
   });
+
   document.getElementById("studentCancelEdit").addEventListener("click",resetForm);
   search.addEventListener("input",drawRows);
-  rows.addEventListener("click",e=>{
+  rows.addEventListener("click",async e=>{
     const edit=e.target.closest("[data-edit-student]");
     const archive=e.target.closest("[data-archive-student]");
-    const all=getStudents();
     if(edit){
-      const s=all.find(x=>x.id===edit.dataset.editStudent); if(!s)return;
+      const s=records.find(x=>x.id===edit.dataset.editStudent);
+      if(!s)return;
+      const g=guardianOf(s);
       document.getElementById("editingStudentId").value=s.id;
-      document.getElementById("studentName").value=s.name;
-      document.getElementById("studentCode").value=s.code;
-      document.getElementById("studentClass").value=s.group;
-      document.getElementById("parentName").value=s.parent;
-      document.getElementById("parentPhone").value=s.phone;
-      document.getElementById("parentEmail").value=s.email||"";
+      document.getElementById("studentName").value=s.full_name||"";
+      document.getElementById("studentCode").value=s.student_code||"";
+      document.getElementById("studentClass").value=s.class_group||"";
+      document.getElementById("parentName").value=g.guardian_name||"";
+      document.getElementById("parentPhone").value=g.phone||"";
+      document.getElementById("parentEmail").value=g.email||"";
       document.getElementById("studentFormHeading").textContent="Edit student profile";
-      document.getElementById("studentSaveButton").textContent="Update student";
+      document.getElementById("studentSaveButton").textContent="Update student online";
       document.getElementById("studentCancelEdit").hidden=false;
       document.getElementById("studentName").focus();
       pageContent.querySelector(".registry-form").scrollIntoView({behavior:"smooth",block:"center"});
     }
     if(archive){
-      const s=all.find(x=>x.id===archive.dataset.archiveStudent); if(!s)return;
-      if(!confirm("Archive "+s.name+"'s profile? It will be hidden from the active list."))return;
-      s.archived=true; saveStudents(all); renderStudents(); showToast("Student profile archived.");
+      const s=records.find(x=>x.id===archive.dataset.archiveStudent);
+      if(!s||!confirm("Archive "+s.full_name+"'s profile? The record and history will remain in the database."))return;
+      const {error}=await db.from("students").update({is_active:false}).eq("id",s.id);
+      if(error){showToast("Could not archive student: "+error.message);return;}
+      await loadRecords(); showToast("Student profile archived. History retained.");
     }
   });
-  drawRows();
+  await loadRecords();
 }
 
 function renderPlaceholder(page){

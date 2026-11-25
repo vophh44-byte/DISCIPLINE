@@ -33,6 +33,7 @@ function setActivePage(page){
   document.querySelectorAll(".nav-item").forEach(btn=>btn.classList.toggle("active",btn.dataset.page===page));
   breadcrumbCurrent.textContent = (pageMeta[page]||pageMeta.dashboard).title;
   if(page==="dashboard"){ location.hash=""; renderDashboard(); }
+  else if(page==="students"){ location.hash=page; renderStudents(); }
   else { location.hash=page; renderPlaceholder(page); }
   closeSidebar();
 }
@@ -58,6 +59,124 @@ function renderDashboard(){
     <div class="lower-grid"><section class="panel activity-panel"><div class="panel-heading"><div><h3>Recent activity</h3><p>Latest mark transactions and records</p></div><button class="text-button" data-page="ledger">View ledger →</button></div><div class="table-scroll"><table><thead><tr><th>STUDENT</th><th>ACTIVITY</th><th>SESSION</th><th>MARKS</th><th>TIME</th></tr></thead><tbody><tr><td><div class="student-cell"><span class="mini-avatar avatar-a">AR</span><strong>Ayaan R.</strong></div></td><td><span class="activity-type positive">Good cooperation</span></td><td>Morning</td><td class="positive-text">+10</td><td>08:22 AM</td></tr><tr><td><div class="student-cell"><span class="mini-avatar avatar-b">HM</span><strong>Hammad M.</strong></div></td><td><span class="activity-type negative">Noise disturbance</span></td><td>Morning</td><td class="negative-text">−5</td><td>08:19 AM</td></tr><tr><td><div class="student-cell"><span class="mini-avatar avatar-c">ZA</span><strong>Zayd A.</strong></div></td><td><span class="activity-type neutral">Appreciation</span></td><td>Morning</td><td class="positive-text">+5</td><td>08:15 AM</td></tr></tbody></table></div></section><section class="panel leaderboard-panel"><div class="panel-heading"><div><h3>Hall of excellence</h3><p>Weekly top performers</p></div><button class="text-button" data-page="leaderboard">View all →</button></div><div class="leader-row"><span class="rank rank-one">01</span><span class="mini-avatar avatar-a">AR</span><div class="leader-name"><strong>Ayaan R.</strong><span>Consistent performer</span></div><strong class="leader-score">+42</strong></div><div class="leader-row"><span class="rank">02</span><span class="mini-avatar avatar-c">ZA</span><div class="leader-name"><strong>Zayd A.</strong><span>Helpful attitude</span></div><strong class="leader-score">+36</strong></div><div class="leader-row"><span class="rank">03</span><span class="mini-avatar avatar-d">IA</span><div class="leader-name"><strong>Ibrahim A.</strong><span>Good cooperation</span></div><strong class="leader-score">+29</strong></div><div class="leader-note"><span>✦</span> Rankings are based on current-week marks.</div></section></div>
     <footer class="page-footer"><span>© 2026 DISCIPLINE. Built for better journeys.</span><span>LOCAL PREVIEW · NOT CONNECTED TO DATABASE</span></footer>`;
 }
+
+function getStudents(){
+  try { return JSON.parse(localStorage.getItem("discipline_students") || "[]"); }
+  catch { return []; }
+}
+function saveStudents(records){
+  localStorage.setItem("discipline_students", JSON.stringify(records));
+}
+function escapeHTML(value){
+  return String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch]));
+}
+function renderStudents(){
+  const records = getStudents();
+  const active = records.filter(s=>!s.archived);
+  pageContent.innerHTML = `
+    <div class="registry-head">
+      <div><div class="eyebrow"><span class="eyebrow-line"></span> WORKSPACE / STUDENTS</div><h1>Student Registry</h1><p class="page-intro">Create and manage student profiles in this browser preview.</p></div>
+      <span class="demo-pill"><span class="pulse-dot"></span> LOCAL PREVIEW</span>
+    </div>
+    <div class="registry-stats">
+      <article class="stat-card"><div class="stat-label">Active students</div><div class="stat-value">${active.length}</div></article>
+      <article class="stat-card"><div class="stat-label">Archived profiles</div><div class="stat-value">${records.length-active.length}</div></article>
+    </div>
+    <section class="panel registry-panel">
+      <div class="panel-heading"><div><h3 id="studentFormHeading">Register a student</h3><p>Enter the student's profile and parent contact details</p></div></div>
+      <form id="studentForm" class="registry-form">
+        <input type="hidden" id="editingStudentId">
+        <div class="form-grid">
+          <div class="field"><label for="studentName">Student full name *</label><input id="studentName" name="studentName" required maxlength="100" placeholder="Enter full name"></div>
+          <div class="field"><label for="studentCode">Student ID *</label><input id="studentCode" name="studentCode" required maxlength="30" placeholder="e.g. STU-001"></div>
+          <div class="field"><label for="studentClass">Class / group *</label><input id="studentClass" name="studentClass" required maxlength="60" placeholder="e.g. Grade 8"></div>
+          <div class="field"><label for="parentName">Parent / guardian name *</label><input id="parentName" name="parentName" required maxlength="100" placeholder="Parent or guardian"></div>
+          <div class="field"><label for="parentPhone">Parent phone *</label><input id="parentPhone" name="parentPhone" type="tel" required maxlength="25" placeholder="Contact number"></div>
+          <div class="field"><label for="parentEmail">Parent email</label><input id="parentEmail" name="parentEmail" type="email" maxlength="120" placeholder="parent@example.com"></div>
+        </div>
+        <div class="registry-form-actions"><button class="button button-primary" type="submit" id="studentSaveButton">Save student</button><button class="button button-secondary" type="button" id="studentCancelEdit" hidden>Cancel edit</button></div>
+        <p class="registry-disclaimer">Prototype only: records are stored in this browser's local storage, not in a secure online database. Use fictional test details only until Supabase authentication and privacy rules are connected.</p>
+      </form>
+    </section>
+    <section class="panel registry-panel">
+      <div class="panel-heading"><div><h3>Student profiles</h3><p>${active.length} active profile(s)</p></div><input class="registry-search" id="studentSearch" type="search" placeholder="Search name, ID or class…" aria-label="Search students"></div>
+      <div class="table-scroll"><table class="registry-table"><thead><tr><th>STUDENT</th><th>STUDENT ID</th><th>CLASS / GROUP</th><th>PARENT / GUARDIAN</th><th>CONTACT</th><th>STATUS</th><th>ACTIONS</th></tr></thead><tbody id="studentRows"></tbody></table></div>
+      <p class="registry-empty" id="studentEmpty" hidden>No student profiles found. Add a student using the form above.</p>
+    </section>
+    <footer class="page-footer"><span>© 2026 DISCIPLINE. Built for better journeys.</span><span>LOCAL PREVIEW · BROWSER STORAGE ONLY</span></footer>`;
+  const form=document.getElementById("studentForm");
+  const rows=document.getElementById("studentRows");
+  const search=document.getElementById("studentSearch");
+  function drawRows(){
+    const q=search.value.trim().toLowerCase();
+    const list=getStudents().filter(s=>!s.archived).filter(s=>[s.name,s.code,s.group,s.parent,s.phone,s.email].join(" ").toLowerCase().includes(q));
+    rows.innerHTML=list.map(s=>`<tr>
+      <td><strong>${escapeHTML(s.name)}</strong></td><td>${escapeHTML(s.code)}</td><td>${escapeHTML(s.group)}</td>
+      <td>${escapeHTML(s.parent)}</td><td>${escapeHTML(s.phone)}<small class="registry-email">${escapeHTML(s.email||"")}</small></td>
+      <td><span class="session-status completed">Active</span></td>
+      <td><div class="registry-actions"><button type="button" class="button button-quiet" data-edit-student="${escapeHTML(s.id)}">Edit</button><button type="button" class="button button-quiet registry-archive" data-archive-student="${escapeHTML(s.id)}">Archive</button></div></td>
+    </tr>`).join("");
+    document.getElementById("studentEmpty").hidden=list.length>0;
+  }
+  function resetForm(){
+    form.reset(); document.getElementById("editingStudentId").value="";
+    document.getElementById("studentFormHeading").textContent="Register a student";
+    document.getElementById("studentSaveButton").textContent="Save student";
+    document.getElementById("studentCancelEdit").hidden=true;
+  }
+  form.addEventListener("submit",e=>{
+    e.preventDefault();
+    const id=document.getElementById("editingStudentId").value;
+    const data={
+      id:id||("stu_"+Date.now()),
+      name:document.getElementById("studentName").value.trim(),
+      code:document.getElementById("studentCode").value.trim(),
+      group:document.getElementById("studentClass").value.trim(),
+      parent:document.getElementById("parentName").value.trim(),
+      phone:document.getElementById("parentPhone").value.trim(),
+      email:document.getElementById("parentEmail").value.trim(),
+      archived:false
+    };
+    if(!data.name||!data.code||!data.group||!data.parent||!data.phone){showToast("Please complete all required fields.");return;}
+    const all=getStudents();
+    if(all.some(s=>s.code.toLowerCase()===data.code.toLowerCase()&&s.id!==id)){showToast("That student ID is already in use.");return;}
+    const index=all.findIndex(s=>s.id===id);
+    if(index>=0) all[index]={...all[index],...data}; else all.unshift(data);
+    try { saveStudents(all); } catch(err) { showToast("Could not save in this browser. Storage may be full or disabled."); return; }
+    resetForm(); drawRows(); showToast(index>=0?"Student profile updated.":"Student profile saved in this browser.");
+    const count=pageContent.querySelector(".registry-stats .stat-card .stat-value");
+    if(count) count.textContent=all.filter(s=>!s.archived).length;
+  });
+  document.getElementById("studentCancelEdit").addEventListener("click",resetForm);
+  search.addEventListener("input",drawRows);
+  rows.addEventListener("click",e=>{
+    const edit=e.target.closest("[data-edit-student]");
+    const archive=e.target.closest("[data-archive-student]");
+    const all=getStudents();
+    if(edit){
+      const s=all.find(x=>x.id===edit.dataset.editStudent); if(!s)return;
+      document.getElementById("editingStudentId").value=s.id;
+      document.getElementById("studentName").value=s.name;
+      document.getElementById("studentCode").value=s.code;
+      document.getElementById("studentClass").value=s.group;
+      document.getElementById("parentName").value=s.parent;
+      document.getElementById("parentPhone").value=s.phone;
+      document.getElementById("parentEmail").value=s.email||"";
+      document.getElementById("studentFormHeading").textContent="Edit student profile";
+      document.getElementById("studentSaveButton").textContent="Update student";
+      document.getElementById("studentCancelEdit").hidden=false;
+      document.getElementById("studentName").focus();
+      pageContent.querySelector(".registry-form").scrollIntoView({behavior:"smooth",block:"center"});
+    }
+    if(archive){
+      const s=all.find(x=>x.id===archive.dataset.archiveStudent); if(!s)return;
+      if(!confirm("Archive "+s.name+"'s profile? It will be hidden from the active list."))return;
+      s.archived=true; saveStudents(all); renderStudents(); showToast("Student profile archived.");
+    }
+  });
+  drawRows();
+}
+
 function renderPlaceholder(page){
   const meta=pageMeta[page]||pageMeta.dashboard;
   const cards = {

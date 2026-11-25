@@ -2,6 +2,7 @@ const pageMeta = {
  dashboard:{title:"Command Center",desc:"Your daily system overview.",icon:"▦"},
  students:{title:"Student Registry",desc:"Create and manage student profiles.",icon:"♙"},
  parents:{title:"Parent Management",desc:"Manage parent accounts and family links.",icon:"♧"},
+ accounts:{title:"Portal Accounts",desc:"Create student and parent sign-in accounts.",icon:"◎"},
  attendance:{title:"Morning Attendance",desc:"Record attendance for the institute-bound journey.",icon:"✓"},
  journeys:{title:"Journey Sessions",desc:"Manage morning and evening journey records.",icon:"↗"},
  marks:{title:"Award & Deduct Marks",desc:"Record positive contributions and discipline deductions.",icon:"＋"},
@@ -34,6 +35,7 @@ function setActivePage(page){
   breadcrumbCurrent.textContent = (pageMeta[page]||pageMeta.dashboard).title;
   if(page==="dashboard"){ location.hash=""; renderDashboard(); }
   else if(page==="students"){ location.hash=page; renderStudents(); }
+  else if(page==="accounts"){ location.hash=page; renderAccounts(); }
   else { location.hash=page; renderPlaceholder(page); }
   closeSidebar();
 }
@@ -232,6 +234,44 @@ async function renderStudents(){
     }
   });
   await loadRecords();
+}
+
+
+async function renderAccounts(){
+  if(!window.disciplineSupabase){pageContent.innerHTML='<section class="panel"><h2>Portal Accounts</h2><p>Authentication is not ready. Please refresh the page.</p></section>';return;}
+  pageContent.innerHTML=`
+    <div class="welcome-row"><div><div class="eyebrow"><span class="eyebrow-line"></span> ADMINISTRATION / ACCESS CONTROL</div><h1>Portal Accounts</h1><p class="page-intro">Create secure sign-in accounts and link each person to the correct student profile.</p></div></div>
+    <section class="panel registry-panel">
+      <div class="panel-heading"><div><h3>Create a portal account</h3><p>An invitation email will be sent so the user can set their own password.</p></div></div>
+      <form id="portalAccountForm">
+        <div class="form-grid">
+          <div class="field"><label for="portalRole">Account type</label><select id="portalRole" required><option value="student">Student</option><option value="parent">Parent / Guardian</option></select></div>
+          <div class="field"><label for="portalName">Full name</label><input id="portalName" required maxlength="100" placeholder="Enter full name"></div>
+          <div class="field"><label for="portalEmail">Email address</label><input id="portalEmail" type="email" required maxlength="254" placeholder="name@example.com"></div>
+          <div class="field"><label for="portalStudent">Link to student</label><select id="portalStudent" required><option value="">Loading student profiles…</option></select></div>
+        </div>
+        <div class="notice-banner" style="margin-top:16px"><div class="notice-icon">i</div><div><strong>Account security</strong><span>Users receive an invitation email and create their own password. Never enter or share their password here.</span></div></div>
+        <div class="modal-actions"><button class="button button-primary" id="createPortalAccount" type="submit">Send invitation</button></div>
+        <p id="portalAccountMessage" class="auth-message" role="status"></p>
+      </form>
+    </section>
+    <section class="panel registry-panel"><div class="panel-heading"><div><h3>Before inviting</h3><p>Check these items to avoid linking the wrong family.</p></div></div><ul class="simple-list"><li>Register the student first in Student Registry.</li><li>Use an email address the student or parent can access.</li><li>Create a separate parent account for each parent email.</li><li>A parent account can be linked to one student in this first release.</li></ul></section>
+    <footer class="page-footer"><span>© 2026 DISCIPLINE.</span><span>SECURE ACCOUNT PROVISIONING</span></footer>`;
+  const select=document.getElementById("portalStudent");
+  const {data:students,error}=await window.disciplineSupabase.from("students").select("id,student_code,full_name,class_group").eq("is_active",true).order("full_name");
+  if(error){select.innerHTML='<option value="">Could not load students</option>';document.getElementById("portalAccountMessage").textContent=error.message;return;}
+  select.innerHTML='<option value="">Choose a student</option>'+(students||[]).map(s=>'<option value="'+s.id+'">'+escapeHTML(s.student_code)+' — '+escapeHTML(s.full_name)+(s.class_group?' ('+escapeHTML(s.class_group)+')':'')+'</option>').join("");
+  document.getElementById("portalRole").addEventListener("change",()=>{document.getElementById("portalStudent").value="";});
+  document.getElementById("portalAccountForm").addEventListener("submit",async e=>{
+    e.preventDefault();
+    const btn=document.getElementById("createPortalAccount"),msg=document.getElementById("portalAccountMessage");
+    btn.disabled=true;btn.textContent="Sending invitation…";msg.textContent="";
+    const payload={role:document.getElementById("portalRole").value,display_name:document.getElementById("portalName").value.trim(),email:document.getElementById("portalEmail").value.trim(),student_id:select.value};
+    const {data,error}=await window.disciplineSupabase.functions.invoke("create-portal-account",{body:payload});
+    if(error||!data||!data.success){msg.textContent=(data&&data.error)||error?.message||"Could not create account. Please try again.";}
+    else {msg.style.color="#7ed6a5";msg.textContent="Invitation sent to "+data.email+". The user must open the email and set a password.";e.target.reset();}
+    btn.disabled=false;btn.textContent="Send invitation";
+  });
 }
 
 function renderPlaceholder(page){

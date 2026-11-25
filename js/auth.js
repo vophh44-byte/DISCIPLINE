@@ -45,7 +45,7 @@
       redirectTo: window.location.origin + window.location.pathname
     });
     message.textContent = error
-      ? "Could not send the reset email. Check the email address and try again."
+      ? "Reset error: " + error.message
       : "If an account exists for this email, a password reset link has been sent. Check your inbox and spam folder.";
     forgotButton.disabled = false;
   });

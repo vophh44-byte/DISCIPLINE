@@ -138,16 +138,16 @@ function escapeHTML(value){
 async function renderStudents(){
   const db = window.disciplineSupabase;
   pageContent.innerHTML = `
-    <div class="registry-head">
-      <div><div class="eyebrow"><span class="eyebrow-line"></span> WORKSPACE / STUDENTS</div><h1>Student Registry</h1><p class="page-intro">Manage student profiles and guardian contacts in the secure database.</p></div>
-      <span class="demo-pill"><span class="pulse-dot"></span> ONLINE DATABASE</span>
+    <div class="registry-head student-page-head">
+      <div><div class="eyebrow"><span class="eyebrow-line"></span> WORKSPACE / STUDENTS</div><h1>Student Registry</h1><p class="page-intro">One clear place to register students and keep guardian details organized.</p></div>
+      <span class="demo-pill"><span class="pulse-dot"></span> SECURE RECORDS</span>
     </div>
-    <div class="registry-stats">
-      <article class="stat-card"><div class="stat-label">Active students</div><div class="stat-value" id="activeStudentCount">—</div></article>
-      <article class="stat-card"><div class="stat-label">Archived profiles</div><div class="stat-value" id="archivedStudentCount">—</div></article>
+    <div class="registry-stats student-summary">
+      <article class="stat-card"><div class="stat-label">Active students</div><div class="stat-value" id="activeStudentCount">—</div><small>Currently enrolled</small></article>
+      <article class="stat-card"><div class="stat-label">Archived profiles</div><div class="stat-value" id="archivedStudentCount">—</div><small>Kept for record history</small></article>
     </div>
     <section class="panel registry-panel">
-      <div class="panel-heading"><div><h3 id="studentFormHeading">Register a student</h3><p>Guardian contact details are stored separately and visible only to administrators.</p></div></div>
+      <div class="student-panel-heading"><div><span class="student-step">STUDENT DETAILS</span><h2 id="studentFormHeading">Register a student</h2><p>Enter the student and guardian information below.</p></div></div>
       <form id="studentForm" class="registry-form">
         <input type="hidden" id="editingStudentId">
         <div class="form-grid">
@@ -163,7 +163,7 @@ async function renderStudents(){
       </form>
     </section>
     <section class="panel registry-panel">
-      <div class="panel-heading"><div><h3>Student profiles</h3><p id="studentListCaption">Loading records…</p></div><div class="registry-actions"><input class="registry-search" id="studentSearch" type="search" placeholder="Search name, ID or class…" aria-label="Search students"><button class="button button-outline" type="button" id="exportStudents">Export CSV</button></div></div>
+      <div class="student-list-head"><div><span class="student-step">RECORDS</span><h2>Student profiles</h2><p id="studentListCaption">Loading records…</p></div><div class="student-list-tools"><label class="student-search-wrap"><span>⌕</span><input class="registry-search" id="studentSearch" type="search" placeholder="Search name, ID or class…" aria-label="Search students"></label><button class="button button-outline" type="button" id="exportStudents">↓ Export CSV</button></div></div>
       <div class="table-scroll"><table class="registry-table"><thead><tr><th>STUDENT</th><th>STUDENT ID</th><th>CLASS / GROUP</th><th>PARENT / GUARDIAN</th><th>CONTACT</th><th>STATUS</th><th>ACTIONS</th></tr></thead><tbody id="studentRows"></tbody></table></div>
       <p class="registry-empty" id="studentEmpty" hidden>No student profiles found.</p>
     </section>

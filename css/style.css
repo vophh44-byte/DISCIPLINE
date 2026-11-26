@@ -722,3 +722,56 @@ table tbody tr:hover{background:#f7f9fc}
 .driver-route-editor .registry-disclaimer{color:#718198}
 @media(max-width:760px){.driver-route-metrics{grid-template-columns:1fr;gap:9px}.driver-route-metric{padding:12px 14px}.driver-routes-head{align-items:flex-start;flex-direction:column}.driver-routes-head .button{width:100%}}
 @media(max-width:560px){.driver-account-group{padding:15px}.driver-route-card{padding:13px}.driver-route-card-head{gap:10px}.driver-route-editor{padding:15px}}
+
+
+/* Driver Check-ins — journey monitoring dashboard */
+.driver-checkins-head{margin:3px 0 20px}
+.driver-checkins-head h1{color:#172b45;font-size:clamp(28px,3vw,35px);letter-spacing:-1.2px;margin:8px 0 5px}
+.driver-checkin-filter{display:grid;grid-template-columns:minmax(220px,.8fr) minmax(260px,1.2fr);align-items:center;gap:16px;padding:17px 19px;margin-bottom:20px;background:#fff;border:1px solid #dfe6ef;box-shadow:0 5px 18px rgba(25,45,72,.035)}
+.driver-checkin-filter-title{display:flex;align-items:center;gap:11px}
+.driver-checkin-filter-icon{width:37px;height:37px;display:grid;place-items:center;border-radius:11px;background:#f7f0e4;color:#986f2e;font-size:22px}
+.driver-checkin-filter-title>div{display:grid;gap:3px}
+.driver-checkin-filter-title strong{font:800 11px Manrope,sans-serif;color:#263b55}
+.driver-checkin-filter-title small{font-size:9px;color:#8290a2}
+.driver-checkin-filter .driver-toolbar{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.driver-checkin-filter .field{min-width:0}
+.driver-checkin-filter .field label{font-size:8px;letter-spacing:.8px;color:#687a91;font-weight:800}
+.driver-checkin-filter .field input,.driver-checkin-filter .field select{min-height:40px;padding:8px 10px;background:#fbfcfd;color:#263a54;border:1px solid #d6dfeb;border-radius:9px;font-size:10px}
+.driver-checkin-info{grid-column:1/-1;margin:0;padding-top:11px;border-top:1px solid #edf1f5;color:#687a91;font-size:9px}
+.driver-checkin-section-label{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin:0 0 12px}
+.driver-checkin-section-label>div>span,.driver-checkin-panel-head>div>span{font-size:8px;letter-spacing:1.1px;color:#a17a3c;font-weight:800}
+.driver-checkin-section-label h2{margin:3px 0 0;color:#203650;font:800 16px Manrope,sans-serif}
+.driver-checkin-section-label>small{color:#8290a2;font-size:9px}
+.driver-checkin-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.driver-checkin-metric{display:flex;align-items:center;gap:12px;min-width:0;padding:14px 15px;background:#fff;border:1px solid #dfe6ef;border-radius:13px;box-shadow:0 4px 15px rgba(25,45,72,.03)}
+.driver-checkin-metric-icon{width:34px;height:34px;display:grid;place-items:center;flex:0 0 34px;border-radius:10px;background:#f8f0e2;color:#966d2c;font:800 10px Manrope,sans-serif}
+.driver-checkin-metric-icon.green{background:#eaf5ee;color:#397d59}.driver-checkin-metric-icon.amber{background:#fbf3e5;color:#98712f}.driver-checkin-metric-icon.blue{background:#eaf2fa;color:#3d75aa}.driver-checkin-metric-icon.slate{background:#eff2f6;color:#65758b}
+.driver-checkin-metric>div{display:grid;gap:2px;min-width:0}
+.driver-checkin-metric small{font-size:8px;letter-spacing:.55px;color:#718198;font-weight:800}
+.driver-checkin-metric strong{font:800 23px Manrope,sans-serif;line-height:1.25;color:#1c304a}
+.driver-checkin-metric span:last-child{font-size:9px;color:#8794a5}
+.driver-checkin-panel{padding:20px 21px;margin-bottom:16px;background:#fff;border:1px solid #dfe6ef;box-shadow:0 5px 18px rgba(25,45,72,.035)}
+.driver-checkin-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;padding-bottom:14px;margin-bottom:13px;border-bottom:1px solid #edf1f5}
+.driver-checkin-panel-head h2{margin:4px 0;color:#203650;font:800 16px Manrope,sans-serif}
+.driver-checkin-panel-head p{margin:0;color:#718198;font-size:10px}
+.driver-checkin-panel-mark{width:30px;height:30px;display:grid;place-items:center;border-radius:9px;background:#f4f6f9;color:#75849a;font:800 9px Manrope,sans-serif}
+.driver-checkin-panel .registry-table{min-width:760px}
+.driver-checkin-panel .registry-table thead th{background:#f5f7fa;color:#65768d}
+.driver-checkin-panel .registry-table td{color:#40536c}
+.driver-checkin-panel .registry-table td strong{color:#263b55}
+.driver-checkin-panel .registry-email{color:#8190a3}
+.driver-checkin-panel .registry-empty{padding:20px;color:#718198}
+.driver-run-admin-card{background:#f9fbfd;border:1px solid #e1e8f0;border-radius:11px;color:#344960}
+.driver-run-admin-main .stat-label{color:#718198;font-size:8px;letter-spacing:.7px;font-weight:800}
+.driver-run-admin-main strong{color:#263b55;font:800 13px Manrope,sans-serif}
+.driver-run-admin-main small{color:#718198}
+.driver-run-admin-times{color:#718198}
+.driver-run-admin-times strong{color:#344960}
+.driver-run-admin-card .session-status.completed{background:#e8f5ed;color:#26764f}
+.driver-run-admin-card .session-status.in-progress{background:#fbf3e5;color:#8c6728}
+.driver-checkin-panel .activity-type{display:inline-flex;padding:5px 8px;font-size:8px;font-weight:800;border-radius:20px}
+.driver-checkin-panel .activity-type.positive{background:#e8f5ef;color:#237d5d}
+.driver-checkin-panel .activity-type.negative{background:#fbecee;color:#b34f58}
+.driver-checkin-panel .activity-type.neutral{background:#eaf2fa;color:#386f9f}
+@media(max-width:900px){.driver-checkin-filter{grid-template-columns:1fr}.driver-checkin-info{grid-column:auto}}
+@media(max-width:640px){.driver-checkin-filter{padding:14px}.driver-checkin-filter .driver-toolbar{grid-template-columns:1fr}.driver-checkin-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.driver-checkin-metric{padding:11px 10px;gap:9px}.driver-checkin-metric-icon{width:30px;height:30px;flex-basis:30px}.driver-checkin-metric strong{font-size:20px}.driver-checkin-section-label{align-items:flex-start;flex-direction:column}.driver-checkin-panel{padding:15px}.driver-checkin-panel .table-scroll{overflow-x:auto}}

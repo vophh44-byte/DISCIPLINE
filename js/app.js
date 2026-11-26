@@ -308,7 +308,12 @@ async function disciplineAdminId(db){
 async function disciplineSession(db,type,date,create){
  let r=await db.from("journey_sessions").select("*").eq("session_type",type).eq("session_date",date).maybeSingle();
  if(r.error)throw r.error;
- if(!r.data&&create){const uid=await disciplineAdminId(db);r=await db.from("journey_sessions").insert({session_type:type,session_date:date,created_by:uid,starts_at:new Date().toISOString()}).select("*").single();if(r.error)throw r.error;}
+ if(!r.data&&create){
+  const uid=await disciplineAdminId(db);
+  r=await db.from("journey_sessions").insert({session_type:type,session_date:date,created_by:uid,starts_at:new Date().toISOString()}).select("*").single();
+  if(r.error?.code==="23505") r=await db.from("journey_sessions").select("*").eq("session_type",type).eq("session_date",date).single();
+  if(r.error)throw r.error;
+ }
  return r.data;
 }
 async function renderAttendance(){
@@ -363,7 +368,7 @@ async function renderJourneys(){
  document.getElementById("journeyDate").addEventListener("change",()=>refresh().catch(e=>showToast(e.message)));
  for(const t of ["morning","evening"])document.getElementById(t+"Action").addEventListener("click",async e=>{
   const btn=e.currentTarget,d=document.getElementById("journeyDate").value;btn.disabled=true;
-  try{const s=await disciplineSession(db,t,d,false);if(!s){const uid=await disciplineAdminId(db),r=await db.from("journey_sessions").insert({session_type:t,session_date:d,created_by:uid,starts_at:new Date().toISOString()});if(r.error)throw r.error;showToast(t+" session started.");}
+  try{const s=await disciplineSession(db,t,d,false);if(!s){await disciplineSession(db,t,d,true);showToast(t+" session started.");}
    else{const r=await db.from("journey_sessions").update({ends_at:new Date().toISOString()}).eq("id",s.id);if(r.error)throw r.error;showToast(t+" session closed.");}await refresh();
   }catch(err){showToast(err.message);btn.disabled=false;}
  });
@@ -562,25 +567,26 @@ async function renderIncidents(){
   if(!Number.isInteger(amount)||amount<0||amount>10000){msg.textContent="Deduction must be a whole number from 0 to 10,000.";return;}
   btn.disabled=true;btn.textContent="Saving…";msg.textContent="";
   try{
-   const uid=await disciplineAdminId(db),when=new Date(document.getElementById("incidentWhen").value+":00+05:30");
+   const when=new Date(document.getElementById("incidentWhen").value+":00+05:30");
    if(Number.isNaN(when.getTime()))throw new Error("Enter a valid date and time.");
-   const payload={student_id:studentSelect.value,session_id:sessionSelect.value||null,category:document.getElementById("incidentCategory").value,severity:document.getElementById("incidentSeverity").value,factual_description:document.getElementById("incidentDescription").value.trim(),exact_words:document.getElementById("incidentExactWords").value.trim()||null,action_taken:document.getElementById("incidentAction").value.trim()||null,occurred_at:when.toISOString(),recorded_by:uid,transcript_verified:false};
-   if(payload.factual_description.length<5)throw new Error("Please provide a factual description of at least 5 characters.");
-   const created=await db.from("incidents").insert(payload).select("id").single();
-   if(created.error)throw created.error;
-   let markNote="";
-   if(amount>0){
-    const mark=await db.rpc("admin_record_mark",{p_student_id:studentSelect.value,p_transaction_type:"deduction",p_amount:amount,p_reason:"Incident deduction: "+payload.category+" — "+payload.factual_description.slice(0,420),p_session_id:sessionSelect.value||null});
-    if(mark.error)markNote=" Incident saved, but deduction could not be saved: "+mark.error.message;
-    else{
-     const linked=await db.from("incidents").update({mark_transaction_id:mark.data.transaction_id||mark.data.id}).eq("id",created.data.id);
-     if(linked.error)markNote=" Deduction saved, but linking it to the incident failed: "+linked.error.message;
-    }
-   }
-   msg.textContent="Incident saved privately."+markNote;
+   const description=document.getElementById("incidentDescription").value.trim();
+   if(description.length<5)throw new Error("Please provide a factual description of at least 5 characters.");
+   const result=await db.rpc("admin_record_incident",{
+    p_student_id:studentSelect.value,
+    p_session_id:sessionSelect.value||null,
+    p_category:document.getElementById("incidentCategory").value,
+    p_severity:document.getElementById("incidentSeverity").value,
+    p_factual_description:description,
+    p_exact_words:document.getElementById("incidentExactWords").value.trim()||null,
+    p_action_taken:document.getElementById("incidentAction").value.trim()||null,
+    p_occurred_at:when.toISOString(),
+    p_deduction:amount
+   });
+   if(result.error)throw result.error;
+   msg.textContent="Incident and any deduction were saved together. The record remains private to administrators.";
    e.target.reset();document.getElementById("incidentWhen").value=localDateTime;
    await load();
-   showToast(markNote?"Incident saved with a follow-up issue.":"Incident saved privately.");
+   showToast("Incident saved privately and consistently.");
   }catch(err){msg.textContent="Not saved: "+err.message;showToast("Incident save failed: "+err.message);}
   finally{btn.disabled=false;btn.textContent="Save private incident";}
  });

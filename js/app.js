@@ -267,13 +267,15 @@ async function renderAccounts(){
   pageContent.innerHTML=`
     <div class="welcome-row"><div><div class="eyebrow"><span class="eyebrow-line"></span> ADMINISTRATION / ACCESS CONTROL</div><h1>Portal Accounts</h1><p class="page-intro">Create secure sign-in accounts and link each person to the correct student profile.</p></div></div>
     <section class="panel registry-panel">
-      <div class="panel-heading"><div><h3>Create or link a portal account</h3><p>New users receive an invitation. Existing active accounts can be linked without sending another invitation.</p></div></div>
+      <div class="panel-heading"><div><h3>Create or link a portal account</h3><p>Invite a parent or driver. Each person signs in through the matching portal option.</p></div></div>
       <form id="portalAccountForm">
         <div class="form-grid">
-          <div class="field"><label for="portalRole">Account type</label><select id="portalRole" required><option value="student">Student</option><option value="parent">Parent / Guardian</option></select></div>
-          <div class="field"><label for="portalName">Full name</label><input id="portalName" required maxlength="100" placeholder="Enter full name"></div>
-          <div class="field"><label for="portalEmail">Email address</label><input id="portalEmail" type="email" required maxlength="254" placeholder="name@example.com"></div>
-          <div class="field"><label for="portalStudent">Link to student</label><select id="portalStudent" required><option value="">Loading student profiles…</option></select></div>
+          <div class="field"><label for="portalRole">Account type</label><select id="portalRole" required><option value="parent">Parent / Guardian</option><option value="driver">Driver</option></select></div>
+          <div class="field"><label for="portalName">Full name</label><input id="portalName" required maxlength="100" placeholder="Full name"></div>
+          <div class="field"><label for="portalEmail">Email</label><input id="portalEmail" type="email" required maxlength="254" placeholder="name@example.com"></div>
+          <div class="field" id="driverRouteFields" hidden><label for="portalRouteName">Route name</label><input id="portalRouteName" maxlength="100" placeholder="e.g. North Route"></div>
+          <div class="field" id="driverVehicleFields" hidden><label for="portalVehicleLabel">Vehicle label (optional)</label><input id="portalVehicleLabel" maxlength="80" placeholder="e.g. Van 1"></div>
+          <div class="field"><label for="portalStudent" id="portalStudentLabel">Link to student</label><select id="portalStudent" required><option value="">Loading student profiles…</option></select><small class="registry-disclaimer" id="portalStudentHint">Choose the child linked to this parent.</small></div>
         </div>
         <div class="notice-banner" style="margin-top:16px"><div class="notice-icon">i</div><div><strong>Account security</strong><span>Users receive an invitation email and create their own password. Never enter or share their password here.</span></div></div>
         <div class="modal-actions"><button class="button button-primary" id="createPortalAccount" type="submit">Create / link account</button></div>
@@ -286,18 +288,46 @@ async function renderAccounts(){
   const {data:students,error}=await window.disciplineSupabase.from("students").select("id,student_code,full_name,class_group").eq("is_active",true).order("full_name");
   if(error){select.innerHTML='<option value="">Could not load students</option>';document.getElementById("portalAccountMessage").textContent=error.message;return;}
   select.innerHTML='<option value="">Choose a student</option>'+(students||[]).map(s=>'<option value="'+s.id+'">'+escapeHTML(s.student_code)+' — '+escapeHTML(s.full_name)+(s.class_group?' ('+escapeHTML(s.class_group)+')':'')+'</option>').join("");
-  document.getElementById("portalRole").addEventListener("change",()=>{document.getElementById("portalStudent").value="";});
+  const roleSelect=document.getElementById("portalRole");
+  const routeFields=document.getElementById("driverRouteFields");
+  const vehicleFields=document.getElementById("driverVehicleFields");
+  const routeNameInput=document.getElementById("portalRouteName");
+  const studentLabel=document.getElementById("portalStudentLabel");
+  const studentHint=document.getElementById("portalStudentHint");
+  function updateAccountForm(){
+    const isDriver=roleSelect.value==="driver";
+    select.multiple=isDriver;
+    select.size=isDriver?6:1;
+    select.value="";
+    routeFields.hidden=!isDriver;
+    vehicleFields.hidden=!isDriver;
+    routeNameInput.required=isDriver;
+    studentLabel.textContent=isDriver?"Students assigned to this driver":"Link to student";
+    studentHint.textContent=isDriver?"Select every student who travels on this route (use Ctrl to select more than one).":"Choose the child linked to this parent.";
+    select.setAttribute("aria-label",isDriver?"Select students assigned to this driver":"Choose the linked student");
+  }
+  roleSelect.addEventListener("change",updateAccountForm);
+  updateAccountForm();
   document.getElementById("portalAccountForm").addEventListener("submit",async e=>{
     e.preventDefault();
     const btn=document.getElementById("createPortalAccount"),msg=document.getElementById("portalAccountMessage");
     btn.disabled=true;btn.textContent="Sending invitation…";msg.textContent="";
-    const payload={role:document.getElementById("portalRole").value,display_name:document.getElementById("portalName").value.trim(),email:document.getElementById("portalEmail").value.trim(),student_id:select.value};
+    const role=roleSelect.value;
+    const payload={role,display_name:document.getElementById("portalName").value.trim(),email:document.getElementById("portalEmail").value.trim()};
+    if(role==="driver"){
+      payload.route_name=routeNameInput.value.trim();
+      payload.vehicle_label=document.getElementById("portalVehicleLabel").value.trim();
+      payload.student_ids=Array.from(select.selectedOptions).map(option=>option.value).filter(Boolean);
+      if(!payload.student_ids.length){msg.textContent="Select at least one student for this route.";btn.disabled=false;btn.textContent="Create / link account";return;}
+    }else{
+      payload.student_id=select.value;
+    }
     const {data,error}=await window.disciplineSupabase.functions.invoke("create-portal-account",{body:payload});
     if(error||!data||!data.success){msg.textContent=(data&&data.error)||error?.message||"Could not create or link account. Please try again.";}
     else {
       msg.style.color="#7ed6a5";
       msg.textContent=data.existing_account
-        ?"Existing "+data.role+" account for "+data.email+" is linked to the selected student. No new invitation was sent."
+        ?"Existing "+data.role+" account for "+data.email+" is linked. No new invitation was sent."
         :"Invitation sent to "+data.email+". The user must open the email and set a password.";
       e.target.reset();
     }

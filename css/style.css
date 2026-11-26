@@ -806,3 +806,78 @@ table tbody tr:hover{background:#f7f9fc}
 #pageContent .driver-checkin-metrics .driver-checkin-metric-icon.amber{background:#fbf3e5!important;color:#805d20!important}
 #pageContent .driver-checkin-metrics .driver-checkin-metric-icon.blue{background:#eaf2fa!important;color:#315f8d!important}
 #pageContent .driver-checkin-metrics .driver-checkin-metric-icon.slate{background:#eff2f6!important;color:#52647b!important}
+
+
+/* DISCIPLINE LIGHT WORKSPACE — shared component contrast audit
+   Keep the navy navigation, but prevent legacy dark cards from hiding dark text. */
+#pageContent .panel,
+#pageContent .stat-card,
+#pageContent .placeholder-card,
+#pageContent .session-card,
+#pageContent .dash-stat,
+#pageContent .dash-panel{
+  background:#ffffff!important;
+  background-image:none!important;
+  color:#263a54!important;
+  border:1px solid #dfe6ef!important;
+  box-shadow:0 5px 18px rgba(25,45,72,.045)!important;
+}
+#pageContent .panel h2,
+#pageContent .panel h3,
+#pageContent .stat-card strong,
+#pageContent .stat-card .stat-value,
+#pageContent .stat-card .dash-stat-value,
+#pageContent .dash-stat-value,
+#pageContent .session-main strong,
+#pageContent .placeholder-card h3{
+  color:#1c304a!important;
+}
+#pageContent .panel p,
+#pageContent .panel small,
+#pageContent .stat-card small,
+#pageContent .stat-foot,
+#pageContent .stat-label,
+#pageContent .session-main span,
+#pageContent .session-meta,
+#pageContent .placeholder-card p{
+  color:#647891!important;
+}
+#pageContent .session-card{
+  border-color:#e1e8f0!important;
+}
+#pageContent .panel .table-scroll table th{
+  color:#526780!important;
+  background:#f5f7fa!important;
+}
+#pageContent .panel .table-scroll table td{
+  color:#40536c!important;
+  border-bottom-color:#e8edf3!important;
+}
+#pageContent .panel .table-scroll table td strong{
+  color:#263b55!important;
+}
+#pageContent .button.button-quiet,
+#pageContent .button-secondary{
+  background:#f0f3f7!important;
+  border:1px solid #dbe3ed!important;
+  color:#40536c!important;
+}
+#pageContent .field label{
+  color:#52647b!important;
+}
+#pageContent input:not([type="checkbox"]):not([type="radio"]),
+#pageContent select,
+#pageContent textarea{
+  background:#ffffff!important;
+  color:#263a54!important;
+  border-color:#d6dfeb!important;
+}
+#pageContent input::placeholder,
+#pageContent textarea::placeholder{
+  color:#8795a8!important;
+  opacity:1!important;
+}
+#pageContent .registry-empty,
+#pageContent .registry-disclaimer{
+  color:#647891!important;
+}

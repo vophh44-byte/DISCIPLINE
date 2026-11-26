@@ -503,3 +503,60 @@ h1{color:#182a42}
  .dash-stat{padding:16px}
  .dash-panel{padding:16px}
 }
+
+
+/* Parent Management — family directory and response inbox */
+.parent-admin-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin:3px 0 22px}
+.parent-admin-head h1{font-size:clamp(28px,3vw,35px);letter-spacing:-1.2px;margin:8px 0 5px}
+.parent-admin-head>.button{min-height:43px;white-space:nowrap}
+.parent-admin-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.parent-summary-card{display:flex;align-items:center;gap:14px;min-width:0;padding:17px 19px;background:#fff;border:1px solid #e4eaf2;border-radius:15px;box-shadow:0 6px 20px rgba(25,45,72,.04)}
+.parent-summary-icon{width:42px;height:42px;flex:0 0 42px;display:grid;place-items:center;border-radius:13px;background:#f7f0e4;color:#a77c32;font-size:20px}
+.parent-summary-icon.parent-summary-blue{background:#edf4fb;color:#477fae}
+.parent-summary-icon.parent-summary-amber{background:#fbf3e5;color:#ae8034}
+.parent-summary-card>div{display:grid;gap:2px;min-width:0}
+.parent-summary-card small{font-size:10px;font-weight:700;color:#738197}
+.parent-summary-card strong{font:800 25px Manrope,sans-serif;line-height:1.25;color:#1c304a}
+.parent-summary-card span:not(.parent-summary-icon){font-size:9px;color:#8b98a9;overflow-wrap:anywhere}
+.parent-links-panel,.parent-responses-panel{padding:22px 23px;margin-bottom:18px}
+.parent-section-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:17px}
+.parent-section-heading h2{font:800 17px Manrope,sans-serif;color:#1d3049;margin:0 0 5px}
+.parent-section-heading p{font-size:10px;color:#7d8b9e;margin:0;max-width:650px;line-height:1.6}
+.parent-search{display:flex;align-items:center;gap:8px;width:min(290px,34vw);min-height:41px;padding:0 11px;background:#f8fafc;border:1px solid #dfe6ef;border-radius:10px;color:#8b98a9}
+.parent-search>span{font-size:19px}
+.parent-search .registry-search{width:100%;min-width:0;min-height:36px;padding:6px 0;border:0;background:transparent;box-shadow:none;color:#263b56}
+.parent-search:focus-within{border-color:#c49a50;box-shadow:0 0 0 3px rgba(196,154,80,.1)}
+.parent-response-tools{display:flex;align-items:center;gap:9px}
+.parent-filter-label{display:flex;align-items:center;gap:8px;color:#7b899b;font-size:10px;font-weight:700}
+.parent-filter-label select{min-height:41px;padding:0 30px 0 11px;background:#f8fafc;border:1px solid #dfe6ef;border-radius:10px;color:#34465e;font:600 10px "DM Sans",sans-serif}
+.parent-response-counts{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 13px;margin-bottom:12px;background:#f6f8fb;border:1px solid #e9eef4;border-radius:9px;color:#8491a2;font-size:10px}
+.parent-response-counts strong{color:#253a55;font:800 13px Manrope,sans-serif;margin-right:4px}
+.parent-response-table{min-width:1120px}
+.parent-response-table td{vertical-align:top;max-width:230px;white-space:normal;overflow-wrap:anywhere;line-height:1.55}
+.parent-response-table td textarea{width:100%;min-width:145px;min-height:64px;padding:8px;border:1px solid #dfe6ef;border-radius:8px;background:#f8fafc;color:#2c4059;font:11px "DM Sans",sans-serif;resize:vertical}
+.parent-response-table td textarea:focus{outline:0;border-color:#c49a50;box-shadow:0 0 0 3px rgba(196,154,80,.1)}
+.parent-response-table td .button{margin-top:6px}
+.parent-response-table td p{margin:6px 0}
+.parent-response-table td .registry-disclaimer{display:block;font-size:9px;line-height:1.4}
+.parent-links-panel .registry-table{min-width:650px}
+.parent-links-panel .registry-table td:first-child strong,.parent-response-table td strong{color:#273b55}
+.parent-links-panel .registry-table td{vertical-align:middle}
+@media(max-width:900px){
+ .parent-section-heading{align-items:flex-start;flex-direction:column}
+ .parent-search{width:100%}
+ .parent-response-tools{width:100%}
+ .parent-response-tools .parent-search{flex:1}
+}
+@media(max-width:640px){
+ .parent-admin-head{align-items:flex-start;flex-direction:column}
+ .parent-admin-head>.button{width:100%}
+ .parent-admin-summary{grid-template-columns:1fr;gap:9px}
+ .parent-summary-card{padding:13px 15px}
+ .parent-summary-icon{width:38px;height:38px;flex-basis:38px}
+ .parent-summary-card strong{font-size:22px}
+ .parent-links-panel,.parent-responses-panel{padding:15px}
+ .parent-response-tools{align-items:stretch;flex-direction:column}
+ .parent-filter-label{justify-content:space-between}
+ .parent-filter-label select{flex:1}
+ .parent-response-counts{align-items:flex-start;flex-direction:column}
+}

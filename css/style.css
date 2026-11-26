@@ -775,3 +775,34 @@ table tbody tr:hover{background:#f7f9fc}
 .driver-checkin-panel .activity-type.neutral{background:#eaf2fa;color:#386f9f}
 @media(max-width:900px){.driver-checkin-filter{grid-template-columns:1fr}.driver-checkin-info{grid-column:auto}}
 @media(max-width:640px){.driver-checkin-filter{padding:14px}.driver-checkin-filter .driver-toolbar{grid-template-columns:1fr}.driver-checkin-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.driver-checkin-metric{padding:11px 10px;gap:9px}.driver-checkin-metric-icon{width:30px;height:30px;flex-basis:30px}.driver-checkin-metric strong{font-size:20px}.driver-checkin-section-label{align-items:flex-start;flex-direction:column}.driver-checkin-panel{padding:15px}.driver-checkin-panel .table-scroll{overflow-x:auto}}
+
+
+/* FINAL OVERRIDE — driver summary cards must remain readable on every cached/theme variant */
+#pageContent .driver-checkin-metrics .driver-checkin-metric{
+  background:#ffffff!important;
+  background-image:none!important;
+  border:1px solid #d8e2ee!important;
+  color:#203650!important;
+  box-shadow:0 5px 18px rgba(25,45,72,.055)!important;
+}
+#pageContent .driver-checkin-metrics .driver-checkin-metric small{
+  color:#526780!important;
+  opacity:1!important;
+}
+#pageContent .driver-checkin-metrics .driver-checkin-metric strong{
+  color:#172f4c!important;
+  opacity:1!important;
+  font-weight:800!important;
+}
+#pageContent .driver-checkin-metrics .driver-checkin-metric span:last-child{
+  color:#647891!important;
+  opacity:1!important;
+}
+#pageContent .driver-checkin-metrics .driver-checkin-metric-icon{
+  color:#805b22!important;
+  background:#f8f0e2!important;
+}
+#pageContent .driver-checkin-metrics .driver-checkin-metric-icon.green{background:#eaf5ee!important;color:#286b49!important}
+#pageContent .driver-checkin-metrics .driver-checkin-metric-icon.amber{background:#fbf3e5!important;color:#805d20!important}
+#pageContent .driver-checkin-metrics .driver-checkin-metric-icon.blue{background:#eaf2fa!important;color:#315f8d!important}
+#pageContent .driver-checkin-metrics .driver-checkin-metric-icon.slate{background:#eff2f6!important;color:#52647b!important}

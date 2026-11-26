@@ -362,3 +362,39 @@ img,svg,video,canvas{max-width:100%}
 .dash-note p{font-size:10px;line-height:1.6;color:#91a3b8;margin:4px 0 0}
 @media(max-width:1000px){.dash-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.dash-main-grid{grid-template-columns:1fr}}
 @media(max-width:640px){.dash-welcome{align-items:flex-start;flex-direction:column}.dash-welcome>.button{width:100%;min-height:42px}.dash-stats{gap:9px}.dash-stat{padding:14px}.dash-stat-value{margin:9px 0 3px}.dash-panel{padding:14px}.dash-section-head{align-items:flex-start}.dash-note{padding:12px}}
+
+/* Student registry: calm hierarchy and simpler tools */
+.student-page-head{margin-bottom:17px}
+.student-summary{gap:12px;margin-bottom:14px}
+.student-summary .stat-card{min-height:88px;padding:14px 17px}
+.student-summary .stat-value{margin:7px 0 1px;font-size:24px}
+.student-summary .stat-card small{color:var(--muted);font-size:9px}
+.student-panel-heading,.student-list-head{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.student-panel-heading{padding-bottom:14px;border-bottom:1px solid var(--border)}
+.student-step{display:block;color:var(--gold);font-size:9px;letter-spacing:1.4px;font-weight:800;margin-bottom:5px}
+.student-panel-heading h2,.student-list-head h2{font:750 16px Manrope,sans-serif;margin:0 0 4px}
+.student-panel-heading p,.student-list-head p{font-size:10px;color:var(--muted);margin:0}
+.student-list-head{margin-bottom:15px}
+.student-list-tools{display:flex;align-items:center;gap:9px;min-width:0}
+.student-search-wrap{display:flex;align-items:center;gap:8px;width:min(290px,36vw);min-height:40px;padding:0 11px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--muted)}
+.student-search-wrap>span{font-size:18px;line-height:1}
+.student-search-wrap .registry-search{min-height:36px;padding:6px 0;border:0;background:transparent;box-shadow:none;max-width:none}
+.student-search-wrap:focus-within{border-color:var(--gold)}
+.student-list-tools>.button{min-height:40px;white-space:nowrap}
+#studentForm .form-grid{gap:13px 16px}
+#studentForm .field label{font-size:10px;letter-spacing:.01em}
+#studentForm .field input{min-height:43px}
+#studentForm .registry-disclaimer{max-width:850px;padding-top:11px;border-top:1px solid var(--border)}
+#studentRows tr:hover{background:rgba(255,255,255,.018)}
+#studentRows td:first-child strong{font-size:11px}
+#studentRows td:nth-child(2){font-variant-numeric:tabular-nums;color:#c8d2df}
+#studentRows .registry-actions{gap:6px}
+#studentRows .registry-actions .button{min-height:32px}
+#studentRows .registry-archive{color:#e89a9d}
+@media(max-width:700px){
+ .student-panel-heading,.student-list-head{align-items:flex-start;flex-direction:column}
+ .student-list-tools{width:100%;flex-direction:column;align-items:stretch}
+ .student-search-wrap{width:100%}
+ .student-list-tools>.button{width:100%}
+ .student-summary .stat-card{min-height:80px}
+}

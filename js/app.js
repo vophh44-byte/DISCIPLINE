@@ -36,6 +36,8 @@ function setActivePage(page){
   if(page==="dashboard"){ location.hash=""; renderDashboard(); }
   else if(page==="students"){ location.hash=page; renderStudents(); }
   else if(page==="accounts"){ location.hash=page; renderAccounts(); }
+  else if(page==="attendance"){ location.hash=page; renderAttendance(); }
+  else if(page==="journeys"){ location.hash=page; renderJourneys(); }
   else { location.hash=page; renderPlaceholder(page); }
   closeSidebar();
 }
@@ -272,6 +274,78 @@ async function renderAccounts(){
     else {msg.style.color="#7ed6a5";msg.textContent="Invitation sent to "+data.email+". The user must open the email and set a password.";e.target.reset();}
     btn.disabled=false;btn.textContent="Send invitation";
   });
+}
+
+function disciplineToday(){
+ const p=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date()),v={};
+ p.forEach(x=>v[x.type]=x.value);return v.year+"-"+v.month+"-"+v.day;
+}
+async function disciplineAdminId(db){
+ const r=await db.auth.getUser();if(r.error||!r.data.user)throw new Error("Please sign in again.");return r.data.user.id;
+}
+async function disciplineSession(db,type,date,create){
+ let r=await db.from("journey_sessions").select("*").eq("session_type",type).eq("session_date",date).maybeSingle();
+ if(r.error)throw r.error;
+ if(!r.data&&create){const uid=await disciplineAdminId(db);r=await db.from("journey_sessions").insert({session_type:type,session_date:date,created_by:uid,starts_at:new Date().toISOString()}).select("*").single();if(r.error)throw r.error;}
+ return r.data;
+}
+async function renderAttendance(){
+ const db=window.disciplineSupabase;
+ pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">WORKSPACE / DAILY REGISTER</div><h1>Morning Attendance</h1><p class="page-intro">Home → Institute · Record each student once per morning session.</p></div></div><section class="panel registry-panel"><div class="attendance-toolbar"><div class="field"><label for="attendanceDate">Date</label><input id="attendanceDate" type="date" value="'+disciplineToday()+'"></div><div class="attendance-actions"><button class="button button-outline" id="startMorningSession">Start morning register</button><button class="button button-primary" id="saveAttendance" disabled>Save attendance</button></div></div><p id="attendanceInfo" class="registry-disclaimer">Loading…</p></section><section class="panel registry-panel"><div class="panel-heading"><h3>Student register</h3><input class="registry-search" id="attendanceSearch" placeholder="Search students…"></div><div class="table-scroll"><table class="registry-table attendance-table"><thead><tr><th>STUDENT</th><th>ID</th><th>CLASS</th><th>STATUS</th><th>NOTE</th></tr></thead><tbody id="attendanceRows"></tbody></table></div></section>';
+ if(!db){showToast("Database is unavailable.");return;}
+ const sr=await db.from("students").select("id,student_code,full_name,class_group").eq("is_active",true).order("full_name");
+ if(sr.error){showToast(sr.error.message);return;}
+ const students=sr.data||[],rows=document.getElementById("attendanceRows"),date=document.getElementById("attendanceDate"),info=document.getElementById("attendanceInfo"),save=document.getElementById("saveAttendance"),start=document.getElementById("startMorningSession");
+ let session=null,existing={};
+ function draw(){
+  const q=document.getElementById("attendanceSearch").value.toLowerCase();
+  rows.innerHTML=students.filter(x=>(x.full_name+" "+x.student_code+" "+(x.class_group||"")).toLowerCase().includes(q)).map(x=>{
+   const a=existing[x.id]||{},disabled=!session||session.ends_at?"disabled":"";
+   return '<tr><td><strong>'+escapeHTML(x.full_name)+'</strong></td><td>'+escapeHTML(x.student_code)+'</td><td>'+escapeHTML(x.class_group||"—")+'</td><td><select '+disabled+' data-status="'+x.id+'"><option value="">Not marked</option>'+["present","absent","late","excused"].map(v=>'<option value="'+v+'" '+(a.status===v?"selected":"")+'>'+v.charAt(0).toUpperCase()+v.slice(1)+'</option>').join("")+'</select></td><td><input '+disabled+' data-note="'+x.id+'" maxlength="300" value="'+escapeHTML(a.notes||"")+'" placeholder="Optional"></td></tr>';
+  }).join("");
+  save.disabled=!session||!!session.ends_at;
+ }
+ async function load(){
+  try{
+   session=await disciplineSession(db,"morning",date.value,false);existing={};
+   if(session){const a=await db.from("attendance").select("student_id,status,notes").eq("session_id",session.id);if(a.error)throw a.error;(a.data||[]).forEach(x=>existing[x.student_id]=x);}
+   info.textContent=session?"Session: "+(session.ends_at?"Closed":"Open")+" · "+Object.keys(existing).length+" saved records": "No session yet. Start the register to begin.";
+   start.disabled=!!session;start.textContent=session?"Session created":"Start morning register";draw();
+  }catch(e){info.textContent="Could not load: "+e.message;}
+ }
+ start.addEventListener("click",async()=>{start.disabled=true;try{await disciplineSession(db,"morning",date.value,true);await load();showToast("Morning register started.");}catch(e){start.disabled=false;showToast(e.message);}});
+ date.addEventListener("change",load);document.getElementById("attendanceSearch").addEventListener("input",draw);
+ save.addEventListener("click",async()=>{
+  save.disabled=true;save.textContent="Saving…";
+  try{const uid=await disciplineAdminId(db),records=[];students.forEach(x=>{const status=rows.querySelector('[data-status="'+x.id+'"]')?.value,notes=rows.querySelector('[data-note="'+x.id+'"]')?.value.trim();if(status)records.push({student_id:x.id,session_id:session.id,status,notes:notes||null,recorded_by:uid});});
+   if(!records.length)throw new Error("Choose a status for at least one student.");
+   const r=await db.from("attendance").upsert(records,{onConflict:"student_id,session_id"});if(r.error)throw r.error;
+   await load();showToast(records.length+" attendance records saved.");
+  }catch(e){showToast("Save failed: "+e.message);}finally{save.textContent="Save attendance";draw();}
+ });
+ await load();
+}
+async function renderJourneys(){
+ const db=window.disciplineSupabase;
+ pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">WORKSPACE / JOURNEY CONTROL</div><h1>Journey Sessions</h1><p class="page-intro">Control the morning and evening journey registers.</p></div></div><section class="panel registry-panel"><div class="field"><label for="journeyDate">Session date</label><input id="journeyDate" type="date" value="'+disciplineToday()+'"></div></section><div class="journey-management-grid">'+["morning","evening"].map(t=>'<section class="panel registry-panel journey-management-card"><div class="session-icon">'+(t==="morning"?"☀":"☾")+'</div><h3>'+(t==="morning"?"Morning · Home → Institute":"Evening · Institute → Home")+'</h3><div id="'+t+'Status" class="journey-status">Loading…</div><p id="'+t+'Time" class="journey-time"></p><button class="button button-primary" id="'+t+'Action">Loading…</button></section>').join("")+'</div>';
+ if(!db){showToast("Database is unavailable.");return;}
+ async function refresh(){
+  const d=document.getElementById("journeyDate").value;
+  for(const t of ["morning","evening"]){
+   const s=await disciplineSession(db,t,d,false),status=document.getElementById(t+"Status"),time=document.getElementById(t+"Time"),btn=document.getElementById(t+"Action");
+   status.textContent=!s?"Not created":s.ends_at?"Closed":"In progress";status.className="journey-status "+(!s?"is-pending":s.ends_at?"is-closed":"is-open");
+   time.textContent=s?"Started: "+(s.starts_at?new Date(s.starts_at).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}):"—")+" · Ended: "+(s.ends_at?new Date(s.ends_at).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}):"—"):"No session record";
+   btn.textContent=!s?"Start session":s.ends_at?"Session closed":"Close session";btn.disabled=!!s?.ends_at;btn.dataset.exists=s?"yes":"no";
+  }
+ }
+ document.getElementById("journeyDate").addEventListener("change",()=>refresh().catch(e=>showToast(e.message)));
+ for(const t of ["morning","evening"])document.getElementById(t+"Action").addEventListener("click",async e=>{
+  const btn=e.currentTarget,d=document.getElementById("journeyDate").value;btn.disabled=true;
+  try{const s=await disciplineSession(db,t,d,false);if(!s){const uid=await disciplineAdminId(db),r=await db.from("journey_sessions").insert({session_type:t,session_date:d,created_by:uid,starts_at:new Date().toISOString()});if(r.error)throw r.error;showToast(t+" session started.");}
+   else{const r=await db.from("journey_sessions").update({ends_at:new Date().toISOString()}).eq("id",s.id);if(r.error)throw r.error;showToast(t+" session closed.");}await refresh();
+  }catch(err){showToast(err.message);btn.disabled=false;}
+ });
+ try{await refresh();}catch(e){showToast("Could not load sessions: "+e.message);}
 }
 
 function renderPlaceholder(page){

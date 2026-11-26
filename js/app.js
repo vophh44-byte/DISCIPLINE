@@ -1185,7 +1185,39 @@ async function renderAnalytics(){
 }
 async function renderCertificates(){
  const db=window.disciplineSupabase;
- pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">RECOGNITION / ADMINISTRATION</div><h1>Achievement Certificates</h1><p class="page-intro">Issue a certificate, review its details, and publish it to the linked student and parent portals when ready.</p></div></div><section class="panel registry-panel"><div class="panel-heading"><div><h3>Issue a certificate</h3><p>New certificates remain private until you publish them.</p></div></div><form id="certificateForm"><div class="form-grid"><div class="field"><label for="certificateStudent">Student *</label><select id="certificateStudent" required><option value="">Loading students…</option></select></div><div class="field"><label for="certificateTitle">Certificate title *</label><input id="certificateTitle" type="text" maxlength="120" required placeholder="e.g. Outstanding Cooperation"></div><div class="field full"><label for="certificateDescription">Achievement description</label><textarea id="certificateDescription" rows="3" maxlength="1000" placeholder="Describe the achievement in clear, encouraging language."></textarea></div></div><div class="registry-form-actions"><button class="button button-primary" id="issueCertificate" type="submit">Issue certificate</button><span id="certificateMessage" class="registry-disclaimer" role="status"></span></div></form></section><section class="panel registry-panel"><div class="panel-heading"><div><h3>Certificate register</h3><p>Review issued certificates and control when each one appears in the portals.</p></div><input id="certificateSearch" class="registry-search" placeholder="Search student or certificate…"></div><div class="table-scroll"><table class="registry-table"><thead><tr><th>ISSUED</th><th>STUDENT</th><th>CERTIFICATE</th><th>DESCRIPTION</th><th>PORTAL STATUS</th><th>ACTION</th></tr></thead><tbody id="certificateRows"><tr><td colspan="6">Loading…</td></tr></tbody></table></div></section>';
+ pageContent.innerHTML=`
+  <div class="certificates-head">
+   <div><div class="eyebrow"><span class="eyebrow-line"></span> RECOGNITION / ACHIEVEMENT RECORDS</div><h1>Achievement Certificates</h1><p class="page-intro">Recognise a student's progress and achievements, then decide when the certificate is ready to appear in linked portals.</p></div>
+   <span class="certificates-access-tag">PRIVATE BY DEFAULT</span>
+  </div>
+  <section class="certificates-guidance"><span class="certificates-guidance-mark">i</span><div><strong>Issue first. Publish after review.</strong><p>New certificates are saved as private drafts. Publishing makes the record visible to the linked student and parent portal accounts.</p></div></section>
+  <section class="certificates-overview" aria-label="Certificate register summary">
+   <article class="certificates-stat"><span>Certificates issued</span><strong id="certificateTotal">—</strong><small>Latest 300 saved records</small></article>
+   <article class="certificates-stat"><span>Published</span><strong id="certificatePublished">—</strong><small>Visible in linked portals</small></article>
+   <article class="certificates-stat"><span>Private drafts</span><strong id="certificatePrivate">—</strong><small>Administrator-only records</small></article>
+  </section>
+  <section class="certificates-form-panel">
+   <div class="certificates-section-heading"><div><span class="certificates-step">01 · CREATE</span><h2>Issue an achievement certificate</h2><p>Add the recipient and a clear description of the achievement being recognised.</p></div><span class="certificates-form-label">NEW CERTIFICATE</span></div>
+   <form id="certificateForm">
+    <div class="certificates-form-grid">
+     <div class="field"><label for="certificateStudent">Student *</label><select id="certificateStudent" required><option value="">Loading students…</option></select><small>Select the student who will receive this recognition.</small></div>
+     <div class="field"><label for="certificateTitle">Certificate title *</label><input id="certificateTitle" type="text" maxlength="120" required placeholder="e.g. Outstanding Cooperation"><small>Use a short, specific title.</small></div>
+     <div class="field full"><label for="certificateDescription">Achievement description</label><textarea id="certificateDescription" rows="3" maxlength="1000" placeholder="Describe the achievement in clear, encouraging language."></textarea><small>Optional · Maximum 1,000 characters.</small></div>
+    </div>
+    <div class="certificates-form-footer"><div><button class="button button-primary" id="issueCertificate" type="submit">Issue private certificate</button><span id="certificateMessage" class="certificates-message" role="status"></span></div><small>Saved as a private draft. You can publish it after reviewing the details.</small></div>
+   </form>
+  </section>
+  <section class="certificates-records-panel">
+   <div class="certificates-section-heading"><div><span class="certificates-step">02 · REVIEW & SHARE</span><h2>Certificate register</h2><p>Search issued certificates and control portal visibility for each record.</p></div><span class="certificates-record-limit">LATEST 300</span></div>
+   <div class="certificates-filter-bar">
+    <div class="field"><label for="certificateSearch">Search records</label><input id="certificateSearch" type="search" class="registry-search" placeholder="Student, ID or certificate title…"></div>
+    <div class="field"><label for="certificateStatusFilter">Portal visibility</label><select id="certificateStatusFilter"><option value="">All certificates</option><option value="private">Private drafts</option><option value="published">Published</option></select></div>
+   </div>
+   <div class="certificates-results-line"><strong id="certificateResultCount">Loading certificates…</strong><span>Published records are visible to linked portal users.</span></div>
+   <div class="table-scroll"><table class="registry-table certificates-table"><thead><tr><th>ISSUED</th><th>STUDENT</th><th>CERTIFICATE</th><th>DESCRIPTION</th><th>PORTAL STATUS</th><th>ACTION</th></tr></thead><tbody id="certificateRows"><tr><td colspan="6">Loading…</td></tr></tbody></table></div>
+   <p class="certificates-footnote">This register shows the latest 300 saved certificates. Unpublishing hides a certificate from student and parent portals but retains the administrator record.</p>
+  </section>
+  <footer class="page-footer"><span>DISCIPLINE · Student recognition</span><span>Private drafts · Controlled portal publishing</span></footer>`;
  if(!db){showToast("Database connection is unavailable.");return;}
  const studentSelect=document.getElementById("certificateStudent"),body=document.getElementById("certificateRows");
  const students=await db.from("students").select("id,student_code,full_name").eq("is_active",true).order("full_name");
@@ -1194,16 +1226,25 @@ async function renderCertificates(){
  let records=[];
  async function load(){
   const r=await db.from("certificates").select("id,student_id,title,description,issued_at,published_at,students(full_name,student_code)").order("issued_at",{ascending:false}).limit(300);
-  if(r.error){body.innerHTML='<tr><td colspan="6">Could not load certificates: '+escapeHTML(r.error.message)+'</td></tr>';return;}
+  if(r.error){body.innerHTML='<tr><td colspan="6">Could not load certificates: '+escapeHTML(r.error.message)+'</td></tr>';document.getElementById("certificateResultCount").textContent="Certificate register could not be loaded.";return;}
   records=r.data||[];
+  const published=records.filter(x=>!!x.published_at).length;
+  document.getElementById("certificateTotal").textContent=records.length;
+  document.getElementById("certificatePublished").textContent=published;
+  document.getElementById("certificatePrivate").textContent=records.length-published;
   draw();
  }
  function draw(){
-  const q=document.getElementById("certificateSearch").value.trim().toLowerCase();
-  const filtered=records.filter(x=>[x.title,x.description,x.students?.full_name,x.students?.student_code].join(" ").toLowerCase().includes(q));
-  body.innerHTML=filtered.map(x=>'<tr><td>'+escapeHTML(new Date(x.issued_at).toLocaleDateString("en-IN"))+'</td><td><strong>'+escapeHTML(x.students?.full_name||"Student")+'</strong><small class="registry-email">'+escapeHTML(x.students?.student_code||"")+'</small></td><td><strong>'+escapeHTML(x.title)+'</strong></td><td>'+escapeHTML(x.description||"—")+'</td><td><span class="session-status '+(x.published_at?"completed":"pending")+'">'+(x.published_at?"Published":"Private draft")+'</span></td><td>'+(x.published_at?'<button class="button button-outline" data-unpublish-certificate="'+x.id+'">Unpublish</button>':'<button class="button button-primary" data-publish-certificate="'+x.id+'" data-certificate-student="'+x.student_id+'">Publish to portals</button>')+'</td></tr>').join("")||'<tr><td colspan="6">No certificates have been issued yet.</td></tr>';
+  const q=document.getElementById("certificateSearch").value.trim().toLowerCase(),status=document.getElementById("certificateStatusFilter").value;
+  const filtered=records.filter(x=>{
+   const published=!!x.published_at;
+   return (!status||(status==="published"?published:!published))&&[x.title,x.description,x.students?.full_name,x.students?.student_code].join(" ").toLowerCase().includes(q);
+  });
+  body.innerHTML=filtered.map(x=>'<tr><td><span class="certificates-date">'+escapeHTML(new Date(x.issued_at).toLocaleDateString("en-IN"))+'</span></td><td><strong>'+escapeHTML(x.students?.full_name||"Student")+'</strong><small class="registry-email">'+escapeHTML(x.students?.student_code||"")+'</small></td><td><strong>'+escapeHTML(x.title)+'</strong></td><td class="certificates-description">'+escapeHTML(x.description||"—")+'</td><td><span class="session-status '+(x.published_at?"completed":"pending")+'">'+(x.published_at?"Published":"Private draft")+'</span></td><td>'+(x.published_at?'<button class="button button-outline" type="button" data-unpublish-certificate="'+x.id+'">Unpublish</button>':'<button class="button button-primary" type="button" data-publish-certificate="'+x.id+'" data-certificate-student="'+x.student_id+'">Publish to portals</button>')+'</td></tr>').join("")||'<tr><td colspan="6" class="certificates-empty-cell">'+(records.length?"No certificates match the current search and visibility filter.":"No certificates have been issued yet. Use the form above to recognise a student's achievement.")+'</td></tr>';
+  document.getElementById("certificateResultCount").textContent="Showing "+filtered.length+" of "+records.length+" recent certificate record(s)";
  }
  document.getElementById("certificateSearch").addEventListener("input",draw);
+ document.getElementById("certificateStatusFilter").addEventListener("change",draw);
  document.getElementById("certificateForm").addEventListener("submit",async e=>{
   e.preventDefault();
   const btn=document.getElementById("issueCertificate"),msg=document.getElementById("certificateMessage");
@@ -1221,7 +1262,7 @@ async function renderCertificates(){
    e.target.reset();msg.textContent="Certificate issued as a private draft. Publish it when ready.";
    await load();showToast("Certificate issued privately.");
   }catch(error){msg.textContent="Could not issue certificate: "+error.message;showToast(error.message);}
-  finally{btn.disabled=false;btn.textContent="Issue certificate";}
+  finally{btn.disabled=false;btn.textContent="Issue private certificate";}
  });
  body.addEventListener("click",async event=>{
   const publish=event.target.closest("[data-publish-certificate]");

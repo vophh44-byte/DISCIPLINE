@@ -414,7 +414,7 @@ async function renderJourneys(){
  try{await refresh();}catch(e){showToast("Could not load sessions: "+e.message);}
 }
 
-async async function renderDriverRoutes(){
+async function renderDriverRoutes(){
  const db=window.disciplineSupabase;
  pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">ADMINISTRATION / TRANSPORT</div><h1>Drivers & Routes</h1><p class="page-intro">Review driver accounts, update route assignments and pause or resume routes. Past journey records are kept.</p></div><button class="button button-primary" data-page="accounts">Create driver account</button></div><div class="stats-grid"><article class="stat-card"><div class="stat-label">Driver accounts</div><div class="stat-value" id="driverRouteDrivers">—</div></article><article class="stat-card"><div class="stat-label">Active routes</div><div class="stat-value" id="driverRouteActive">—</div></article><article class="stat-card"><div class="stat-label">Students assigned</div><div class="stat-value" id="driverRouteStudents">—</div></article></div><div id="driverRouteMessage" class="registry-disclaimer" role="status">Loading driver routes…</div><div id="driverRouteCards"></div><div id="driverRouteEditor"></div><footer class="page-footer"><span>© 2026 DISCIPLINE.</span><span>DRIVER ACCESS MANAGEMENT</span></footer>';
  if(!db){document.getElementById("driverRouteMessage").textContent="Database connection unavailable. Refresh and try again.";return;}

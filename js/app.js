@@ -733,7 +733,27 @@ async function renderWeeklyReports(){
 
 async function renderParents(){
  const db=window.disciplineSupabase;
- pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">ADMINISTRATION / FAMILY ACCESS</div><h1>Parent Management</h1><p class="page-intro">Manage family links and review parent acknowledgements, questions and review requests.</p></div><button class="button button-primary" data-page="accounts">Create parent account</button></div><section class="panel registry-panel"><div class="panel-heading"><div><h3>Parent-to-student links</h3><p>Only administrator-visible links are shown here.</p></div><input id="parentSearch" class="registry-search" placeholder="Search parent or student…"></div><div class="table-scroll"><table class="registry-table"><thead><tr><th>PARENT</th><th>EMAIL</th><th>STUDENT</th><th>STUDENT ID</th><th>RELATIONSHIP</th></tr></thead><tbody id="parentRows"><tr><td colspan="5">Loading…</td></tr></tbody></table></div></section><section class="panel registry-panel"><div class="panel-heading"><div><h3>Parent responses</h3><p>Review acknowledgements, clarification requests and requests for review. Administrator notes are private.</p></div><div class="attendance-actions"><select id="parentResponseFilter"><option value="pending">Pending review</option><option value="all">All responses</option><option value="reviewed">Reviewed</option></select><input id="parentResponseSearch" class="registry-search" placeholder="Search responses…"></div></div><div class="registry-stats"><article class="stat-card"><div class="stat-label">Pending responses</div><div class="stat-value" id="pendingParentResponseCount">—</div></article><article class="stat-card"><div class="stat-label">Total responses</div><div class="stat-value" id="totalParentResponseCount">—</div></article></div><div class="table-scroll"><table class="registry-table parent-response-table"><thead><tr><th>DATE</th><th>PARENT</th><th>STUDENT</th><th>ABOUT</th><th>RESPONSE</th><th>PARENT MESSAGE</th><th>PRIVATE ADMIN NOTE</th><th>STATUS / ACTION</th></tr></thead><tbody id="parentResponseRows"><tr><td colspan="8">Loading…</td></tr></tbody></table></div><p id="parentResponseInfo" class="registry-disclaimer">Pending responses appear first. Mark a response reviewed only after the administrator has followed up as needed.</p></section>';
+ pageContent.innerHTML=`
+  <div class="parent-admin-head">
+   <div><div class="eyebrow"><span class="eyebrow-line"></span> WORKSPACE / FAMILY CONNECTIONS</div><h1>Parent Management</h1><p class="page-intro">Keep family connections organised and respond to parent feedback in one place.</p></div>
+   <button class="button button-primary" data-page="accounts"><span>＋</span> Create parent account</button>
+  </div>
+  <section class="parent-admin-summary" aria-label="Parent management overview">
+   <article class="parent-summary-card"><span class="parent-summary-icon">♧</span><div><small>Linked families</small><strong id="parentLinkCount">—</strong><span>Parent-to-student connections</span></div></article>
+   <article class="parent-summary-card"><span class="parent-summary-icon parent-summary-blue">♙</span><div><small>Linked students</small><strong id="parentStudentCount">—</strong><span>Students with a family link</span></div></article>
+   <article class="parent-summary-card"><span class="parent-summary-icon parent-summary-amber">◷</span><div><small>Awaiting review</small><strong id="pendingParentResponseCount">—</strong><span>Parent responses to follow up</span></div></article>
+  </section>
+  <section class="panel registry-panel parent-links-panel">
+   <div class="parent-section-heading"><div><span class="student-step">FAMILY DIRECTORY</span><h2>Parent-to-student links</h2><p>Check which parent account is connected to each student.</p></div><label class="parent-search"><span>⌕</span><input id="parentSearch" class="registry-search" placeholder="Search parent or student…" aria-label="Search family links"></label></div>
+   <div class="table-scroll"><table class="registry-table"><thead><tr><th>PARENT / GUARDIAN</th><th>EMAIL ADDRESS</th><th>LINKED STUDENT</th><th>STUDENT ID</th><th>RELATIONSHIP</th></tr></thead><tbody id="parentRows"><tr><td colspan="5">Loading family links…</td></tr></tbody></table></div>
+  </section>
+  <section class="panel registry-panel parent-responses-panel">
+   <div class="parent-section-heading parent-response-heading"><div><span class="student-step">INBOX & FOLLOW-UP</span><h2>Parent responses</h2><p>Review acknowledgements, clarification requests and requests for review. Private notes are visible only to administrators.</p></div><div class="parent-response-tools"><label class="parent-filter-label"><span>Show</span><select id="parentResponseFilter"><option value="pending">Pending review</option><option value="all">All responses</option><option value="reviewed">Reviewed</option></select></label><label class="parent-search"><span>⌕</span><input id="parentResponseSearch" class="registry-search" placeholder="Search responses…" aria-label="Search parent responses"></label></div></div>
+   <div class="parent-response-counts"><span><strong id="totalParentResponseCount">—</strong> total responses</span><span>Private administrator follow-up</span></div>
+   <div class="table-scroll"><table class="registry-table parent-response-table"><thead><tr><th>DATE</th><th>PARENT</th><th>STUDENT</th><th>ABOUT</th><th>RESPONSE</th><th>PARENT MESSAGE</th><th>PRIVATE ADMIN NOTE</th><th>STATUS / ACTION</th></tr></thead><tbody id="parentResponseRows"><tr><td colspan="8">Loading parent responses…</td></tr></tbody></table></div>
+   <p id="parentResponseInfo" class="registry-disclaimer">Pending responses appear first. Mark a response reviewed only after the administrator has followed up as needed.</p>
+  </section>
+  <footer class="page-footer"><span>DISCIPLINE · Family connections</span><span>ADMINISTRATOR ACCESS · PRIVATE RECORDS</span></footer>`;
  if(!db){showToast("Database connection is unavailable.");return;}
  const body=document.getElementById("parentRows"),responseBody=document.getElementById("parentResponseRows");
  const [links,responses]=await Promise.all([
@@ -743,6 +763,8 @@ async function renderParents(){
  if(links.error){body.innerHTML='<tr><td colspan="5">Could not load parent links: '+escapeHTML(links.error.message)+'</td></tr>';}
  else{
   const rows=links.data||[];
+  document.getElementById("parentLinkCount").textContent=rows.length;
+  document.getElementById("parentStudentCount").textContent=new Set(rows.map(x=>x.students?.student_code||x.students?.full_name).filter(Boolean)).size;
   function drawLinks(){
    const q=document.getElementById("parentSearch").value.trim().toLowerCase();
    const filtered=rows.filter(x=>[x.profiles?.display_name,x.profiles?.email,x.students?.full_name,x.students?.student_code,x.relationship_label].join(" ").toLowerCase().includes(q));

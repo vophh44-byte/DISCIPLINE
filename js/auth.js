@@ -129,8 +129,10 @@
     }
   });
 
+  let recoveryFormShown = false;
   function showNewPasswordForm() {
-    if (isPasswordRecovery) return;
+    if (recoveryFormShown) return;
+    recoveryFormShown = true;
     isPasswordRecovery = true;
     gate.style.display = "grid";
     picker.hidden = true;

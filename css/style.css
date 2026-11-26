@@ -881,3 +881,46 @@ table tbody tr:hover{background:#f7f9fc}
 #pageContent .registry-disclaimer{
   color:#647891!important;
 }
+
+
+/* Morning Attendance — focused register workspace */
+.attendance-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin:3px 0 20px}
+.attendance-head h1{color:#172b45;font-size:clamp(28px,3vw,35px);letter-spacing:-1.2px;margin:8px 0 5px}
+.attendance-secure-tag{padding:9px 13px;border:1px solid #e5ebf2;border-radius:30px;background:#fff;color:#65758b;font-size:9px;font-weight:800;letter-spacing:.7px;white-space:nowrap}
+.attendance-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin-bottom:16px}
+.attendance-summary-card{display:flex;align-items:center;gap:12px;min-width:0;padding:15px 17px;background:#fff;border:1px solid #dfe6ef;border-radius:14px;box-shadow:0 5px 18px rgba(25,45,72,.04)}
+.attendance-summary-icon{width:36px;height:36px;display:grid;place-items:center;flex:0 0 36px;border-radius:11px;background:#f8f0e2;color:#805b22;font:800 10px Manrope,sans-serif}
+.attendance-summary-icon.present{background:#eaf5ee;color:#286b49}
+.attendance-summary-icon.pending{background:#fbf3e5;color:#805d20}
+.attendance-summary-card>div{display:grid;gap:2px;min-width:0}
+.attendance-summary-card small{font-size:8px;letter-spacing:.65px;color:#657890;font-weight:800}
+.attendance-summary-card strong{font:800 24px Manrope,sans-serif;color:#172f4c;line-height:1.25}
+.attendance-summary-card span:last-child{font-size:9px;color:#78899e}
+.attendance-control-panel,.attendance-list-panel{padding:20px 21px;margin-bottom:15px;background:#fff!important;border:1px solid #dfe6ef!important}
+.attendance-panel-heading,.attendance-list-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;margin-bottom:16px}
+.attendance-panel-heading h2,.attendance-list-heading h2{margin:4px 0;color:#203650;font:800 16px Manrope,sans-serif}
+.attendance-panel-heading p,.attendance-list-heading p{margin:0;color:#718198;font-size:10px}
+.attendance-step{font-size:8px;letter-spacing:1.1px;color:#a17a3c;font-weight:800}
+.attendance-panel-mark{width:30px;height:30px;display:grid;place-items:center;border-radius:9px;background:#f8f0e2;color:#8a6428;font:800 10px Manrope,sans-serif}
+.attendance-toolbar{display:grid;grid-template-columns:minmax(200px,.7fr) minmax(0,1.3fr);align-items:end;gap:14px}
+.attendance-toolbar .field label{font-size:8px;letter-spacing:.8px;color:#687a91;font-weight:800}
+.attendance-toolbar .field input{min-height:42px;background:#fbfcfd!important;color:#263a54!important;border:1px solid #d6dfeb!important;border-radius:9px}
+.attendance-actions{display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap}
+.attendance-actions .button{min-height:42px}
+.attendance-actions button:disabled{opacity:.48;cursor:not-allowed}
+.attendance-info{margin:14px 0 0;padding:11px 12px;border-radius:9px;background:#f3f6fa;color:#526780;font-size:10px}
+.attendance-info.is-open{background:#eaf5ee;color:#286b49}
+.attendance-info.is-closed{background:#eaf2fa;color:#315f8d}
+.attendance-info.is-pending{background:#fbf3e5;color:#805d20}
+.attendance-info.is-error{background:#fbecee;color:#a83f4a}
+.attendance-list-heading{align-items:flex-end}
+.attendance-list-heading .registry-search{width:min(100%,280px);min-height:39px;background:#fbfcfd;color:#263a54;border:1px solid #d6dfeb}
+.attendance-table{min-width:760px}
+.attendance-table th{background:#f5f7fa;color:#526780;padding-top:11px}
+.attendance-table td{color:#40536c;vertical-align:middle}
+.attendance-table td strong{color:#263b55}
+.attendance-table select,.attendance-table input{width:100%;min-width:125px;min-height:36px;padding:7px 9px;border:1px solid #d6dfeb;border-radius:8px;background:#fff;color:#263a54}
+.attendance-table select:disabled,.attendance-table input:disabled{background:#f0f3f7;color:#7b899b;opacity:1}
+.attendance-footnote{margin:12px 0 0;color:#718198;font-size:9px}
+@media(max-width:760px){.attendance-summary{grid-template-columns:1fr;gap:8px}.attendance-summary-card{padding:12px 14px}.attendance-toolbar{grid-template-columns:1fr}.attendance-actions{justify-content:stretch}.attendance-actions .button{flex:1}.attendance-head{align-items:flex-start;flex-direction:column}.attendance-secure-tag{align-self:flex-start}}
+@media(max-width:640px){.attendance-control-panel,.attendance-list-panel{padding:15px}.attendance-list-heading{align-items:stretch;flex-direction:column}.attendance-list-heading .registry-search{width:100%;max-width:none}.attendance-actions{flex-direction:column}.attendance-actions .button{width:100%}}

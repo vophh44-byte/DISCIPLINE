@@ -498,18 +498,78 @@ async function renderWeeklyReports(){
 
 async function renderParents(){
  const db=window.disciplineSupabase;
- pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">ADMINISTRATION / FAMILY ACCESS</div><h1>Parent Management</h1><p class="page-intro">Review parent accounts and the student profiles they are linked to.</p></div><button class="button button-primary" data-page="accounts">Create parent account</button></div><section class="panel registry-panel"><div class="panel-heading"><div><h3>Parent-to-student links</h3><p>Only administrator-visible links are shown here.</p></div><input id="parentSearch" class="registry-search" placeholder="Search parent or student…"></div><div class="table-scroll"><table class="registry-table"><thead><tr><th>PARENT</th><th>EMAIL</th><th>STUDENT</th><th>STUDENT ID</th><th>RELATIONSHIP</th></tr></thead><tbody id="parentRows"><tr><td colspan="5">Loading…</td></tr></tbody></table></div></section>';
+ pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">ADMINISTRATION / FAMILY ACCESS</div><h1>Parent Management</h1><p class="page-intro">Manage family links and review parent acknowledgements, questions and review requests.</p></div><button class="button button-primary" data-page="accounts">Create parent account</button></div><section class="panel registry-panel"><div class="panel-heading"><div><h3>Parent-to-student links</h3><p>Only administrator-visible links are shown here.</p></div><input id="parentSearch" class="registry-search" placeholder="Search parent or student…"></div><div class="table-scroll"><table class="registry-table"><thead><tr><th>PARENT</th><th>EMAIL</th><th>STUDENT</th><th>STUDENT ID</th><th>RELATIONSHIP</th></tr></thead><tbody id="parentRows"><tr><td colspan="5">Loading…</td></tr></tbody></table></div></section><section class="panel registry-panel"><div class="panel-heading"><div><h3>Parent responses</h3><p>Review acknowledgements, clarification requests and requests for review. Administrator notes are private.</p></div><div class="attendance-actions"><select id="parentResponseFilter"><option value="pending">Pending review</option><option value="all">All responses</option><option value="reviewed">Reviewed</option></select><input id="parentResponseSearch" class="registry-search" placeholder="Search responses…"></div></div><div class="registry-stats"><article class="stat-card"><div class="stat-label">Pending responses</div><div class="stat-value" id="pendingParentResponseCount">—</div></article><article class="stat-card"><div class="stat-label">Total responses</div><div class="stat-value" id="totalParentResponseCount">—</div></article></div><div class="table-scroll"><table class="registry-table parent-response-table"><thead><tr><th>DATE</th><th>PARENT</th><th>STUDENT</th><th>ABOUT</th><th>RESPONSE</th><th>PARENT MESSAGE</th><th>PRIVATE ADMIN NOTE</th><th>STATUS / ACTION</th></tr></thead><tbody id="parentResponseRows"><tr><td colspan="8">Loading…</td></tr></tbody></table></div><p id="parentResponseInfo" class="registry-disclaimer">Pending responses appear first. Mark a response reviewed only after the administrator has followed up as needed.</p></section>';
  if(!db){showToast("Database connection is unavailable.");return;}
- const body=document.getElementById("parentRows");
- const r=await db.from("parent_student_links").select("parent_user_id,relationship_label,profiles(display_name,email),students(full_name,student_code)").order("created_at",{ascending:false});
- if(r.error){body.innerHTML='<tr><td colspan="5">Could not load parent links: '+escapeHTML(r.error.message)+'</td></tr>';return;}
- const rows=r.data||[];
- function draw(){
-  const q=document.getElementById("parentSearch").value.trim().toLowerCase();
-  const filtered=rows.filter(x=>[x.profiles?.display_name,x.profiles?.email,x.students?.full_name,x.students?.student_code,x.relationship_label].join(" ").toLowerCase().includes(q));
-  body.innerHTML=filtered.map(x=>'<tr><td><strong>'+escapeHTML(x.profiles?.display_name||"Parent")+'</strong></td><td>'+escapeHTML(x.profiles?.email||"—")+'</td><td>'+escapeHTML(x.students?.full_name||"Student")+'</td><td>'+escapeHTML(x.students?.student_code||"—")+'</td><td>'+escapeHTML(x.relationship_label||"—")+'</td></tr>').join("")||'<tr><td colspan="5">No linked parent accounts found. Create an account to add one.</td></tr>';
+ const body=document.getElementById("parentRows"),responseBody=document.getElementById("parentResponseRows");
+ const [links,responses]=await Promise.all([
+  db.from("parent_student_links").select("parent_user_id,relationship_label,created_at,profiles(display_name,email),students(full_name,student_code)").order("created_at",{ascending:false}),
+  db.from("parent_responses").select("id,parent_user_id,student_id,incident_id,weekly_result_id,response_type,message,created_at,reviewed_at,reviewed_by,admin_note,profiles(display_name,email),students(full_name,student_code)").order("created_at",{ascending:false}).limit(300)
+ ]);
+ if(links.error){body.innerHTML='<tr><td colspan="5">Could not load parent links: '+escapeHTML(links.error.message)+'</td></tr>';}
+ else{
+  const rows=links.data||[];
+  function drawLinks(){
+   const q=document.getElementById("parentSearch").value.trim().toLowerCase();
+   const filtered=rows.filter(x=>[x.profiles?.display_name,x.profiles?.email,x.students?.full_name,x.students?.student_code,x.relationship_label].join(" ").toLowerCase().includes(q));
+   body.innerHTML=filtered.map(x=>'<tr><td><strong>'+escapeHTML(x.profiles?.display_name||"Parent")+'</strong></td><td>'+escapeHTML(x.profiles?.email||"—")+'</td><td>'+escapeHTML(x.students?.full_name||"Student")+'</td><td>'+escapeHTML(x.students?.student_code||"—")+'</td><td>'+escapeHTML(x.relationship_label||"—")+'</td></tr>').join("")||'<tr><td colspan="5">No linked parent accounts found. Create an account to add one.</td></tr>';
+  }
+  document.getElementById("parentSearch").addEventListener("input",drawLinks);drawLinks();
  }
- document.getElementById("parentSearch").addEventListener("input",draw);draw();
+ if(responses.error){responseBody.innerHTML='<tr><td colspan="8">Could not load parent responses: '+escapeHTML(responses.error.message)+'</td></tr>';return;}
+ const responseRows=responses.data||[];
+ document.getElementById("totalParentResponseCount").textContent=responseRows.length;
+ document.getElementById("pendingParentResponseCount").textContent=responseRows.filter(x=>!x.reviewed_at).length;
+ function drawResponses(){
+  const filter=document.getElementById("parentResponseFilter").value;
+  const q=document.getElementById("parentResponseSearch").value.trim().toLowerCase();
+  const filtered=responseRows.filter(x=>{
+   const status=!x.reviewed_at?"pending":"reviewed";
+   const search=[x.profiles?.display_name,x.profiles?.email,x.students?.full_name,x.students?.student_code,x.response_type,x.message,x.admin_note,x.incident_id?"incident report":"weekly result"].join(" ").toLowerCase();
+   return (filter==="all"||filter===status)&&search.includes(q);
+  });
+  responseBody.innerHTML=filtered.map(x=>{
+   const reviewed=!!x.reviewed_at;
+   const about=x.incident_id?"Behaviour report":x.weekly_result_id?"Weekly result":"General parent response";
+   return '<tr><td>'+escapeHTML(new Date(x.created_at).toLocaleString("en-IN"))+'</td><td><strong>'+escapeHTML(x.profiles?.display_name||"Parent")+'</strong><small class="registry-email">'+escapeHTML(x.profiles?.email||"")+'</small></td><td><strong>'+escapeHTML(x.students?.full_name||"Student")+'</strong><small class="registry-email">'+escapeHTML(x.students?.student_code||"")+'</small></td><td>'+about+'</td><td>'+escapeHTML(x.response_type.replaceAll("_"," "))+'</td><td>'+escapeHTML(x.message||"—")+'</td><td><textarea rows="2" maxlength="1000" data-admin-response-note="'+x.id+'" placeholder="Private follow-up note">'+escapeHTML(x.admin_note||"")+'</textarea><button class="button button-quiet" type="button" data-save-response-note="'+x.id+'">Save note</button></td><td><span class="session-status '+(reviewed?"completed":"pending")+'">'+(reviewed?"Reviewed":"Pending")+'</span><p><small>'+ (reviewed&&x.reviewed_at?escapeHTML(new Date(x.reviewed_at).toLocaleDateString("en-IN")):"Awaiting action")+'</small></p><button class="button button-outline" type="button" data-toggle-response-review="'+x.id+'" data-next-state="'+(reviewed?"pending":"reviewed")+'">'+(reviewed?"Reopen":"Mark reviewed")+'</button><small data-response-action-status="'+x.id+'" class="registry-disclaimer"></small></td></tr>';
+  }).join("")||'<tr><td colspan="8">No responses match this filter.</td></tr>';
+ }
+ document.getElementById("parentResponseFilter").addEventListener("change",drawResponses);
+ document.getElementById("parentResponseSearch").addEventListener("input",drawResponses);
+ responseBody.addEventListener("click",async event=>{
+  const save=event.target.closest("[data-save-response-note]");
+  const toggle=event.target.closest("[data-toggle-response-review]");
+  if(!save&&!toggle)return;
+  const id=(save||toggle).dataset.saveResponseNote||(save||toggle).dataset.toggleResponseReview;
+  const status=responseBody.querySelector('[data-response-action-status="'+id+'"]');
+  const buttons=responseBody.querySelectorAll('[data-save-response-note="'+id+'"],[data-toggle-response-review="'+id+'"]');
+  buttons.forEach(b=>b.disabled=true);
+  try{
+   let payload={};
+   if(save){
+    const note=responseBody.querySelector('[data-admin-response-note="'+id+'"]').value.trim();
+    payload={admin_note:note||null};
+   }else{
+    const next=toggle.dataset.nextState;
+    if(next==="reviewed"){
+     if(!confirm("Mark this parent response as reviewed? This records the administrator review time."))return;
+     payload={reviewed_at:new Date().toISOString(),reviewed_by:await disciplineAdminId(db)};
+    }else{
+     if(!confirm("Reopen this response as pending review?"))return;
+     payload={reviewed_at:null,reviewed_by:null};
+    }
+   }
+   const {error}=await db.from("parent_responses").update(payload).eq("id",id);
+   if(error)throw error;
+   const row=responseRows.find(x=>x.id===id);
+   if(row)Object.assign(row,payload);
+   document.getElementById("pendingParentResponseCount").textContent=responseRows.filter(x=>!x.reviewed_at).length;
+   status.textContent=save?"Private note saved.":"Review status updated.";
+   drawResponses();
+   showToast(save?"Administrator note saved privately.":"Parent response status updated.");
+  }catch(error){if(status)status.textContent="Could not save: "+error.message;showToast(error.message);}
+  finally{buttons.forEach(b=>b.disabled=false);}
+ });
+ drawResponses();
 }
 
 async function renderLedger(){

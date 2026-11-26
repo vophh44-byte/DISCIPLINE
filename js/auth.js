@@ -472,12 +472,26 @@
     if (isPasswordRecovery || !session || !session.user) return false;
     const { data: profile, error } = await client.from("profiles")
       .select("role,is_active,display_name").eq("user_id", session.user.id).maybeSingle();
-    const allowedRoles = ["admin","parent","driver"];
-    if (error || !profile || profile.is_active !== true || !allowedRoles.includes(String(profile.role))) {
+    if (error || !profile || profile.is_active !== true) {
       await client.auth.signOut();
       gate.style.display = "grid";
       showPicker();
       picker.insertAdjacentHTML("beforeend", '<p class="auth-message">This account is inactive or has no active portal role. Please contact the administrator.</p>');
+      return false;
+    }
+    if (profile.role === "student") {
+      await client.auth.signOut();
+      gate.style.display = "grid";
+      showPicker();
+      picker.insertAdjacentHTML("beforeend", '<p class="auth-message">This email is registered as a Student account. This sign-in page has Admin, Parent and Driver portals only. Ask the administrator to assign the correct portal role or use the parent account email.</p>');
+      return false;
+    }
+    const allowedRoles = ["admin","parent","driver"];
+    if (!allowedRoles.includes(String(profile.role))) {
+      await client.auth.signOut();
+      gate.style.display = "grid";
+      showPicker();
+      picker.insertAdjacentHTML("beforeend", '<p class="auth-message">This account has no supported portal role. Please contact the administrator.</p>');
       return false;
     }
     if (expectedPortal && profile.role !== expectedPortal) {

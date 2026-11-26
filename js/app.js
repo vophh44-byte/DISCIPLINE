@@ -516,7 +516,7 @@ document.addEventListener("click",e=>{
   if(e.target.closest("#dateButton"))showToast("Weekly period: Monday to Sunday · Asia/Kolkata");
   if(e.target.closest("#notificationButton"))showToast("No live notifications in local preview.");
 });
-document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click",()=>setActivePage(btn.dataset.page)));
+// Navigation is handled once by the delegated document click listener above.
 document.getElementById("menuToggle").addEventListener("click",()=>{document.getElementById("sidebar").classList.add("open");document.getElementById("sidebarBackdrop").classList.add("show");});
 document.getElementById("closeSidebar").addEventListener("click",closeSidebar);
 document.getElementById("sidebarBackdrop").addEventListener("click",closeSidebar);

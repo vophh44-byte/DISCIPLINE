@@ -172,7 +172,8 @@
     }
     if(profile.role==="admin"){
       portalShell("admin",profile.display_name||"Administrator");
-      if(location.hash==="#students" && typeof renderStudents==="function") renderStudents();
+      const requestedPage=location.hash.replace("#","");
+      if(typeof setActivePage==="function") setActivePage(requestedPage && document.querySelector('.nav-item[data-page="'+requestedPage+'"]') ? requestedPage : "dashboard");
       return true;
     }
     await renderReadOnlyPortal(profile.role,profile,session.user);

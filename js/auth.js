@@ -74,22 +74,55 @@
   });
   document.getElementById("backToPortals").addEventListener("click", showPicker);
 
+  let resetCooldownTimer = null;
+  let resetRequestInProgress = false;
+  function startResetCooldown(seconds = 60) {
+    if (resetCooldownTimer) window.clearInterval(resetCooldownTimer);
+    let remaining = Math.max(1, Math.ceil(seconds));
+    forgotButton.disabled = true;
+    forgotButton.textContent = "Wait " + remaining + "s";
+    resetCooldownTimer = window.setInterval(() => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        window.clearInterval(resetCooldownTimer);
+        resetCooldownTimer = null;
+        forgotButton.disabled = false;
+        forgotButton.textContent = "Forgot password?";
+      } else {
+        forgotButton.textContent = "Wait " + remaining + "s";
+      }
+    }, 1000);
+  }
   forgotButton.addEventListener("click", async () => {
+    if (resetRequestInProgress || forgotButton.disabled) return;
     const email = document.getElementById("loginEmail").value.trim();
     if (!email) {
       message.textContent = "Enter your email first.";
       document.getElementById("loginEmail").focus();
       return;
     }
-    forgotButton.disabled = true;
-    message.textContent = "Sending reset email…";
-    const { error } = await client.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + window.location.pathname
-    });
-    message.textContent = error
-      ? "Could not send reset email. Please try again."
-      : "If an account exists for this email, a reset link has been sent. Check your inbox and spam folder.";
-    forgotButton.disabled = false;
+    resetRequestInProgress = true;
+    startResetCooldown(60);
+    message.textContent = "Sending password-reset link…";
+    try {
+      const { error } = await client.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + window.location.pathname
+      });
+      if (error) {
+        const detail = String(error.message || "");
+        const isRateLimited = /429|rate.?limit|security purposes|too many/i.test(detail);
+        message.textContent = isRateLimited
+          ? "Too many reset requests. Please wait for the timer to finish, check your inbox and spam folder, then try once."
+          : "Reset request failed: " + detail;
+      } else {
+        message.textContent = "Reset request accepted. Check your inbox and spam folder. You can request another link after the timer finishes.";
+      }
+    } catch (error) {
+      const detail = error && error.message ? error.message : "Network error";
+      message.textContent = "Could not contact the reset service: " + detail;
+    } finally {
+      resetRequestInProgress = false;
+    }
   });
 
   function showNewPasswordForm() {

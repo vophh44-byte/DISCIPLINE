@@ -439,44 +439,118 @@
     const name = profile.display_name || user.email || "Driver";
     portalShell("driver", name);
     const page = document.getElementById("pageContent");
-    page.innerHTML = '<div class="registry-head"><div><div class="eyebrow">DISCIPLINE / DRIVER</div><h1>Driver Dashboard</h1><p class="page-intro">Your assigned route and student journey check-ins.</p></div></div><section class="panel registry-panel"><div class="driver-route-head"><div><span class="stat-label">Assigned route</span><h2 id="driverRouteName">Loading…</h2><p id="driverVehicle" class="page-intro"></p></div><span class="session-status completed">Driver access</span></div><div class="driver-toolbar"><div class="field"><label for="driverDate">Journey date</label><input type="date" id="driverDate" value="' + driverToday() + '"></div><div class="field"><label for="driverJourneyType">Journey</label><select id="driverJourneyType"><option value="morning">Morning · Home to institute</option><option value="evening">Evening · Institute to home</option></select></div></div><p id="driverInfo" class="registry-disclaimer" role="status">Loading assigned students…</p></section><section class="panel registry-panel"><div class="panel-heading"><div><h3>Assigned students</h3><p>Update one check-in at a time. Only your assigned route is shown.</p></div></div><div class="table-scroll"><table class="registry-table driver-roster-table"><thead><tr><th>STUDENT</th><th>STATUS</th><th>NOTE</th><th>ACTION</th></tr></thead><tbody id="driverRosterRows"><tr><td colspan="4">Loading…</td></tr></tbody></table></div></section><p class="registry-disclaimer">This portal does not show marks, behaviour reports or parent information. For an urgent safety issue, contact the administrator directly.</p>';
+    page.innerHTML = '<div class="registry-head"><div><div class="eyebrow">DISCIPLINE / DRIVER</div><h1>Driver Dashboard</h1><p class="page-intro">Start your trip, update each student, then finish the journey.</p></div></div>' +
+      '<section class="panel registry-panel"><div class="driver-route-head"><div><span class="stat-label">Assigned route</span><h2 id="driverRouteName">Loading…</h2><p id="driverVehicle" class="page-intro"></p></div><span class="session-status completed">Driver access</span></div>' +
+      '<div class="driver-toolbar"><div class="field"><label for="driverDate">Journey date</label><input type="date" id="driverDate" value="' + driverToday() + '"></div><div class="field"><label for="driverJourneyType">Journey</label><select id="driverJourneyType"><option value="morning">Morning · Home to institute</option><option value="evening">Evening · Institute to home</option></select></div></div></section>' +
+      '<section class="panel registry-panel driver-run-panel"><div class="driver-run-top"><div><span class="stat-label">TRIP STATUS</span><h3 id="driverRunStatus">Checking trip…</h3><p id="driverRunTimes" class="registry-disclaimer">Journey controls are available for today only.</p></div><span id="driverRunBadge" class="session-status pending">Not started</span></div>' +
+      '<div class="driver-run-actions"><button class="button button-primary" id="startDriverRun" type="button">Start journey</button><button class="button button-outline" id="finishDriverRun" type="button" disabled>Finish journey</button></div></section>' +
+      '<section class="panel registry-panel"><div class="panel-heading"><div><h3>Assigned students</h3><p>Record boarding or drop-off updates for students on your route.</p></div></div><p id="driverInfo" class="registry-disclaimer" role="status">Loading assigned students…</p><div class="table-scroll"><table class="registry-table driver-roster-table"><thead><tr><th>STUDENT</th><th>STATUS</th><th>NOTE</th><th>ACTION</th></tr></thead><tbody id="driverRosterRows"><tr><td colspan="4">Loading…</td></tr></tbody></table></div></section>' +
+      '<p class="registry-disclaimer">This portal does not show marks, behaviour reports or parent information. For an urgent safety issue, contact the administrator directly.</p>';
     const info = document.getElementById("driverInfo");
     const rows = document.getElementById("driverRosterRows");
     const date = document.getElementById("driverDate");
     const journey = document.getElementById("driverJourneyType");
+    const runStatus = document.getElementById("driverRunStatus");
+    const runBadge = document.getElementById("driverRunBadge");
+    const runTimes = document.getElementById("driverRunTimes");
+    const startButton = document.getElementById("startDriverRun");
+    const finishButton = document.getElementById("finishDriverRun");
     const routeResult = await client.from("driver_routes").select("id,route_name,vehicle_label").eq("driver_user_id", user.id).eq("is_active", true).limit(1).maybeSingle();
     if (routeResult.error || !routeResult.data) {
       document.getElementById("driverRouteName").textContent = "Route not assigned";
       info.textContent = routeResult.error ? "Unable to load your route. Contact the administrator." : "Your account is active, but no active route has been assigned yet. Contact the administrator.";
       rows.innerHTML = '<tr><td colspan="4">No route is available.</td></tr>';
+      startButton.disabled = true;
+      finishButton.disabled = true;
       return;
     }
     const route = routeResult.data;
     document.getElementById("driverRouteName").textContent = route.route_name;
     document.getElementById("driverVehicle").textContent = route.vehicle_label || "Vehicle not specified";
+    let currentRunStatus = null;
+    const today = driverToday();
     const optionsFor = type => type === "morning"
       ? [["boarded","Boarded"],["late","Late"],["absent","Absent"],["not_on_vehicle","Not on vehicle"]]
       : [["boarded","Boarded"],["dropped_off","Dropped off"],["not_on_vehicle","Not on vehicle"]];
+    function displayTime(value) {
+      return value ? new Date(value).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}) : "";
+    }
+    function updateRunControls(run) {
+      const isToday = date.value === today;
+      currentRunStatus = run?.run_status || null;
+      const started = currentRunStatus === "in_progress";
+      const completed = currentRunStatus === "completed";
+      runStatus.textContent = completed ? "Journey completed" : started ? "Journey in progress" : "Journey not started";
+      runBadge.textContent = completed ? "Completed" : started ? "In progress" : "Not started";
+      runBadge.className = "session-status " + (completed ? "completed" : started ? "in-progress" : "pending");
+      const startedAt = displayTime(run?.started_at);
+      const finishedAt = displayTime(run?.finished_at);
+      runTimes.textContent = (startedAt ? "Started at " + startedAt : "Not started yet") + (finishedAt ? " · Finished at " + finishedAt : "") +
+        (isToday ? "" : " · Select today to control a journey");
+      startButton.disabled = !isToday || started || completed;
+      finishButton.disabled = !isToday || !started;
+      startButton.textContent = started ? "Journey started" : completed ? "Journey completed" : "Start journey";
+      finishButton.textContent = completed ? "Journey finished" : "Finish journey";
+      rows.querySelectorAll("[data-driver-save]").forEach(button => { button.disabled = !started; });
+    }
     async function loadRoster() {
       info.textContent = "Loading your assigned students…";
       rows.innerHTML = '<tr><td colspan="4">Loading…</td></tr>';
-      const { data, error } = await client.rpc("driver_get_roster", { p_journey_date: date.value, p_journey_type: journey.value });
-      if (error) {
+      const [runResult, rosterResult] = await Promise.all([
+        client.rpc("driver_get_route_run_status", { p_journey_date: date.value, p_journey_type: journey.value }),
+        client.rpc("driver_get_roster", { p_journey_date: date.value, p_journey_type: journey.value })
+      ]);
+      if (runResult.error) {
+        currentRunStatus = null;
+        runStatus.textContent = "Trip status unavailable";
+        runTimes.textContent = "Refresh the page or contact the administrator.";
+        startButton.disabled = true;
+        finishButton.disabled = true;
+        info.textContent = "Could not load the journey status.";
+        rows.innerHTML = '<tr><td colspan="4">Journey status unavailable.</td></tr>';
+        return;
+      }
+      if (rosterResult.error) {
+        updateRunControls(runResult.data?.[0]);
         info.textContent = "Could not load the route list. Please refresh or contact the administrator.";
         rows.innerHTML = '<tr><td colspan="4">Roster unavailable.</td></tr>';
         return;
       }
-      const roster = data || [];
-      info.textContent = roster.length + " assigned student(s) · " + (journey.value === "morning" ? "Morning journey" : "Evening journey") + " · " + date.value;
+      const run = runResult.data?.[0] || null;
+      updateRunControls(run);
+      const roster = rosterResult.data || [];
+      info.textContent = roster.length + " assigned student(s) · " + (journey.value === "morning" ? "Morning journey" : "Evening journey") + " · " + date.value +
+        (currentRunStatus === "in_progress" ? " · Check-ins enabled" : currentRunStatus === "completed" ? " · Journey closed" : " · Start the journey to enable check-ins");
       if (!roster.length) {
         rows.innerHTML = '<tr><td colspan="4">No students are assigned for this date.</td></tr>';
         return;
       }
       rows.innerHTML = roster.map(student => {
         const options = optionsFor(journey.value).map(([value,label]) => '<option value="' + value + '" ' + (student.last_status === value ? "selected" : "") + '>' + label + '</option>').join("");
-        return '<tr data-driver-row="' + esc(student.student_id) + '"><td><strong>' + esc(student.full_name) + '</strong><small class="registry-email">' + esc(student.student_code) + (student.class_group ? " · " + esc(student.class_group) : "") + '</small></td><td><select data-driver-status><option value="">Choose status</option>' + options + '</select></td><td><input data-driver-note maxlength="250" placeholder="Optional note" value="' + esc(student.last_note || "") + '"></td><td><button class="button button-primary" type="button" data-driver-save>Save</button></td></tr>';
+        return '<tr data-driver-row="' + esc(student.student_id) + '">' +
+          '<td data-label="Student"><strong>' + esc(student.full_name) + '</strong><small class="registry-email">' + esc(student.student_code) + (student.class_group ? " · " + esc(student.class_group) : "") + '</small></td>' +
+          '<td data-label="Status"><select data-driver-status><option value="">Choose status</option>' + options + '</select></td>' +
+          '<td data-label="Note"><input data-driver-note maxlength="250" placeholder="Optional note" value="' + esc(student.last_note || "") + '"></td>' +
+          '<td data-label="Action"><button class="button button-primary" type="button" data-driver-save ' + (currentRunStatus === "in_progress" ? "" : "disabled") + '>Save update</button></td></tr>';
       }).join("");
     }
+    async function changeRun(action) {
+      const button = action === "start" ? startButton : finishButton;
+      button.disabled = true;
+      button.textContent = action === "start" ? "Starting…" : "Finishing…";
+      const { error } = await client.rpc(action === "start" ? "driver_start_route_run" : "driver_finish_route_run", {
+        p_journey_date: date.value, p_journey_type: journey.value
+      });
+      if (error) {
+        info.textContent = error.message || "The journey could not be updated.";
+        await loadRoster();
+        return;
+      }
+      info.textContent = action === "start" ? "Journey started. You can now save student check-ins." : "Journey finished. Student check-ins are now locked.";
+      await loadRoster();
+    }
+    startButton.addEventListener("click", () => changeRun("start"));
+    finishButton.addEventListener("click", () => changeRun("finish"));
     rows.addEventListener("click", async event => {
       const save = event.target.closest("[data-driver-save]");
       if (!save) return;
@@ -494,11 +568,11 @@
         p_note: note || null
       });
       if (error) {
-        info.textContent = "Could not save this check-in. Please try again.";
-        save.disabled = false;
-        save.textContent = "Save";
+        info.textContent = error.message || "Could not save this check-in. Please try again.";
+        save.disabled = currentRunStatus !== "in_progress";
+        save.textContent = "Save update";
       } else {
-        info.textContent = "Journey check-in saved.";
+        info.textContent = "Journey check-in saved and parent notification sent where a parent is linked.";
         await loadRoster();
       }
     });

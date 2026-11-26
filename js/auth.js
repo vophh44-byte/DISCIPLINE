@@ -31,6 +31,7 @@
   const button = document.getElementById("loginButton");
   const forgotButton = document.getElementById("forgotPasswordButton");
   let isPasswordRecovery = false;
+  const isInviteSetup = new URLSearchParams(window.location.search).get("setup") === "1";
 
   forgotButton.addEventListener("click", async () => {
     const email = document.getElementById("loginEmail").value.trim();
@@ -54,8 +55,8 @@
     isPasswordRecovery = true;
     gate.style.display = "grid";
     const card = gate.querySelector(".auth-card");
-    card.querySelector("h1").textContent = "Choose a new password";
-    card.querySelector("p").textContent = "Enter and confirm your new password.";
+    card.querySelector("h1").textContent = isInviteSetup ? "Create your password" : "Choose a new password";
+    card.querySelector("p").textContent = isInviteSetup ? "Set a password for your DISCIPLINE account to finish joining." : "Enter and confirm your new password.";
     form.innerHTML = `
       <label>New password<input id="newPassword" type="password" minlength="8" autocomplete="new-password" required placeholder="At least 8 characters"></label>
       <label>Confirm new password<input id="confirmPassword" type="password" minlength="8" autocomplete="new-password" required placeholder="Enter it again"></label>
@@ -76,6 +77,11 @@
         recoveryMessage.textContent = "Password update failed. Please request a new reset link.";
         save.disabled = false;
         save.textContent = "Update password";
+      } else if (isInviteSetup) {
+        history.replaceState({}, document.title, window.location.pathname);
+        recoveryMessage.textContent = "Password created. Opening your DISCIPLINE dashboard…";
+        const { data: sessionData } = await client.auth.getSession();
+        if (sessionData.session) await openForSession(sessionData.session);
       } else {
         await client.auth.signOut();
         recoveryMessage.textContent = "Password updated successfully. You can now sign in with your new password.";
@@ -85,7 +91,7 @@
   }
 
   client.auth.onAuthStateChange((event) => {
-    if (event === "PASSWORD_RECOVERY") showNewPasswordForm();
+    if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && isInviteSetup)) showNewPasswordForm();
   });
 
   function esc(v) {
@@ -187,6 +193,9 @@
   });
 
   client.auth.getSession().then(({data,error})=>{
-    if(!error&&data.session) openForSession(data.session);
+    if(!error&&data.session) {
+      if (isInviteSetup) showNewPasswordForm();
+      else openForSession(data.session);
+    }
   });
 })();

@@ -160,3 +160,22 @@ body:not(.is-authenticated) .app-shell{display:none}
 
 .auth-form .auth-forgot{width:auto;justify-self:center;background:none;border:0;color:var(--gold);font:600 11px 'DM Sans',sans-serif;text-decoration:underline;cursor:pointer;margin:0;padding:4px 8px}
 .auth-form .auth-forgot:disabled{opacity:.55;cursor:wait}
+
+
+/* Attendance and journey management */
+.attendance-toolbar{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.attendance-toolbar .field{min-width:190px}
+.attendance-actions{display:flex;gap:9px;flex-wrap:wrap}
+.attendance-table select,.attendance-table input{min-width:110px;max-width:180px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:8px 9px;color:var(--text);font:500 11px 'DM Sans',sans-serif}
+.attendance-table input{min-width:140px}
+.attendance-table select:disabled,.attendance-table input:disabled{opacity:.55}
+.journey-management-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.journey-management-card{display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.journey-management-card h3{font:700 15px Manrope;margin:3px 0 0}
+.journey-management-card>p{font-size:10px;color:var(--muted);margin:0}
+.journey-status{font-size:11px;font-weight:700;padding:6px 10px;border-radius:20px;background:rgba(213,179,106,.12);color:var(--gold-2)}
+.journey-status.is-open{background:rgba(91,196,154,.12);color:#83d9b5}
+.journey-status.is-closed{background:rgba(121,169,220,.12);color:#9fc5eb}
+.journey-time{min-height:16px;color:var(--muted);font-size:10px}
+.journey-management-card .button{margin-top:5px}
+@media(max-width:650px){.journey-management-grid{grid-template-columns:1fr}.attendance-toolbar{align-items:stretch}.attendance-actions{width:100%}.attendance-actions .button{flex:1}}

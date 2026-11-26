@@ -621,3 +621,59 @@ h1{color:#182a42}
 .accounts-help-card p{margin:0;color:#8792a1;font-size:9px;line-height:1.55}
 @media(max-width:900px){.accounts-workspace{grid-template-columns:1fr}.accounts-guide-column{grid-template-columns:1fr 1fr}}
 @media(max-width:640px){.accounts-admin-head{align-items:flex-start;flex-direction:column}.accounts-secure-tag{align-self:flex-start}.accounts-overview{grid-template-columns:1fr;gap:8px}.accounts-overview-card{padding:11px 13px}.accounts-create-panel{padding:17px 15px}.accounts-guide-column{grid-template-columns:1fr}.accounts-submit-row{align-items:stretch;flex-direction:column}.accounts-submit-row .auth-message{max-width:100%}.accounts-submit-row .button{width:100%}.accounts-form-grid{grid-template-columns:1fr}.accounts-email-field{grid-column:auto}}
+
+
+/* Global light-theme contrast and control consistency */
+body{color:#24364e}
+h2,h3,h4{color:#203650}
+p{color:inherit}
+.panel,.registry-panel,.dash-panel,.stat-card{color:#263a54}
+.panel-heading h3,.section-heading h2{color:#203650}
+.panel-heading p,.section-heading p{color:#687a91}
+.field label{color:#52647b}
+.field input,.field select,.field textarea,
+input:not([type="checkbox"]):not([type="radio"]):not(.auth-form input),
+select,textarea{
+ background:#fff;color:#263a54;border:1px solid #d6dfeb;
+}
+.field input::placeholder,.field textarea::placeholder,
+input::placeholder,textarea::placeholder{color:#8795a8;opacity:1}
+.field input:focus,.field select:focus,.field textarea:focus,
+input:focus,select:focus,textarea:focus{
+ outline:none;border-color:#b78a42;box-shadow:0 0 0 3px rgba(183,138,66,.12)
+}
+.field select option,select option{background:#fff;color:#263a54}
+.field input:disabled,.field select:disabled,.field textarea:disabled,
+input:disabled,select:disabled,textarea:disabled{background:#f0f3f7;color:#7b899b;opacity:1}
+table th{color:#64758b}
+table td{color:#40536c}
+table tbody tr:hover{background:#f7f9fc}
+.student-cell strong{color:#263a54}
+.leader-note{color:#687a91}
+.leader-score{color:#946c2a}
+.activity-type{font-weight:700}
+.page-footer{color:#687a91}
+.registry-disclaimer,.field small{color:#718198}
+.text-button{color:#936b2b}
+.button-quiet{color:#40536c}
+.button-secondary{background:#f0f3f7;border-color:#dbe3ed;color:#40536c}
+.modal-backdrop{background:rgba(16,29,46,.58)}
+.modal{background:#fff;border:1px solid #dfe6ef;color:#263a54;box-shadow:0 22px 65px rgba(20,36,58,.2)}
+.modal-head h2{color:#203650}
+.modal .field label{color:#52647b}
+.modal .field input,.modal .field select,.modal .field textarea{background:#f8fafc;color:#263a54;border-color:#d6dfeb}
+.modal .icon-button{background:#f1f4f8;color:#40536c;border-color:#dfe6ef}
+.modal .button-secondary{background:#f0f3f7;color:#40536c;border-color:#dbe3ed}
+.toast{background:#18304b;color:#fff;border-color:#45617e}
+.auth-form label{color:#52637a}
+.auth-form input{background:#f8fafc;color:#1b2d45;border-color:#dfe6ef}
+.auth-form input::placeholder{color:#8795a8}
+.auth-message{color:#b13e49}
+.auth-note{color:#718096}
+.notice-banner strong{color:#60491f}
+.notice-banner span{color:#75613e}
+.journey-status.is-open{color:#24734f;background:#e8f5ed}
+.journey-status.is-closed{color:#315f91;background:#eaf2fa}
+.completed{color:#237d5d;background:#e8f5ef}
+.pending{color:#8b6727;background:#fbf3e5}
+@media(prefers-reduced-motion:no-preference){button,a,input,select,textarea{transition-color:.15s ease,border-color .15s ease,background-color .15s ease}}

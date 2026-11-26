@@ -560,3 +560,64 @@ h1{color:#182a42}
  .parent-filter-label select{flex:1}
  .parent-response-counts{align-items:flex-start;flex-direction:column}
 }
+
+
+/* Portal Accounts — guided account creation workspace */
+.accounts-admin-head{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:3px 0 20px}
+.accounts-admin-head h1{font-size:clamp(28px,3vw,35px);letter-spacing:-1.2px;margin:8px 0 5px}
+.accounts-secure-tag{display:flex;align-items:center;gap:8px;padding:9px 13px;border:1px solid #e5ebf2;border-radius:30px;background:#fff;color:#66768b;font-size:10px;font-weight:700;white-space:nowrap}
+.accounts-secure-tag span{color:#b48a43;font-size:15px}
+.accounts-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin-bottom:17px}
+.accounts-overview-card{display:flex;align-items:center;gap:12px;padding:14px 16px;background:#fff;border:1px solid #e4eaf2;border-radius:14px;box-shadow:0 5px 18px rgba(25,45,72,.035)}
+.accounts-overview-icon{width:36px;height:36px;display:grid;place-items:center;flex:0 0 36px;border-radius:11px;background:#f8f1e5;color:#a47a35;font:800 12px Manrope,sans-serif}
+.accounts-icon-blue{background:#edf4fb;color:#477fae}.accounts-icon-green{background:#edf6f0;color:#4d8b67}
+.accounts-overview-card>div{display:grid;gap:3px;min-width:0}
+.accounts-overview-card strong{font:800 11px Manrope,sans-serif;color:#263b55}
+.accounts-overview-card small{font-size:9px;color:#8996a7}
+.accounts-workspace{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(250px,.85fr);align-items:start;gap:16px}
+.accounts-create-panel{padding:23px 24px}
+.accounts-panel-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding-bottom:18px;border-bottom:1px solid #edf0f4}
+.accounts-step-label{font-size:9px;letter-spacing:1.25px;font-weight:800;color:#b08a4c}
+.accounts-panel-heading h2{margin:6px 0 5px;color:#203650;font:800 19px Manrope,sans-serif;letter-spacing:-.4px}
+.accounts-panel-heading p{margin:0;color:#8491a2;font-size:10px;line-height:1.6}
+.accounts-heading-symbol{width:38px;height:38px;display:grid;place-items:center;border-radius:12px;background:#f8f2e8;color:#a57b37;font-size:22px}
+.accounts-form-section{padding:19px 0 17px;border-bottom:1px solid #edf0f4}
+.accounts-form-section-title{display:flex;align-items:center;gap:10px;margin-bottom:15px}
+.accounts-form-section-title>span{width:26px;height:26px;display:grid;place-items:center;border-radius:8px;background:#f3f5f8;color:#5f7188;font:800 10px Manrope,sans-serif}
+.accounts-form-section-title>div{display:grid;gap:2px}
+.accounts-form-section-title strong{font:800 11px Manrope,sans-serif;color:#2a3e57}
+.accounts-form-section-title small{font-size:9px;color:#8995a5}
+.accounts-form-grid{gap:13px 15px}
+.accounts-form-grid .field label,.accounts-student-section .field label{font-size:10px;color:#52647b;font-weight:700}
+.accounts-form-grid .field input,.accounts-form-grid .field select,.accounts-student-section .field select{min-height:42px;border:1px solid #dfe6ef;border-radius:9px;background:#fbfcfd;color:#263b55;font-size:11px}
+.accounts-form-grid .field input:focus,.accounts-form-grid .field select:focus,.accounts-student-section .field select:focus{outline:0;border-color:#c49a50;box-shadow:0 0 0 3px rgba(196,154,80,.1)}
+.accounts-email-field{grid-column:1/-1}
+.accounts-student-section .field select[multiple]{min-height:142px;padding:9px}
+.accounts-student-section .field select[multiple] option{padding:7px;border-radius:5px}
+.accounts-student-section .registry-disclaimer{display:block;margin-top:7px;line-height:1.5}
+.accounts-security-note{display:flex;align-items:flex-start;gap:11px;padding:13px 14px;margin-top:17px;border:1px solid #e4eee7;border-radius:11px;background:#f6faf7}
+.accounts-security-icon{width:25px;height:25px;display:grid;place-items:center;flex:0 0 25px;border-radius:50%;background:#e5f1e8;color:#4f8a65;font-size:12px;font-weight:800}
+.accounts-security-note strong{font:800 10px Manrope,sans-serif;color:#365c43}
+.accounts-security-note p{margin:4px 0 0;color:#748a7a;font-size:9px;line-height:1.55}
+.accounts-submit-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:17px}
+.accounts-submit-row .auth-message{margin:0;max-width:58%;font-size:10px;overflow-wrap:anywhere}
+.accounts-submit-row .button{min-height:42px;white-space:nowrap}
+.accounts-submit-row .button span{margin-left:7px}
+.accounts-guide-column{display:grid;gap:13px}
+.accounts-guide-panel{padding:20px 19px}
+.accounts-guide-heading{display:flex;align-items:center;justify-content:space-between;color:#ad8546;font-size:9px;font-weight:800;letter-spacing:1.1px}
+.accounts-guide-check{width:24px;height:24px;display:grid;place-items:center;border-radius:8px;background:#edf6f0;color:#528765;font-size:12px}
+.accounts-guide-panel h3{margin:10px 0 6px;color:#233952;font:800 16px Manrope,sans-serif}
+.accounts-guide-intro{margin:0;color:#8793a3;font-size:9px;line-height:1.6}
+.accounts-check-list{list-style:none;padding:0;margin:17px 0 0;display:grid;gap:15px}
+.accounts-check-list li{display:flex;align-items:flex-start;gap:9px}
+.accounts-check-list li>span{width:19px;height:19px;display:grid;place-items:center;flex:0 0 19px;border-radius:6px;background:#f3f6f4;color:#5b916d;font-size:10px;font-weight:800}
+.accounts-check-list li div{display:grid;gap:3px}
+.accounts-check-list strong{font:700 10px Manrope,sans-serif;color:#344a63}
+.accounts-check-list small{font-size:9px;line-height:1.5;color:#8995a5}
+.accounts-help-card{padding:16px 17px;border:1px solid #eee6d9;border-radius:13px;background:linear-gradient(135deg,#fbf8f1,#fff)}
+.accounts-help-card>span{display:block;color:#a9844b;font-size:8px;font-weight:800;letter-spacing:1px}
+.accounts-help-card strong{display:block;margin:7px 0 4px;color:#34475f;font:800 11px Manrope,sans-serif}
+.accounts-help-card p{margin:0;color:#8792a1;font-size:9px;line-height:1.55}
+@media(max-width:900px){.accounts-workspace{grid-template-columns:1fr}.accounts-guide-column{grid-template-columns:1fr 1fr}}
+@media(max-width:640px){.accounts-admin-head{align-items:flex-start;flex-direction:column}.accounts-secure-tag{align-self:flex-start}.accounts-overview{grid-template-columns:1fr;gap:8px}.accounts-overview-card{padding:11px 13px}.accounts-create-panel{padding:17px 15px}.accounts-guide-column{grid-template-columns:1fr}.accounts-submit-row{align-items:stretch;flex-direction:column}.accounts-submit-row .auth-message{max-width:100%}.accounts-submit-row .button{width:100%}.accounts-form-grid{grid-template-columns:1fr}.accounts-email-field{grid-column:auto}}

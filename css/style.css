@@ -924,3 +924,38 @@ table tbody tr:hover{background:#f7f9fc}
 .attendance-footnote{margin:12px 0 0;color:#718198;font-size:9px}
 @media(max-width:760px){.attendance-summary{grid-template-columns:1fr;gap:8px}.attendance-summary-card{padding:12px 14px}.attendance-toolbar{grid-template-columns:1fr}.attendance-actions{justify-content:stretch}.attendance-actions .button{flex:1}.attendance-head{align-items:flex-start;flex-direction:column}.attendance-secure-tag{align-self:flex-start}}
 @media(max-width:640px){.attendance-control-panel,.attendance-list-panel{padding:15px}.attendance-list-heading{align-items:stretch;flex-direction:column}.attendance-list-heading .registry-search{width:100%;max-width:none}.attendance-actions{flex-direction:column}.attendance-actions .button{width:100%}}
+
+
+/* Journey Sessions — daily session control */
+.journeys-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin:3px 0 20px}
+.journeys-head h1{color:#172b45;font-size:clamp(28px,3vw,35px);letter-spacing:-1.2px;margin:8px 0 5px}
+.journeys-admin-tag{padding:9px 13px;border:1px solid #e5ebf2;border-radius:30px;background:#fff;color:#65758b;font-size:9px;font-weight:800;letter-spacing:.7px;white-space:nowrap}
+.journeys-date-panel{display:grid;grid-template-columns:1fr minmax(210px,.55fr);align-items:center;gap:20px;padding:19px 21px;margin-bottom:23px;background:#fff;border:1px solid #dfe6ef;border-radius:15px;box-shadow:0 5px 18px rgba(25,45,72,.04)}
+.journeys-date-panel h2,.journeys-section-heading h2{margin:4px 0;color:#203650;font:800 16px Manrope,sans-serif}
+.journeys-date-panel p{margin:0;color:#718198;font-size:10px}
+.journeys-date-panel .field label{font-size:8px;letter-spacing:.8px;color:#687a91;font-weight:800}
+.journeys-date-panel .field input{min-height:42px;background:#fbfcfd;color:#263a54;border:1px solid #d6dfeb;border-radius:9px}
+.journeys-step{font-size:8px;letter-spacing:1.1px;color:#a17a3c;font-weight:800}
+.journeys-section-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:15px;margin:0 0 12px}
+.journeys-section-heading p{margin:0;color:#718198;font-size:10px}
+.journey-management-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;margin-bottom:13px}
+.journey-management-card{padding:21px!important;background:#fff!important;border:1px solid #dfe6ef!important;border-radius:15px!important;box-shadow:0 5px 18px rgba(25,45,72,.045)!important}
+.journey-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:17px}
+.journey-card-icon{width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:#f8f0e2;color:#805b22;font:800 12px Manrope,sans-serif}
+.journey-evening .journey-card-icon{background:#eaf2fa;color:#315f8d}
+.journey-card-route{font-size:8px;font-weight:800;letter-spacing:.75px;color:#718198}
+.journey-card-kicker{font-size:8px;letter-spacing:1px;font-weight:800;color:#a17a3c}
+.journey-management-card h3{margin:5px 0 5px;color:#203650;font:800 20px Manrope,sans-serif}
+.journey-card-description{min-height:32px;margin:0 0 15px;color:#718198;font-size:10px;line-height:1.6}
+.journey-management-card .journey-status{display:inline-flex;align-items:center;padding:7px 10px;border-radius:30px;font-size:9px;font-weight:800;margin:0 0 15px}
+.journey-management-card .journey-status.is-open{background:#eaf5ee;color:#286b49}
+.journey-management-card .journey-status.is-closed{background:#eaf2fa;color:#315f8d}
+.journey-management-card .journey-status.is-pending{background:#fbf3e5;color:#805d20}
+.journey-time-block{padding:12px 13px;margin-bottom:15px;border:1px solid #e8edf3;border-radius:10px;background:#f8fafc}
+.journey-time-block>span{font-size:8px;letter-spacing:.8px;font-weight:800;color:#718198}
+.journey-time-block .journey-time{margin:5px 0 0;color:#40536c;font-size:10px;line-height:1.5}
+.journey-management-card .button{width:100%;min-height:42px}
+.journey-management-card .button:disabled{opacity:.5;cursor:not-allowed}
+.journeys-note{margin:0 0 18px;color:#718198;font-size:9px}
+@media(max-width:760px){.journey-management-grid{grid-template-columns:1fr}.journeys-date-panel{grid-template-columns:1fr;gap:12px}.journeys-head{align-items:flex-start;flex-direction:column}.journeys-admin-tag{align-self:flex-start}}
+@media(max-width:640px){.journeys-date-panel,.journey-management-card{padding:15px!important}.journeys-section-heading{align-items:flex-start;flex-direction:column}}

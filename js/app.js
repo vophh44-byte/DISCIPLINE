@@ -38,6 +38,7 @@ function setActivePage(page){
   else if(page==="accounts"){ location.hash=page; renderAccounts(); }
   else if(page==="attendance"){ location.hash=page; renderAttendance(); }
   else if(page==="journeys"){ location.hash=page; renderJourneys(); }
+  else if(page==="marks"){ location.hash=page; renderMarks(); }
   else { location.hash=page; renderPlaceholder(page); }
   closeSidebar();
 }
@@ -346,6 +347,42 @@ async function renderJourneys(){
   }catch(err){showToast(err.message);btn.disabled=false;}
  });
  try{await refresh();}catch(e){showToast("Could not load sessions: "+e.message);}
+}
+
+async function renderMarks(){
+ const db=window.disciplineSupabase;
+ pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">WORKSPACE / MARK MANAGEMENT</div><h1>Award & Deduct Marks</h1><p class="page-intro">Record verified awards and deductions. Every entry keeps an auditable before-and-after balance.</p></div><span class="demo-pill"><span class="pulse-dot"></span> LIVE DATABASE</span></div><section class="panel registry-panel"><div class="panel-heading"><div><h3>Record a mark transaction</h3><p>Only administrators can create mark transactions.</p></div></div><form id="markEntryForm"><div class="form-grid"><div class="field"><label for="markStudent">Student *</label><select id="markStudent" required><option value="">Loading students…</option></select></div><div class="field"><label for="markType">Transaction type *</label><select id="markType" required><option value="award">Award marks (+)</option><option value="deduction">Deduct marks (−)</option></select></div><div class="field"><label for="markAmount">Number of marks *</label><input id="markAmount" type="number" min="1" max="10000" step="1" required placeholder="e.g. 5"></div><div class="field"><label for="markSession">Journey session (optional)</label><select id="markSession"><option value="">Not linked to a session</option></select></div><div class="field full"><label for="markReason">Reason / explanation *</label><textarea id="markReason" rows="3" maxlength="500" required placeholder="Write a clear, factual reason (3–500 characters)"></textarea></div></div><div class="registry-form-actions"><button class="button button-primary" id="saveMarkButton" type="submit">Save mark transaction</button><span id="markFormMessage" class="registry-disclaimer" role="status"></span></div></form></section><section class="panel registry-panel"><div class="panel-heading"><div><h3>Student mark balances</h3><p>Balances are calculated from starting marks and all saved transactions.</p></div><input class="registry-search" id="markStudentSearch" type="search" placeholder="Search students…"></div><div class="table-scroll"><table class="registry-table"><thead><tr><th>STUDENT</th><th>STUDENT ID</th><th>STARTING MARKS</th><th>LIFETIME BALANCE</th></tr></thead><tbody id="markBalanceRows"><tr><td colspan="4">Loading…</td></tr></tbody></table></div></section><section class="panel registry-panel"><div class="panel-heading"><div><h3>Recent transactions</h3><p>Latest 50 saved mark entries.</p></div></div><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>STUDENT</th><th>TYPE</th><th>REASON</th><th>CHANGE</th><th>BALANCE AFTER</th></tr></thead><tbody id="markHistoryRows"><tr><td colspan="6">Loading…</td></tr></tbody></table></div></section>';
+ if(!db){showToast("Database is unavailable.");return;}
+ const studentSelect=document.getElementById("markStudent"),sessionSelect=document.getElementById("markSession"),balanceRows=document.getElementById("markBalanceRows"),historyRows=document.getElementById("markHistoryRows");
+ const sr=await db.from("students").select("id,student_code,full_name,class_group,starting_marks").eq("is_active",true).order("full_name");
+ if(sr.error){showToast("Could not load students: "+sr.error.message);return;}
+ const students=sr.data||[];
+ studentSelect.innerHTML='<option value="">Choose a student</option>'+students.map(x=>'<option value="'+x.id+'">'+escapeHTML(x.student_code)+' — '+escapeHTML(x.full_name)+'</option>').join("");
+ const today=disciplineToday(),jr=await db.from("journey_sessions").select("id,session_type,session_date").eq("session_date",today).order("session_type");
+ if(!jr.error)(jr.data||[]).forEach(x=>{const o=document.createElement("option");o.value=x.id;o.textContent=(x.session_type==="morning"?"Morning":"Evening")+" · "+x.session_date;sessionSelect.appendChild(o);});
+ async function loadMarkData(){
+  const [tr,allTx]=await Promise.all([
+   db.from("mark_transactions").select("id,student_id,transaction_type,amount,balance_delta,reason,balance_before,balance_after,occurred_at,students(full_name,student_code)").order("occurred_at",{ascending:false}).limit(50),
+   db.from("mark_transactions").select("student_id,balance_delta")
+  ]);
+  if(tr.error||allTx.error){showToast("Could not load mark history: "+(tr.error||allTx.error).message);return;}
+  const sums={};(allTx.data||[]).forEach(t=>sums[t.student_id]=(sums[t.student_id]||0)+t.balance_delta);
+  const q=document.getElementById("markStudentSearch").value.trim().toLowerCase();
+  balanceRows.innerHTML=students.filter(x=>(x.full_name+" "+x.student_code).toLowerCase().includes(q)).map(x=>'<tr><td><strong>'+escapeHTML(x.full_name)+'</strong></td><td>'+escapeHTML(x.student_code)+'</td><td>'+x.starting_marks+'</td><td><strong>'+((x.starting_marks||0)+(sums[x.id]||0))+'</strong></td></tr>').join("")||'<tr><td colspan="4">No matching active students.</td></tr>';
+  historyRows.innerHTML=(tr.data||[]).map(t=>'<tr><td>'+escapeHTML(new Date(t.occurred_at).toLocaleString("en-IN"))+'</td><td>'+escapeHTML(t.students?.full_name||"Student")+'<small class="registry-email">'+escapeHTML(t.students?.student_code||"")+'</small></td><td>'+escapeHTML(t.transaction_type)+'</td><td>'+escapeHTML(t.reason)+'</td><td class="'+(t.balance_delta>0?"positive-text":"negative-text")+'">'+(t.balance_delta>0?"+":"")+t.balance_delta+'</td><td>'+t.balance_after+'</td></tr>').join("")||'<tr><td colspan="6">No mark records yet.</td></tr>';
+ }
+ document.getElementById("markStudentSearch").addEventListener("input",loadMarkData);
+ document.getElementById("markEntryForm").addEventListener("submit",async e=>{
+  e.preventDefault();const btn=document.getElementById("saveMarkButton"),msg=document.getElementById("markFormMessage");
+  btn.disabled=true;btn.textContent="Saving securely…";msg.textContent="";
+  const args={p_student_id:studentSelect.value,p_transaction_type:document.getElementById("markType").value,p_amount:Number(document.getElementById("markAmount").value),p_reason:document.getElementById("markReason").value.trim(),p_session_id:sessionSelect.value||null};
+  try{
+   const result=await db.rpc("admin_record_mark",args);if(result.error)throw result.error;
+   e.target.reset();await loadMarkData();msg.textContent="Saved successfully. New balance: "+result.data.balance_after;showToast("Mark transaction saved.");
+  }catch(err){msg.textContent="Not saved: "+err.message;showToast("Could not save marks: "+err.message);}
+  finally{btn.disabled=false;btn.textContent="Save mark transaction";}
+ });
+ await loadMarkData();
 }
 
 function renderPlaceholder(page){

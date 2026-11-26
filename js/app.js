@@ -865,17 +865,54 @@ async function renderLedger(){
 }
 
 async function renderLeaderboard(){
- const db=window.disciplineSupabase,today=disciplineToday(),week=disciplineMonday(today);
- pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">MARK MANAGEMENT / RECOGNITION</div><h1>Hall of Excellence</h1><p class="page-intro">Rankings use the official calculated results for the selected week.</p></div><button class="button button-outline" data-page="reports">Open weekly publishing</button></div><section class="panel registry-panel"><div class="attendance-toolbar"><div class="field"><label for="leaderWeek">Week starting (Monday)</label><input id="leaderWeek" type="date" value="'+week+'"></div><button class="button button-outline" id="leaderLoad">Load leaderboard</button></div><div class="table-scroll"><table class="registry-table"><thead><tr><th>RANK</th><th>STUDENT</th><th>PUBLISHED WEEKLY SCORE</th></tr></thead><tbody id="leaderRows"><tr><td colspan="4">Loading…</td></tr></tbody></table></div><p id="leaderInfo" class="registry-disclaimer">Only published weekly results are ranked.</p></section>';
+ const db=window.disciplineSupabase,week=disciplineMonday(disciplineToday());
+ pageContent.innerHTML=`
+  <div class="leaderboard-head">
+   <div><div class="eyebrow"><span class="eyebrow-line"></span> RECOGNITION / WEEKLY RESULTS</div><h1>Hall of Excellence</h1><p class="page-intro">Celebrate student achievement using the official published score for each selected week.</p></div>
+   <div class="leaderboard-head-actions"><span class="leaderboard-secure-tag">PUBLISHED RESULTS ONLY</span><button class="button button-outline" data-page="reports">Manage weekly publishing</button></div>
+  </div>
+  <section class="leaderboard-control-panel">
+   <div><span class="leaderboard-step">RANKING PERIOD</span><h2>Choose a results week</h2><p>Only results already published by the administrator appear here.</p></div>
+   <div class="leaderboard-controls"><div class="field"><label for="leaderWeek">Week starting (Monday)</label><input id="leaderWeek" type="date" value="${week}"></div><button class="button button-primary" id="leaderLoad" type="button">Load leaderboard</button></div>
+  </section>
+  <section class="leaderboard-overview" aria-label="Leaderboard summary">
+   <article class="leaderboard-stat"><span>Students ranked</span><strong id="leaderCount">—</strong><small>Published results</small></article>
+   <article class="leaderboard-stat"><span>Top weekly score</span><strong id="leaderTopScore">—</strong><small id="leaderTopName">Leading student</small></article>
+   <article class="leaderboard-stat"><span>Results week</span><strong id="leaderWeekLabel">—</strong><small>Monday start date</small></article>
+  </section>
+  <section class="leaderboard-podium-panel">
+   <div class="leaderboard-section-heading"><div><span class="leaderboard-step">TOP PERFORMERS</span><h2>Weekly distinction</h2><p>The three highest published rankings for this week</p></div><span class="leaderboard-published-tag">Official ranking</span></div>
+   <div class="leaderboard-podium" id="leaderPodium"><div class="leaderboard-loading">Loading published rankings…</div></div>
+  </section>
+  <section class="leaderboard-table-panel">
+   <div class="leaderboard-section-heading"><div><span class="leaderboard-step">FULL RANKING</span><h2>Student leaderboard</h2><p>Up to 50 published student results, in official rank order</p></div><span class="leaderboard-list-tag">TOP 50</span></div>
+   <div class="table-scroll"><table class="registry-table leaderboard-table"><thead><tr><th>RANK</th><th>STUDENT</th><th>PUBLISHED WEEKLY SCORE</th></tr></thead><tbody id="leaderRows"><tr><td colspan="3">Loading…</td></tr></tbody></table></div>
+   <p id="leaderInfo" class="leaderboard-info" role="status">Only published weekly results are ranked.</p>
+  </section>
+  <footer class="page-footer"><span>DISCIPLINE · Hall of Excellence</span><span>Scores reflect published weekly results.</span></footer>`;
  if(!db){showToast("Database connection is unavailable.");return;}
  const input=document.getElementById("leaderWeek"),body=document.getElementById("leaderRows"),info=document.getElementById("leaderInfo");
  async function load(){
-  if(disciplineMonday(input.value)!==input.value){info.textContent="Choose a Monday.";body.innerHTML='<tr><td colspan="4">Invalid week start.</td></tr>';return;}
-  const r=await db.rpc("get_published_student_leaderboard",{p_week_start:input.value,p_limit:50});
-  if(r.error){info.textContent="Could not load leaderboard: "+r.error.message;return;}
-  const rows=r.data||[];
-  body.innerHTML=rows.map(x=>'<tr><td><strong>#'+x.rank+'</strong></td><td><strong>'+escapeHTML(x.full_name||"Student")+'</strong><small class="registry-email">'+escapeHTML(x.student_code||"")+'</small></td><td class="'+(x.weekly_net>=0?"positive-text":"negative-text")+'">'+(x.weekly_net>0?"+":"")+x.weekly_net+'</td></tr>').join("")||'<tr><td colspan="4">No published results for this week. Publish the weekly results first.</td></tr>';
-  info.textContent=rows.length+" published student result(s) · Week starting "+input.value+".";
+  const podium=document.getElementById("leaderPodium");
+  if(disciplineMonday(input.value)!==input.value){info.textContent="Choose a Monday.";body.innerHTML='<tr><td colspan="3">Invalid week start.</td></tr>';podium.innerHTML='<p class="leaderboard-empty">Select a valid Monday to view the rankings.</p>';return;}
+  const button=document.getElementById("leaderLoad");button.disabled=true;button.textContent="Loading…";
+  try{
+   const r=await db.rpc("get_published_student_leaderboard",{p_week_start:input.value,p_limit:50});
+   if(r.error)throw r.error;
+   const rows=r.data||[],top=rows[0];
+   document.getElementById("leaderCount").textContent=rows.length;
+   document.getElementById("leaderTopScore").textContent=top?((Number(top.weekly_net)>0?"+":"")+Number(top.weekly_net)):"—";
+   document.getElementById("leaderTopName").textContent=top?(top.full_name||"Student"):"No published leader";
+   document.getElementById("leaderWeekLabel").textContent=new Date(input.value+"T12:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"});
+   const featured=rows.slice(0,3),positions=[1,0,2];
+   podium.innerHTML=featured.length?positions.filter(i=>featured[i]).map(i=>{
+    const x=featured[i],rank=Number(x.rank),score=Number(x.weekly_net||0);
+    return '<article class="leaderboard-podium-card rank-'+rank+'"><span class="leaderboard-rank-label">'+(rank===1?"1ST PLACE":rank===2?"2ND PLACE":"3RD PLACE")+'</span><div class="leaderboard-medal">'+(rank===1?"01":rank===2?"02":"03")+'</div><h3>'+escapeHTML(x.full_name||"Student")+'</h3><p>'+escapeHTML(x.student_code||"")+'</p><strong class="leaderboard-podium-score '+(score>=0?"positive-text":"negative-text")+'">'+(score>0?"+":"")+score+'</strong><small>weekly net marks</small></article>';
+   }).join(""):'<p class="leaderboard-empty">No published results for this week. Publish the weekly results first.</p>';
+   body.innerHTML=rows.map(x=>'<tr><td><span class="leaderboard-rank-chip rank-chip-'+Number(x.rank)+'">#'+Number(x.rank)+'</span></td><td><strong>'+escapeHTML(x.full_name||"Student")+'</strong><small class="registry-email">'+escapeHTML(x.student_code||"")+'</small></td><td class="'+(Number(x.weekly_net)>=0?"positive-text":"negative-text")+'"><strong>'+(Number(x.weekly_net)>0?"+":"")+Number(x.weekly_net)+'</strong></td></tr>').join("")||'<tr><td colspan="3">No published results for this week. Publish the weekly results first.</td></tr>';
+   info.textContent=rows.length+" published student result(s) · Week starting "+input.value+".";
+  }catch(error){info.textContent="Could not load leaderboard: "+error.message;podium.innerHTML='<p class="leaderboard-empty">The published rankings could not be loaded. Please try again.</p>';showToast("Could not load leaderboard.");}
+  finally{button.disabled=false;button.textContent="Load leaderboard";}
  }
  document.getElementById("leaderLoad").addEventListener("click",load);input.addEventListener("change",load);await load();
 }

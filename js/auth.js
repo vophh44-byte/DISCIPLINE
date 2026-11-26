@@ -226,6 +226,19 @@
       );
     }
 
+    if (role === "student") {
+      const weekStart = disciplineMonday(disciplineToday());
+      const board = await client.rpc("get_published_student_leaderboard", { p_week_start: weekStart, p_limit: 10 });
+      const entries = board.data || [];
+      const boardRows = entries.map(x => '<tr><td><strong>#'+esc(x.rank)+'</strong></td><td><strong>'+esc(x.full_name)+'</strong><small class="registry-email">'+esc(x.student_code)+'</small></td><td class="'+(x.weekly_net >= 0 ? "positive-text" : "negative-text")+'">'+(x.weekly_net > 0 ? "+" : "")+esc(x.weekly_net)+'</td></tr>').join("");
+      container.insertAdjacentHTML("beforeend",
+        '<section class="panel registry-panel"><div class="panel-heading"><div><h3>Hall of Excellence</h3><p>Public rankings · week starting '+esc(weekStart)+'</p></div></div>' +
+        (board.error ? '<p>Leaderboard unavailable: '+esc(board.error.message)+'</p>' :
+        '<div class="table-scroll"><table class="registry-table"><thead><tr><th>RANK</th><th>STUDENT</th><th>WEEKLY SCORE</th></tr></thead><tbody>'+(boardRows || '<tr><td colspan="3">No published weekly results yet.</td></tr>')+'</tbody></table></div>') +
+        '<p class="registry-disclaimer">Only published weekly scores and basic student identifiers appear here. Private balances and incident details are not shown.</p></section>'
+      );
+    }
+
     if (role === "parent") {
       container.addEventListener("submit", async event => {
         const form = event.target.closest("form[data-parent-response-form]");

@@ -38,6 +38,10 @@
     return;
   }
 
+  // Capture the recovery type before client initialization consumes the URL fragment.
+  const recoveryFragmentAtLoad = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const cameFromPasswordRecovery = recoveryFragmentAtLoad.get("type") === "recovery";
+
   // Keep sessions in browser storage and refresh them automatically.
   const client = window.supabase.createClient(config.url, config.publishableKey, {
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
@@ -51,9 +55,7 @@
   const button = document.getElementById("loginButton");
   const forgotButton = document.getElementById("forgotPasswordButton");
   let selectedPortal = null;
-  // Capture the recovery type before Supabase processes and removes the URL fragment.
-  const recoveryFragment = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-  let isPasswordRecovery = recoveryFragment.get("type") === "recovery";
+  let isPasswordRecovery = cameFromPasswordRecovery;
   const isInviteSetup = new URLSearchParams(window.location.search).get("setup") === "1";
 
   function showPicker() {
@@ -188,7 +190,7 @@
         save.disabled = false;
         save.textContent = "Save password";
       }
-    });;
+    });
   }
 
   client.auth.onAuthStateChange(event => {

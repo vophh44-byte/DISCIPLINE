@@ -52,6 +52,7 @@
   });
 
   function showNewPasswordForm() {
+    if (isPasswordRecovery) return;
     isPasswordRecovery = true;
     gate.style.display = "grid";
     const card = gate.querySelector(".auth-card");

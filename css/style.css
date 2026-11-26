@@ -1074,3 +1074,45 @@ table tbody tr:hover{background:#f7f9fc}
 .leaderboard-controls .button:disabled{opacity:.6;cursor:wait}
 @media(max-width:760px){.leaderboard-head{align-items:flex-start;flex-direction:column}.leaderboard-head-actions{align-items:flex-start}.leaderboard-control-panel{grid-template-columns:1fr;gap:14px}.leaderboard-overview{gap:8px}.leaderboard-stat{padding:13px}.leaderboard-podium-panel,.leaderboard-table-panel{padding:16px}}
 @media(max-width:560px){.leaderboard-controls{align-items:stretch;flex-direction:column}.leaderboard-controls .button{width:100%}.leaderboard-overview{grid-template-columns:1fr}.leaderboard-podium{grid-template-columns:1fr}.leaderboard-podium-card{display:grid;grid-template-columns:55px 1fr auto;grid-template-rows:auto auto;align-items:center;column-gap:10px;text-align:left;padding:12px}.leaderboard-rank-label{grid-column:2;grid-row:1}.leaderboard-medal{grid-column:1;grid-row:1/3;margin:0}.leaderboard-podium-card h3{grid-column:2;grid-row:2}.leaderboard-podium-card p{grid-column:2;grid-row:3}.leaderboard-podium-score{grid-column:3;grid-row:1/3;margin:0;text-align:right}.leaderboard-podium-card>small{grid-column:3;grid-row:3;text-align:right}.leaderboard-section-heading{align-items:flex-start}}
+
+
+/* Discipline Ledger — transaction audit workspace */
+.ledger-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin:3px 0 19px}
+.ledger-head h1{margin:8px 0 5px;color:#172b45;font-size:clamp(28px,3vw,35px);letter-spacing:-1.2px}
+.ledger-live-tag,.ledger-record-limit{display:inline-flex;align-items:center;padding:9px 12px;border:1px solid #e5ebf2;border-radius:30px;background:#fff;color:#65758b;font-size:8px;font-weight:800;letter-spacing:.65px;white-space:nowrap}
+.ledger-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.ledger-stat{display:flex;flex-direction:column;gap:5px;min-width:0;padding:16px 18px;background:#fff!important;border:1px solid #dfe6ef;border-radius:13px;box-shadow:0 5px 18px rgba(25,45,72,.035)}
+.ledger-stat>span{color:#718198;font-size:9px;font-weight:700}
+.ledger-stat>strong{color:#203650;font:800 23px Manrope,sans-serif;overflow-wrap:anywhere}
+.ledger-stat>small{color:#8290a2;font-size:9px}
+.ledger-records-panel{padding:20px 21px;margin-bottom:15px;background:#fff!important;border:1px solid #dfe6ef!important;border-radius:15px;box-shadow:0 5px 18px rgba(25,45,72,.035)}
+.ledger-section-heading{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:17px}
+.ledger-step{color:#a17a3c;font-size:8px;font-weight:800;letter-spacing:1.1px}
+.ledger-section-heading h2{margin:5px 0;color:#203650;font:800 17px Manrope,sans-serif}
+.ledger-section-heading p{margin:0;color:#718198;font-size:10px;line-height:1.55}
+.ledger-filter-bar{display:grid;grid-template-columns:minmax(180px,.65fr) minmax(220px,1fr) auto;align-items:end;gap:12px;padding:14px;margin-bottom:12px;background:#f8fafc;border:1px solid #e6ecf2;border-radius:11px}
+.ledger-filter-bar .field{min-width:0}
+.ledger-filter-bar .field label{color:#687a91;font-size:8px;font-weight:800;letter-spacing:.7px}
+.ledger-filter-bar .field select,.ledger-filter-bar .field input{width:100%;min-height:40px;padding:9px 10px;background:#fff!important;color:#263a54!important;border:1px solid #d6dfeb!important;border-radius:9px;font-size:10px}
+.ledger-clear-button{min-height:40px;white-space:nowrap}
+.ledger-results-line{display:flex;justify-content:space-between;gap:12px;margin:0 0 10px;color:#687b91;font-size:9px}
+.ledger-results-line span:first-child{color:#40536c;font-weight:800}
+.ledger-table{min-width:790px}
+.ledger-table th{color:#718198!important;white-space:nowrap}
+.ledger-table td{color:#40536c;vertical-align:middle}
+.ledger-table td strong{color:#263a54}
+.ledger-table td small{display:block;margin-top:3px}
+.ledger-date{font-weight:700;color:#40536c}
+.ledger-reason{min-width:170px;max-width:320px;line-height:1.5}
+.ledger-type-chip{display:inline-flex;padding:6px 8px;border-radius:7px;background:#eef2f6;color:#4d6178;font-size:8px;font-weight:800;text-transform:capitalize;white-space:nowrap}
+.ledger-type-chip.type-award,.ledger-type-chip.type-appreciation{background:#eaf5ee;color:#286b49}
+.ledger-type-chip.type-deduction{background:#fbefed;color:#9a493d}
+.ledger-type-chip.type-transfer-in{background:#eaf2fa;color:#315f8d}
+.ledger-type-chip.type-transfer-out{background:#f8f0e2;color:#805d28}
+.ledger-type-chip.type-correction{background:#f0edf8;color:#65518d}
+.ledger-table .positive-text,.ledger-table .negative-text{font-weight:800}
+.ledger-neutral{color:#526780;font-weight:800}
+.ledger-empty-cell{padding:25px!important;text-align:center;color:#718198!important}
+.ledger-footnote{margin:13px 0 0;color:#718198;font-size:9px;line-height:1.55}
+@media(max-width:760px){.ledger-head{align-items:flex-start;flex-direction:column}.ledger-live-tag{align-self:flex-start}.ledger-filter-bar{grid-template-columns:1fr 1fr}.ledger-search-filter{grid-column:1/-1;grid-row:1}.ledger-clear-button{width:100%}.ledger-results-line{align-items:flex-start;flex-direction:column;gap:4px}}
+@media(max-width:560px){.ledger-overview{grid-template-columns:1fr;gap:8px}.ledger-stat{padding:13px 15px}.ledger-records-panel{padding:15px}.ledger-filter-bar{grid-template-columns:1fr;padding:11px}.ledger-search-filter{grid-column:auto;grid-row:auto}.ledger-section-heading{align-items:flex-start;flex-direction:column}.ledger-results-line{font-size:8px}}

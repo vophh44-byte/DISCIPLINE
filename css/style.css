@@ -179,3 +179,11 @@ body:not(.is-authenticated) .app-shell{display:none}
 .journey-time{min-height:16px;color:var(--muted);font-size:10px}
 .journey-management-card .button{margin-top:5px}
 @media(max-width:650px){.journey-management-grid{grid-template-columns:1fr}.attendance-toolbar{align-items:stretch}.attendance-actions{width:100%}.attendance-actions .button{flex:1}}
+
+/* Parent response controls */
+.registry-response-form{display:grid;grid-template-columns:minmax(150px,.8fr) minmax(220px,1.5fr) auto;align-items:end;gap:10px;margin:10px 0;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2,rgba(127,127,127,.04))}
+.registry-response-form .field{margin:0;min-width:0}
+.registry-response-form textarea{min-height:46px;resize:vertical}
+.registry-response-form button{white-space:nowrap}
+.registry-response-form [data-response-status]{grid-column:1/-1}
+@media(max-width:760px){.registry-response-form{grid-template-columns:1fr}.registry-response-form [data-response-status]{grid-column:1}.registry-response-form button{width:100%}}

@@ -31,18 +31,27 @@ function showToast(message){
   toastTimer = setTimeout(()=>toast.classList.remove("show"),2800);
 }
 function setActivePage(page){
+  if(!pageMeta[page]) page="dashboard";
   document.querySelectorAll(".nav-item").forEach(btn=>btn.classList.toggle("active",btn.dataset.page===page));
-  breadcrumbCurrent.textContent = (pageMeta[page]||pageMeta.dashboard).title;
-  if(page==="dashboard"){ location.hash=""; renderDashboard(); }
-  else if(page==="students"){ location.hash=page; renderStudents(); }
-  else if(page==="accounts"){ location.hash=page; renderAccounts(); }
-  else if(page==="attendance"){ location.hash=page; renderAttendance(); }
-  else if(page==="journeys"){ location.hash=page; renderJourneys(); }
-  else if(page==="marks"){ location.hash=page; renderMarks(); }
-  else if(page==="dedications"){ location.hash=page; renderDedications(); }
-  else if(page==="reports"){ location.hash=page; renderWeeklyReports(); }
-  else { location.hash=page; renderPlaceholder(page); }
+  breadcrumbCurrent.textContent=(pageMeta[page]||pageMeta.dashboard).title;
+  location.hash=page==="dashboard"?"":page;
+  const renderers={
+    dashboard:renderDashboard,students:renderStudents,parents:renderParents,accounts:renderAccounts,
+    attendance:renderAttendance,journeys:renderJourneys,marks:renderMarks,dedications:renderDedications,
+    leaderboard:renderLeaderboard,ledger:renderLedger,incidents:renderIncidents,
+    analytics:renderAnalytics,reports:renderWeeklyReports,portals:renderPortals,settings:renderSettings
+  };
+  try{
+    const task=(renderers[page]||(()=>renderPlaceholder(page)))();
+    if(task&&typeof task.catch==="function") task.catch(error=>showPageError(error));
+  }catch(error){showPageError(error);}
   closeSidebar();
+}
+function showPageError(error){
+  const message=error&&error.message?error.message:String(error||"Unknown error");
+  console.error("DISCIPLINE page error:",error);
+  if(pageContent) pageContent.innerHTML='<section class="panel registry-panel"><h2>Page could not be loaded</h2><p>'+escapeHTML(message)+'</p><button class="button button-primary" data-page="dashboard">Return to Command Center</button></section>';
+  showToast("Page error: "+message);
 }
 function closeSidebar(){
   document.getElementById("sidebar").classList.remove("open");
@@ -474,6 +483,134 @@ async function renderWeeklyReports(){
  await load();
 }
 
+
+
+async function renderParents(){
+ const db=window.disciplineSupabase;
+ pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">ADMINISTRATION / FAMILY ACCESS</div><h1>Parent Management</h1><p class="page-intro">Review parent accounts and the student profiles they are linked to.</p></div><button class="button button-primary" data-page="accounts">Create parent account</button></div><section class="panel registry-panel"><div class="panel-heading"><div><h3>Parent-to-student links</h3><p>Only administrator-visible links are shown here.</p></div><input id="parentSearch" class="registry-search" placeholder="Search parent or student…"></div><div class="table-scroll"><table class="registry-table"><thead><tr><th>PARENT</th><th>EMAIL</th><th>STUDENT</th><th>STUDENT ID</th><th>RELATIONSHIP</th></tr></thead><tbody id="parentRows"><tr><td colspan="5">Loading…</td></tr></tbody></table></div></section>';
+ if(!db){showToast("Database connection is unavailable.");return;}
+ const body=document.getElementById("parentRows");
+ const r=await db.from("parent_student_links").select("parent_user_id,relationship_label,profiles(display_name,email),students(full_name,student_code)").order("created_at",{ascending:false});
+ if(r.error){body.innerHTML='<tr><td colspan="5">Could not load parent links: '+escapeHTML(r.error.message)+'</td></tr>';return;}
+ const rows=r.data||[];
+ function draw(){
+  const q=document.getElementById("parentSearch").value.trim().toLowerCase();
+  const filtered=rows.filter(x=>[x.profiles?.display_name,x.profiles?.email,x.students?.full_name,x.students?.student_code,x.relationship_label].join(" ").toLowerCase().includes(q));
+  body.innerHTML=filtered.map(x=>'<tr><td><strong>'+escapeHTML(x.profiles?.display_name||"Parent")+'</strong></td><td>'+escapeHTML(x.profiles?.email||"—")+'</td><td>'+escapeHTML(x.students?.full_name||"Student")+'</td><td>'+escapeHTML(x.students?.student_code||"—")+'</td><td>'+escapeHTML(x.relationship_label||"—")+'</td></tr>').join("")||'<tr><td colspan="5">No linked parent accounts found. Create an account to add one.</td></tr>';
+ }
+ document.getElementById("parentSearch").addEventListener("input",draw);draw();
+}
+
+async function renderLedger(){
+ const db=window.disciplineSupabase;
+ pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">MARK MANAGEMENT / AUDIT TRAIL</div><h1>Discipline Ledger</h1><p class="page-intro">Search the saved, append-only history of awards, deductions and dedications.</p></div><span class="demo-pill">LIVE DATABASE</span></div><section class="panel registry-panel"><div class="panel-heading"><div><h3>All mark transactions</h3><p>Most recent 500 transactions.</p></div><div class="attendance-actions"><select id="ledgerType"><option value="">All types</option><option value="award">Awards</option><option value="deduction">Deductions</option><option value="transfer_out">Transfers sent</option><option value="transfer_in">Transfers received</option><option value="appreciation">Appreciation</option><option value="correction">Corrections</option></select><input id="ledgerSearch" class="registry-search" placeholder="Search student or reason…"></div></div><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>STUDENT</th><th>TYPE</th><th>REASON</th><th>CHANGE</th><th>BEFORE</th><th>AFTER</th></tr></thead><tbody id="ledgerRows"><tr><td colspan="7">Loading…</td></tr></tbody></table></div></section>';
+ if(!db){showToast("Database connection is unavailable.");return;}
+ const body=document.getElementById("ledgerRows");
+ const r=await db.from("mark_transactions").select("id,student_id,transaction_type,amount,balance_delta,reason,balance_before,balance_after,occurred_at,students(full_name,student_code)").order("occurred_at",{ascending:false}).limit(500);
+ if(r.error){body.innerHTML='<tr><td colspan="7">Could not load ledger: '+escapeHTML(r.error.message)+'</td></tr>';return;}
+ const rows=r.data||[];
+ function draw(){
+  const q=document.getElementById("ledgerSearch").value.trim().toLowerCase(),type=document.getElementById("ledgerType").value;
+  const filtered=rows.filter(x=>(!type||x.transaction_type===type)&&[x.students?.full_name,x.students?.student_code,x.reason,x.transaction_type].join(" ").toLowerCase().includes(q));
+  body.innerHTML=filtered.map(x=>'<tr><td>'+escapeHTML(new Date(x.occurred_at).toLocaleString("en-IN"))+'</td><td><strong>'+escapeHTML(x.students?.full_name||"Student")+'</strong><small class="registry-email">'+escapeHTML(x.students?.student_code||"")+'</small></td><td>'+escapeHTML(x.transaction_type)+'</td><td>'+escapeHTML(x.reason||"—")+'</td><td class="'+(x.balance_delta>0?"positive-text":"negative-text")+'">'+(x.balance_delta>0?"+":"")+x.balance_delta+'</td><td>'+x.balance_before+'</td><td>'+x.balance_after+'</td></tr>').join("")||'<tr><td colspan="7">No matching transactions.</td></tr>';
+ }
+ document.getElementById("ledgerSearch").addEventListener("input",draw);document.getElementById("ledgerType").addEventListener("change",draw);draw();
+}
+
+async function renderLeaderboard(){
+ const db=window.disciplineSupabase,today=disciplineToday(),week=disciplineMonday(today);
+ pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">MARK MANAGEMENT / RECOGNITION</div><h1>Hall of Excellence</h1><p class="page-intro">Rankings use the official calculated results for the selected week.</p></div><button class="button button-outline" data-page="reports">Open weekly publishing</button></div><section class="panel registry-panel"><div class="attendance-toolbar"><div class="field"><label for="leaderWeek">Week starting (Monday)</label><input id="leaderWeek" type="date" value="'+week+'"></div><button class="button button-outline" id="leaderLoad">Load leaderboard</button></div><div class="table-scroll"><table class="registry-table"><thead><tr><th>RANK</th><th>STUDENT</th><th>WEEKLY NET</th><th>LIFETIME BALANCE</th></tr></thead><tbody id="leaderRows"><tr><td colspan="4">Loading…</td></tr></tbody></table></div><p id="leaderInfo" class="registry-disclaimer">Only published weekly results are ranked.</p></section>';
+ if(!db){showToast("Database connection is unavailable.");return;}
+ const input=document.getElementById("leaderWeek"),body=document.getElementById("leaderRows"),info=document.getElementById("leaderInfo");
+ async function load(){
+  if(disciplineMonday(input.value)!==input.value){info.textContent="Choose a Monday.";body.innerHTML='<tr><td colspan="4">Invalid week start.</td></tr>';return;}
+  const r=await db.from("weekly_results").select("student_id,weekly_net,lifetime_balance,published_at,students(full_name,student_code)").eq("week_start",input.value).not("published_at","is",null).order("weekly_net",{ascending:false}).order("lifetime_balance",{ascending:false});
+  if(r.error){info.textContent="Could not load leaderboard: "+r.error.message;return;}
+  const rows=r.data||[];
+  body.innerHTML=rows.map((x,i)=>'<tr><td><strong>#'+(i+1)+'</strong></td><td><strong>'+escapeHTML(x.students?.full_name||"Student")+'</strong><small class="registry-email">'+escapeHTML(x.students?.student_code||"")+'</small></td><td class="'+(x.weekly_net>=0?"positive-text":"negative-text")+'">'+(x.weekly_net>0?"+":"")+x.weekly_net+'</td><td>'+x.lifetime_balance+'</td></tr>').join("")||'<tr><td colspan="4">No published results for this week. Publish the weekly results first.</td></tr>';
+  info.textContent=rows.length+" published student result(s) · Week starting "+input.value+".";
+ }
+ document.getElementById("leaderLoad").addEventListener("click",load);input.addEventListener("change",load);await load();
+}
+
+async function renderIncidents(){
+ const db=window.disciplineSupabase;
+ const dateParts=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date()),dt={};
+ dateParts.forEach(x=>dt[x.type]=x.value);
+ const localDateTime=dt.year+"-"+dt.month+"-"+dt.day+"T"+dt.hour+":"+dt.minute;
+ const categories=[["noise_disturbance","Noise / disturbance"],["fighting_aggression","Fighting / aggression"],["disrespect","Disrespect"],["misbehaviour","Misbehaviour"],["safety","Safety concern"],["abusive_language","Abusive language"],["cleanliness","Cleanliness"],["bullying","Bullying"],["other","Other"]];
+ pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">BEHAVIOUR / PRIVATE ADMIN RECORDS</div><h1>Incident Center</h1><p class="page-intro">Record factual observations privately. New incidents are not automatically shared with parents.</p></div></div><section class="panel registry-panel"><div class="panel-heading"><div><h3>Record an incident</h3><p>Use neutral language and include only details you have verified.</p></div></div><form id="incidentForm"><div class="form-grid"><div class="field"><label for="incidentStudent">Student *</label><select id="incidentStudent" required><option value="">Loading students…</option></select></div><div class="field"><label for="incidentCategory">Category *</label><select id="incidentCategory">'+categories.map(x=>'<option value="'+x[0]+'">'+x[1]+'</option>').join("")+'</select></div><div class="field"><label for="incidentSeverity">Severity *</label><select id="incidentSeverity"><option value="low">Low</option><option value="moderate">Moderate</option><option value="high">High</option><option value="critical">Critical</option></select></div><div class="field"><label for="incidentWhen">Date and time *</label><input id="incidentWhen" type="datetime-local" value="'+localDateTime+'" required></div><div class="field"><label for="incidentSession">Journey session (optional)</label><select id="incidentSession"><option value="">Not linked</option></select></div><div class="field"><label for="incidentDeduction">Deduction marks (optional)</label><input id="incidentDeduction" type="number" min="0" max="10000" step="1" value="0"></div><div class="field full"><label for="incidentDescription">Factual description *</label><textarea id="incidentDescription" rows="4" maxlength="3000" required placeholder="Describe only what was observed, without assumptions."></textarea></div><div class="field full"><label for="incidentExactWords">Exact words (only when essential and verified)</label><textarea id="incidentExactWords" rows="2" maxlength="1000" placeholder="Optional. Restricted to administrator records until separately reviewed."></textarea></div><div class="field full"><label for="incidentAction">Action taken</label><textarea id="incidentAction" rows="2" maxlength="1000" placeholder="Optional action or follow-up."></textarea></div></div><div class="registry-form-actions"><button class="button button-primary" id="saveIncident" type="submit">Save private incident</button><span id="incidentMessage" class="registry-disclaimer" role="status"></span></div></form></section><section class="panel registry-panel"><div class="panel-heading"><div><h3>Recent incidents</h3><p>Administrator-only view. Parent publication is not enabled from this screen.</p></div></div><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>STUDENT</th><th>CATEGORY</th><th>SEVERITY</th><th>OBSERVATION</th><th>DEDUCTION</th></tr></thead><tbody id="incidentRows"><tr><td colspan="6">Loading…</td></tr></tbody></table></div></section>';
+ if(!db){showToast("Database connection is unavailable.");return;}
+ const studentSelect=document.getElementById("incidentStudent"),sessionSelect=document.getElementById("incidentSession"),body=document.getElementById("incidentRows");
+ const [students,sessions]=await Promise.all([
+  db.from("students").select("id,student_code,full_name").eq("is_active",true).order("full_name"),
+  db.from("journey_sessions").select("id,session_type,session_date").order("session_date",{ascending:false}).limit(30)
+ ]);
+ if(students.error)throw students.error;
+ studentSelect.innerHTML='<option value="">Choose a student</option>'+(students.data||[]).map(x=>'<option value="'+x.id+'">'+escapeHTML(x.student_code)+' — '+escapeHTML(x.full_name)+'</option>').join("");
+ if(!sessions.error)(sessions.data||[]).forEach(x=>{const o=document.createElement("option");o.value=x.id;o.textContent=x.session_type+" · "+x.session_date;sessionSelect.appendChild(o);});
+ async function load(){
+  const r=await db.from("incidents").select("id,student_id,category,severity,factual_description,occurred_at,mark_transaction_id,students(full_name,student_code)").order("occurred_at",{ascending:false}).limit(100);
+  if(r.error){body.innerHTML='<tr><td colspan="6">Could not load incidents: '+escapeHTML(r.error.message)+'</td></tr>';return;}
+  body.innerHTML=(r.data||[]).map(x=>'<tr><td>'+escapeHTML(new Date(x.occurred_at).toLocaleString("en-IN"))+'</td><td><strong>'+escapeHTML(x.students?.full_name||"Student")+'</strong><small class="registry-email">'+escapeHTML(x.students?.student_code||"")+'</small></td><td>'+escapeHTML(x.category)+'</td><td>'+escapeHTML(x.severity)+'</td><td>'+escapeHTML(x.factual_description)+'</td><td>'+(x.mark_transaction_id?"Recorded":"—")+'</td></tr>').join("")||'<tr><td colspan="6">No incidents have been recorded.</td></tr>';
+ }
+ document.getElementById("incidentForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const btn=document.getElementById("saveIncident"),msg=document.getElementById("incidentMessage");
+  const amount=Number(document.getElementById("incidentDeduction").value||0);
+  if(!studentSelect.value){msg.textContent="Choose a student.";return;}
+  if(!Number.isInteger(amount)||amount<0||amount>10000){msg.textContent="Deduction must be a whole number from 0 to 10,000.";return;}
+  btn.disabled=true;btn.textContent="Saving…";msg.textContent="";
+  try{
+   const uid=await disciplineAdminId(db),when=new Date(document.getElementById("incidentWhen").value+":00+05:30");
+   if(Number.isNaN(when.getTime()))throw new Error("Enter a valid date and time.");
+   const payload={student_id:studentSelect.value,session_id:sessionSelect.value||null,category:document.getElementById("incidentCategory").value,severity:document.getElementById("incidentSeverity").value,factual_description:document.getElementById("incidentDescription").value.trim(),exact_words:document.getElementById("incidentExactWords").value.trim()||null,action_taken:document.getElementById("incidentAction").value.trim()||null,occurred_at:when.toISOString(),recorded_by:uid,transcript_verified:false};
+   if(payload.factual_description.length<5)throw new Error("Please provide a factual description of at least 5 characters.");
+   const created=await db.from("incidents").insert(payload).select("id").single();
+   if(created.error)throw created.error;
+   let markNote="";
+   if(amount>0){
+    const mark=await db.rpc("admin_record_mark",{p_student_id:studentSelect.value,p_transaction_type:"deduction",p_amount:amount,p_reason:"Incident deduction: "+payload.category+" — "+payload.factual_description.slice(0,420),p_session_id:sessionSelect.value||null});
+    if(mark.error)markNote=" Incident saved, but deduction could not be saved: "+mark.error.message;
+    else{
+     const linked=await db.from("incidents").update({mark_transaction_id:mark.data.transaction_id||mark.data.id}).eq("id",created.data.id);
+     if(linked.error)markNote=" Deduction saved, but linking it to the incident failed: "+linked.error.message;
+    }
+   }
+   msg.textContent="Incident saved privately."+markNote;
+   e.target.reset();document.getElementById("incidentWhen").value=localDateTime;
+   await load();
+   showToast(markNote?"Incident saved with a follow-up issue.":"Incident saved privately.");
+  }catch(err){msg.textContent="Not saved: "+err.message;showToast("Incident save failed: "+err.message);}
+  finally{btn.disabled=false;btn.textContent="Save private incident";}
+ });
+ await load();
+}
+
+async function renderAnalytics(){
+ const db=window.disciplineSupabase,week=disciplineMonday(disciplineToday()),next=new Date(week+"T12:00:00");
+ next.setDate(next.getDate()+7);
+ const end=next.getFullYear()+"-"+String(next.getMonth()+1).padStart(2,"0")+"-"+String(next.getDate()).padStart(2,"0");
+ pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">REPORTING / LIVE MEASURES</div><h1>Performance Analytics</h1><p class="page-intro">A factual summary of activity recorded during the current Monday–Sunday week.</p></div><button class="button button-outline" data-page="reports">Weekly results</button></div><div class="stats-grid"><article class="stat-card"><div class="stat-label">Awards</div><div class="stat-value" id="analyticsAwards">—</div></article><article class="stat-card"><div class="stat-label">Deductions</div><div class="stat-value" id="analyticsDeductions">—</div></article><article class="stat-card"><div class="stat-label">Net mark movement</div><div class="stat-value" id="analyticsNet">—</div></article><article class="stat-card"><div class="stat-label">Recorded incidents</div><div class="stat-value" id="analyticsIncidents">—</div></article></div><section class="panel registry-panel"><div class="panel-heading"><div><h3>Daily mark activity</h3><p id="analyticsWeek">Loading…</p></div></div><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>AWARDS</th><th>DEDUCTIONS</th><th>NET (ALL TRANSACTIONS)</th></tr></thead><tbody id="analyticsRows"><tr><td colspan="4">Loading…</td></tr></tbody></table></div></section>';
+ if(!db){showToast("Database connection is unavailable.");return;}
+ const [tx,inc]=await Promise.all([
+  db.from("mark_transactions").select("transaction_type,amount,balance_delta,occurred_at").gte("occurred_at",week+"T00:00:00+05:30").lt("occurred_at",end+"T00:00:00+05:30"),
+  db.from("incidents").select("id",{count:"exact",head:true}).gte("occurred_at",week+"T00:00:00+05:30").lt("occurred_at",end+"T00:00:00+05:30")
+ ]);
+ if(tx.error)throw tx.error;if(inc.error)throw inc.error;
+ const rows=tx.data||[],awards=rows.filter(x=>x.transaction_type==="award").reduce((n,x)=>n+x.amount,0),deductions=rows.filter(x=>x.transaction_type==="deduction").reduce((n,x)=>n+x.amount,0),net=rows.reduce((n,x)=>n+x.balance_delta,0),byDay={};
+ rows.forEach(x=>{const day=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(x.occurred_at));if(!byDay[day])byDay[day]={awards:0,deductions:0,net:0};if(x.transaction_type==="award")byDay[day].awards+=x.amount;if(x.transaction_type==="deduction")byDay[day].deductions+=x.amount;byDay[day].net+=x.balance_delta;});
+ document.getElementById("analyticsAwards").textContent=awards;document.getElementById("analyticsDeductions").textContent=deductions;document.getElementById("analyticsNet").textContent=(net>0?"+":"")+net;document.getElementById("analyticsIncidents").textContent=inc.count??0;document.getElementById("analyticsWeek").textContent="Week "+week+" to "+new Date(end+"T12:00:00").toLocaleDateString("en-IN");
+ document.getElementById("analyticsRows").innerHTML=Object.keys(byDay).sort().map(day=>'<tr><td>'+day+'</td><td>+'+byDay[day].awards+'</td><td>−'+byDay[day].deductions+'</td><td class="'+(byDay[day].net>=0?"positive-text":"negative-text")+'">'+(byDay[day].net>0?"+":"")+byDay[day].net+'</td></tr>').join("")||'<tr><td colspan="4">No mark activity recorded this week.</td></tr>';
+}
+
+function renderPortals(){
+ pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">ACCESS / ROLE PORTALS</div><h1>Portal Overview</h1><p class="page-intro">Student and parent accounts use the same secure sign-in page and are routed by their assigned role.</p></div></div><section class="panel registry-panel"><h3>Student portal</h3><p>Students can view their own mark balance, recent mark history, published weekly results and relevant records. They cannot create or change marks.</p></section><section class="panel registry-panel"><h3>Parent portal</h3><p>Parents can view only their linked child’s published results and permitted reports. Parent accounts must be created by the administrator.</p></section><section class="panel registry-panel"><h3>Manage access</h3><p>Use Portal Accounts to send an invitation. The invited person sets their own password; never ask them to share it.</p><button class="button button-primary" data-page="accounts">Open Portal Accounts</button></section>';
+}
+function renderSettings(){
+ pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">ADMINISTRATION / SYSTEM</div><h1>Settings</h1><p class="page-intro">Current system rules and security boundaries.</p></div></div><section class="panel registry-panel"><h3>Weekly scoring period</h3><p>Monday 00:00 through Sunday 23:59 · Asia/Kolkata. Negative balances are allowed; historical transactions are retained.</p></section><section class="panel registry-panel"><h3>Roles and permissions</h3><p>Administrator: full control. Student: own records, view only. Parent: linked child records, view only. Parent and student accounts are created by the administrator.</p></section><section class="panel registry-panel"><h3>Data protection</h3><p>Mark changes are stored in the transaction ledger. Incident records start private and are not automatically published to parents. Do not store passwords, private keys or unnecessary personal details in this application.</p></section>';
+}
+
 function renderPlaceholder(page){
   const meta=pageMeta[page]||pageMeta.dashboard;
   const cards = {
@@ -511,7 +648,7 @@ document.addEventListener("click",e=>{
   const pageBtn=e.target.closest("[data-page]");
   const actionBtn=e.target.closest("[data-action]");
   if(pageBtn)setActivePage(pageBtn.dataset.page);
-  if(actionBtn)openModal(actionBtn.dataset.action);
+  if(actionBtn&&actionBtn.dataset.action==="add-student")setActivePage("students");
   if(e.target.closest(".notice-dismiss"))e.target.closest(".notice-banner").remove();
   if(e.target.closest("#dateButton"))showToast("Weekly period: Monday to Sunday · Asia/Kolkata");
   if(e.target.closest("#notificationButton"))showToast("No live notifications in local preview.");
@@ -523,5 +660,4 @@ document.getElementById("sidebarBackdrop").addEventListener("click",closeSidebar
 document.getElementById("modalClose").addEventListener("click",closeModal);
 modalBackdrop.addEventListener("click",e=>{if(e.target===modalBackdrop)closeModal();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeModal();closeSidebar();}});
-const hash=location.hash.replace("#","");
-if(hash&&pageMeta[hash])setActivePage(hash);
+// The authenticated role controller opens the requested hash route after sign-in.

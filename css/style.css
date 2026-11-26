@@ -306,3 +306,20 @@ img,svg,video,canvas{max-width:100%}
  .stat-card{min-width:0}
  .registry-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+
+/* Parent live journey status */
+.parent-journey-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0 20px}
+.parent-journey-card{min-width:0;padding:15px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.018)}
+.parent-journey-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.parent-journey-card-head>div{display:grid;gap:5px;min-width:0}
+.parent-journey-card-head strong{font:700 13px Manrope,sans-serif;overflow-wrap:anywhere}
+.parent-journey-card-head .session-status{white-space:nowrap}
+.parent-journey-vehicle{font-size:10px;color:var(--muted);margin:8px 0}
+.parent-journey-times{display:flex;gap:14px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:10px;font-size:10px;color:var(--muted)}
+.parent-journey-times strong{color:var(--text);margin-left:4px}
+@media(max-width:640px){
+ .parent-journey-grid{grid-template-columns:1fr}
+ .parent-journey-card{padding:13px}
+ .parent-journey-card-head{flex-wrap:wrap}
+}

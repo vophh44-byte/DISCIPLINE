@@ -1049,10 +1049,41 @@ async function renderIncidents(){
      <div class="field full"><label for="incidentDescription">Factual description *</label><textarea id="incidentDescription" rows="4" maxlength="3000" required placeholder="Describe what was directly observed, when it happened and any relevant context."></textarea></div>
      <div class="field full"><label for="incidentExactWords">Exact words (only when essential and verified)</label><textarea id="incidentExactWords" rows="2" maxlength="1000" placeholder="Optional. Include exact wording only when necessary and accurately verified."></textarea><small>Exact words remain in the administrator record until separately reviewed.</small></div>
      <div class="field full"><label for="incidentAction">Action taken</label><textarea id="incidentAction" rows="2" maxlength="1000" placeholder="Optional action, support provided or follow-up required."></textarea></div>
+     <div class="field full incidents-audio-capture">
+      <strong>Optional temporary audio evidence</strong>
+      <p>Record only when the school has obtained the required permission and everyone being recorded has been informed. Recording is manual, never continuous.</p>
+      <label class="incidents-consent"><input id="incidentAudioConsent" type="checkbox"> I confirm the required school / guardian permission and notice have been handled.</label>
+      <div class="incidents-audio-actions">
+       <button class="button button-outline" id="incidentStartRecording" type="button">Start recording</button>
+       <button class="button button-quiet" id="incidentStopRecording" type="button" disabled>Stop recording</button>
+       <span id="incidentAudioStatus" role="status">No audio recorded.</span>
+      </div>
+      <audio id="incidentAudioPreview" controls hidden></audio>
+      <small>Maximum 60 seconds and 8 MB. Audio stays private and is deleted immediately after an administrator verifies the transcript.</small>
+     </div>
     </div>
     <div class="incidents-form-footer"><div><button class="button button-primary" id="saveIncident" type="submit">Save private incident</button><span id="incidentMessage" class="incidents-message" role="status"></span></div><small>New records are not automatically shared with parents.</small></div>
    </form>
   </section>
+  <dialog id="incidentReviewDialog" class="incidents-review-dialog" aria-labelledby="incidentReviewTitle">
+   <form id="incidentReviewForm">
+    <span class="incidents-step">STEP 03 · ADMINISTRATOR REVIEW</span>
+    <h2 id="incidentReviewTitle">Review incident evidence</h2>
+    <p class="incidents-review-notice">Check the recording and transcript carefully. When you verify, temporary audio is permanently deleted before verification is saved. Parent publication remains a separate step.</p>
+    <div id="incidentReviewAudioWrap" class="incidents-review-audio" hidden>
+     <label for="incidentReviewAudio">Temporary audio · private administrator access</label>
+     <audio id="incidentReviewAudio" controls></audio>
+     <small id="incidentReviewAudioStatus"></small>
+    </div>
+    <label for="incidentReviewTranscript">Reviewed transcript / exact words (optional when no audio is attached)</label>
+    <textarea id="incidentReviewTranscript" rows="4" maxlength="1000" placeholder="Correct the transcript after listening. Enter only wording you can verify."></textarea>
+    <p id="incidentReviewMessage" class="incidents-message" role="status"></p>
+    <div class="incidents-review-actions">
+     <button class="button button-quiet" id="incidentReviewCancel" type="button">Cancel</button>
+     <button class="button button-primary" id="incidentReviewVerify" type="submit">Verify transcript & delete audio</button>
+    </div>
+   </form>
+  </dialog>
   <section class="incidents-records-panel">
    <div class="incidents-section-heading"><div><span class="incidents-step">STEP 02 · REVIEW</span><h2>Recent incident records</h2><p>Review details and control whether a verified report is visible to linked parents.</p></div><span class="incidents-record-limit">LATEST 100</span></div>
    <div class="incidents-filter-bar">
@@ -1072,11 +1103,16 @@ async function renderIncidents(){
  if(students.error)throw students.error;
  studentSelect.innerHTML='<option value="">Choose a student</option>'+(students.data||[]).map(x=>'<option value="'+x.id+'">'+escapeHTML(x.student_code)+' — '+escapeHTML(x.full_name)+'</option>').join("");
  if(!sessions.error)(sessions.data||[]).forEach(x=>{const o=document.createElement("option");o.value=x.id;o.textContent=x.session_type+" · "+x.session_date;sessionSelect.appendChild(o);});
- let incidentRecords=[];
+ let incidentRecords=[],incidentEvidence=[];
  async function load(){
-  const r=await db.from("incidents").select("id,student_id,category,severity,factual_description,exact_words,action_taken,transcript_verified,published_to_parent_at,occurred_at,mark_transaction_id,students(full_name,student_code)").order("occurred_at",{ascending:false}).limit(100);
+  const [r,evidenceResult]=await Promise.all([
+   db.from("incidents").select("id,student_id,category,severity,factual_description,exact_words,action_taken,transcript_verified,published_to_parent_at,occurred_at,mark_transaction_id,students(full_name,student_code)").order("occurred_at",{ascending:false}).limit(100),
+   db.from("incident_evidence").select("id,incident_id,evidence_type,storage_path,transcript_text,verified_at,audio_deleted_at").order("created_at",{ascending:false})
+  ]);
   if(r.error){body.innerHTML='<tr><td colspan="6">Could not load incidents: '+escapeHTML(r.error.message)+'</td></tr>';showToast("Could not load incident records.");return;}
+  if(evidenceResult.error){body.innerHTML='<tr><td colspan="6">Could not load evidence status: '+escapeHTML(evidenceResult.error.message)+'</td></tr>';showToast("Could not load incident evidence status.");return;}
   incidentRecords=r.data||[];
+  incidentEvidence=evidenceResult.data||[];
   document.getElementById("incidentTotal").textContent=incidentRecords.length;
   document.getElementById("incidentPrivate").textContent=incidentRecords.filter(x=>!x.published_to_parent_at).length;
   document.getElementById("incidentPublished").textContent=incidentRecords.filter(x=>!!x.published_to_parent_at).length;
@@ -1088,18 +1124,54 @@ async function renderIncidents(){
    const published=!!x.published_to_parent_at;
    return (!visibility||(visibility==="published"?published:!published))&&[x.students?.full_name,x.students?.student_code,x.category,x.severity,x.factual_description,x.exact_words,x.action_taken].join(" ").toLowerCase().includes(q);
   });
-  body.innerHTML=filtered.map(x=>'<tr><td>'+escapeHTML(new Date(x.occurred_at).toLocaleString("en-IN"))+'</td><td><strong>'+escapeHTML(x.students?.full_name||"Student")+'</strong><small class="registry-email">'+escapeHTML(x.students?.student_code||"")+'</small></td><td><strong>'+escapeHTML(x.category.replace(/_/g," "))+'</strong><small class="incidents-severity severity-'+escapeHTML(x.severity)+'">'+escapeHTML(x.severity)+'</small></td><td class="incidents-observation">'+escapeHTML(x.factual_description)+(x.exact_words?'<small class="registry-email">Verified words: '+escapeHTML(x.exact_words)+'</small>':'')+'</td><td>'+(x.mark_transaction_id?'<span class="incidents-deduction-recorded">Recorded</span>':'—')+'</td><td>'+(x.published_to_parent_at?'<span class="session-status completed">Published</span> <button type="button" class="button button-quiet" data-unpublish-incident="'+x.id+'">Unpublish</button>':(x.transcript_verified?'<span class="session-status pending">Verified · private</span> ':'')+'<button type="button" class="button button-outline" data-publish-incident="'+x.id+'" data-student-id="'+x.student_id+'">Verify & publish</button>')+'</td></tr>').join("")||'<tr><td colspan="6" class="incidents-empty-cell">No matching incidents. Try changing the search or visibility filter.</td></tr>';
+  body.innerHTML=filtered.map(x=>{
+   const audio=incidentEvidence.find(e=>e.incident_id===x.id&&e.evidence_type==="audio_temp");
+   const hasAudio=!!(audio?.storage_path&&!audio.audio_deleted_at);
+   const review=x.transcript_verified?'<span class="session-status completed">Verified</span>':'<button type="button" class="button button-outline" data-review-incident="'+x.id+'">Review & verify</button>';
+   const parent=x.published_to_parent_at?'<span class="session-status completed">Published</span> <button type="button" class="button button-quiet" data-unpublish-incident="'+x.id+'">Unpublish</button>':(x.transcript_verified?'<button type="button" class="button button-quiet" data-publish-incident="'+x.id+'" data-student-id="'+x.student_id+'">Publish to parent</button>':'<small class="registry-email">Private until verified</small>');
+   const audioState=hasAudio?'<small class="incidents-audio-pending">Temporary audio awaiting review</small>':(audio?.audio_deleted_at?'<small class="registry-email">Audio deleted after verification</small>':'');
+   return '<tr><td>'+escapeHTML(new Date(x.occurred_at).toLocaleString("en-IN"))+'</td><td><strong>'+escapeHTML(x.students?.full_name||"Student")+'</strong><small class="registry-email">'+escapeHTML(x.students?.student_code||"")+'</small></td><td><strong>'+escapeHTML(x.category.replace(/_/g," "))+'</strong><small class="incidents-severity severity-'+escapeHTML(x.severity)+'">'+escapeHTML(x.severity)+'</small></td><td class="incidents-observation">'+escapeHTML(x.factual_description)+(x.exact_words?'<small class="registry-email">Verified words: '+escapeHTML(x.exact_words)+'</small>':'')+audioState+'</td><td>'+(x.mark_transaction_id?'<span class="incidents-deduction-recorded">Recorded</span>':'—')+'</td><td>'+review+parent+'</td></tr>';
+  }).join("")||'<tr><td colspan="6" class="incidents-empty-cell">No matching incidents. Try changing the search or visibility filter.</td></tr>';
   document.getElementById("incidentResultCount").textContent="Showing "+filtered.length+" of "+incidentRecords.length+" recent incident record(s)";
  }
  document.getElementById("incidentSearch").addEventListener("input",drawIncidentRows);
  document.getElementById("incidentVisibility").addEventListener("change",drawIncidentRows);
+ const reviewDialog=document.getElementById("incidentReviewDialog");
+ let reviewIncidentId=null;
  body.addEventListener("click",async event=>{
+  const review=event.target.closest("[data-review-incident]");
   const publish=event.target.closest("[data-publish-incident]");
   const unpublish=event.target.closest("[data-unpublish-incident]");
+  if(review){
+   reviewIncidentId=review.dataset.reviewIncident;
+   const incident=incidentRecords.find(x=>x.id===reviewIncidentId);
+   const audioEvidence=incidentEvidence.find(x=>x.incident_id===reviewIncidentId&&x.evidence_type==="audio_temp");
+   const transcriptEvidence=incidentEvidence.find(x=>x.incident_id===reviewIncidentId&&x.evidence_type==="transcript");
+   const hasAudio=!!(audioEvidence?.storage_path&&!audioEvidence.audio_deleted_at);
+   document.getElementById("incidentReviewTranscript").value=audioEvidence?.transcript_text||transcriptEvidence?.transcript_text||incident?.exact_words||"";
+   document.getElementById("incidentReviewMessage").textContent=hasAudio?"Listen and correct the transcript. Verification permanently deletes the temporary audio.":"No temporary audio is attached. Review the incident details, then verify the record.";
+   const audioWrap=document.getElementById("incidentReviewAudioWrap"),audioPlayer=document.getElementById("incidentReviewAudio");
+   audioPlayer.pause();audioPlayer.removeAttribute("src");audioPlayer.load();audioWrap.hidden=!hasAudio;
+   document.getElementById("incidentReviewAudioStatus").textContent="";
+   if(hasAudio){
+    document.getElementById("incidentReviewAudioStatus").textContent="Preparing a private 60-second listening link…";
+    const signed=await db.functions.invoke("incident-audio",{body:{action:"listen",incident_id:reviewIncidentId}});
+    if(signed.error||!signed.data?.signed_url){
+     document.getElementById("incidentReviewAudioStatus").textContent="Audio could not be opened: "+(signed.error?.message||signed.data?.error||"Unknown error");
+    }else{
+     audioPlayer.src=signed.data.signed_url;
+     document.getElementById("incidentReviewAudioStatus").textContent="This private link expires after 60 seconds.";
+    }
+   }
+   reviewDialog.showModal();
+   return;
+  }
   if(publish){
-   if(!confirm("Verify that you have reviewed the factual description, category, severity, and any exact words. Publishing will make this incident visible to the linked parent account(s). Continue?"))return;
+   const incident=incidentRecords.find(x=>x.id===publish.dataset.publishIncident);
+   if(!incident?.transcript_verified){showToast("Verify the incident before publishing it.");return;}
+   if(!confirm("Publish this verified behaviour report to the linked parent account(s)? The report will include the reviewed exact words, if present."))return;
    publish.disabled=true;
-   const {error}=await db.from("incidents").update({transcript_verified:true,published_to_parent_at:new Date().toISOString()}).eq("id",publish.dataset.publishIncident);
+   const {error}=await db.from("incidents").update({published_to_parent_at:new Date().toISOString()}).eq("id",publish.dataset.publishIncident);
    if(error){showToast("Could not publish incident: "+error.message);publish.disabled=false;return;}
    const links=await db.from("parent_student_links").select("parent_user_id").eq("student_id",publish.dataset.studentId);
    if(!links.error&&links.data?.length){
@@ -1116,9 +1188,73 @@ async function renderIncidents(){
    await load();showToast("Incident removed from parent portal. Administrator history retained.");
   }
  });
+ const reviewForm=document.getElementById("incidentReviewForm");
+ document.getElementById("incidentReviewCancel").addEventListener("click",()=>reviewDialog.close());
+ reviewForm.addEventListener("submit",async e=>{
+  e.preventDefault();
+  if(!reviewIncidentId)return;
+  const verifyButton=document.getElementById("incidentReviewVerify"),message=document.getElementById("incidentReviewMessage");
+  const incident=incidentRecords.find(x=>x.id===reviewIncidentId);
+  const audioEvidence=incidentEvidence.find(x=>x.incident_id===reviewIncidentId&&x.evidence_type==="audio_temp");
+  const hasAudio=!!(audioEvidence?.storage_path&&!audioEvidence.audio_deleted_at);
+  const transcript=document.getElementById("incidentReviewTranscript").value.trim();
+  if(hasAudio&&!transcript){message.textContent="A reviewed transcript is required before audio can be deleted.";return;}
+  if(!confirm(hasAudio?"Verify this transcript and permanently delete the temporary audio now? This cannot be undone.":"Confirm that you have reviewed and verified the factual description and any exact words?"))return;
+  verifyButton.disabled=true;verifyButton.textContent=hasAudio?"Deleting audio…":"Verifying…";message.textContent="Saving review…";
+  try{
+   const result=await db.functions.invoke("incident-audio",{body:{action:"verify",incident_id:reviewIncidentId,transcript_text:transcript}});
+   if(result.error||result.data?.error)throw new Error(result.data?.error||result.error?.message||"Verification failed.");
+   reviewDialog.close();reviewIncidentId=null;
+   await load();
+   showToast(hasAudio?"Transcript verified. Temporary audio has been deleted.":"Incident review verified.");
+  }catch(err){message.textContent="Not verified: "+err.message;showToast("Could not verify incident: "+err.message);}
+  finally{verifyButton.disabled=false;verifyButton.textContent="Verify transcript & delete audio";}
+ });
+ let recordedAudioBlob=null,recordedAudioUrl=null,activeRecorder=null,activeStream=null,recordingTimer=null;
+ const startRecording=document.getElementById("incidentStartRecording"),stopRecording=document.getElementById("incidentStopRecording"),audioConsent=document.getElementById("incidentAudioConsent"),audioStatus=document.getElementById("incidentAudioStatus"),audioPreview=document.getElementById("incidentAudioPreview");
+ function clearRecordedAudio(){
+  recordedAudioBlob=null;
+  if(recordedAudioUrl){URL.revokeObjectURL(recordedAudioUrl);recordedAudioUrl=null;}
+  audioPreview.pause();audioPreview.removeAttribute("src");audioPreview.load();audioPreview.hidden=true;
+  audioStatus.textContent="No audio recorded.";
+ }
+ startRecording.addEventListener("click",async()=>{
+  if(!audioConsent.checked){audioStatus.textContent="Confirm the required permission and notice before recording.";return;}
+  if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){audioStatus.textContent="This browser does not support in-page audio recording.";return;}
+  try{
+   activeStream=await navigator.mediaDevices.getUserMedia({audio:true});
+   const mimeType=["audio/webm;codecs=opus","audio/webm","audio/mp4","audio/ogg"].find(x=>MediaRecorder.isTypeSupported(x))||"";
+   activeRecorder=new MediaRecorder(activeStream,mimeType?{mimeType}:undefined);
+   const chunks=[];
+   activeRecorder.ondataavailable=event=>{if(event.data&&event.data.size)chunks.push(event.data);};
+   activeRecorder.onstop=()=>{
+    activeStream?.getTracks().forEach(track=>track.stop());activeStream=null;
+    const type=activeRecorder?.mimeType||"audio/webm";
+    const blob=new Blob(chunks,{type});
+    if(blob.size>8*1024*1024){
+     clearRecordedAudio();audioStatus.textContent="Recording exceeded 8 MB. Record a shorter clip.";
+    }else if(blob.size){
+     clearRecordedAudio();recordedAudioBlob=blob;recordedAudioUrl=URL.createObjectURL(blob);
+     audioPreview.src=recordedAudioUrl;audioPreview.hidden=false;audioStatus.textContent="Recording ready · "+Math.ceil(blob.size/1024)+" KB · temporary";
+    }else{audioStatus.textContent="No audio data was captured.";}
+    startRecording.disabled=false;stopRecording.disabled=true;stopRecording.textContent="Stop recording";
+   };
+   activeRecorder.start(1000);
+   startRecording.disabled=true;stopRecording.disabled=false;audioStatus.textContent="Recording… maximum 60 seconds.";
+   recordingTimer=setTimeout(()=>{if(activeRecorder?.state==="recording")activeRecorder.stop();},60000);
+  }catch(err){
+   activeStream?.getTracks().forEach(track=>track.stop());activeStream=null;
+   startRecording.disabled=false;stopRecording.disabled=true;audioStatus.textContent="Could not start recording: "+err.message;
+  }
+ });
+ stopRecording.addEventListener("click",()=>{
+  if(recordingTimer)clearTimeout(recordingTimer);
+  if(activeRecorder?.state==="recording"){activeRecorder.stop();audioStatus.textContent="Preparing recording…";}
+ });
  document.getElementById("incidentForm").addEventListener("submit",async e=>{
   e.preventDefault();
   const btn=document.getElementById("saveIncident"),msg=document.getElementById("incidentMessage");
+  if(activeRecorder?.state==="recording"){msg.textContent="Stop the audio recording before saving the incident.";return;}
   const amount=Number(document.getElementById("incidentDeduction").value||0);
   if(!studentSelect.value){msg.textContent="Choose a student.";return;}
   if(!Number.isInteger(amount)||amount<0||amount>10000){msg.textContent="Deduction must be a whole number from 0 to 10,000.";return;}
@@ -1140,10 +1276,26 @@ async function renderIncidents(){
     p_deduction:amount
    });
    if(result.error)throw result.error;
-   msg.textContent="Incident and any deduction were saved together. The record remains private to administrators.";
+   const incidentId=result.data?.incident_id;
+   let audioUploaded=false;
+   if(recordedAudioBlob&&incidentId){
+    const formData=new FormData();
+    const extension=recordedAudioBlob.type.includes("mp4")?"mp4":recordedAudioBlob.type.includes("ogg")?"ogg":"webm";
+    formData.append("action","upload");formData.append("incident_id",incidentId);
+    formData.append("audio",recordedAudioBlob,"incident-audio."+extension);
+    const upload=await db.functions.invoke("incident-audio",{body:formData});
+    if(upload.error||upload.data?.error){
+     msg.textContent="Incident saved, but temporary audio upload failed: "+(upload.data?.error||upload.error?.message||"Unknown error");
+     showToast("Incident saved; audio evidence was not uploaded. "+(upload.data?.error||upload.error?.message||""));
+    }else{audioUploaded=true;msg.textContent="Incident and temporary audio saved privately. Review the transcript to delete the audio.";}
+   }else{
+    msg.textContent="Incident and any deduction were saved together. The record remains private until administrator review.";
+   }
+   if(recordedAudioBlob)clearRecordedAudio();
    e.target.reset();document.getElementById("incidentWhen").value=localDateTime;
    await load();
-   showToast("Incident saved privately and consistently.");
+   if(audioUploaded)showToast("Incident saved with private temporary audio. Verify transcript to delete it.");
+   else if(!recordedAudioBlob)showToast("Incident saved privately and consistently.");
   }catch(err){msg.textContent="Not saved: "+err.message;showToast("Incident save failed: "+err.message);}
   finally{btn.disabled=false;btn.textContent="Save private incident";}
  });

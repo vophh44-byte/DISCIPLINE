@@ -40,6 +40,7 @@ function setActivePage(page){
   else if(page==="journeys"){ location.hash=page; renderJourneys(); }
   else if(page==="marks"){ location.hash=page; renderMarks(); }
   else if(page==="dedications"){ location.hash=page; renderDedications(); }
+  else if(page==="reports"){ location.hash=page; renderWeeklyReports(); }
   else { location.hash=page; renderPlaceholder(page); }
   closeSidebar();
 }
@@ -428,6 +429,39 @@ async function renderDedications(){
   }catch(err){msg.textContent="Not saved: "+err.message;showToast("Could not save dedication: "+err.message);}
   finally{btn.disabled=false;updateMode();}
  });
+}
+
+function disciplineMonday(value){
+ const d=new Date(value+"T12:00:00"),day=d.getDay();d.setDate(d.getDate()-(day===0?6:day-1));
+ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+async function renderWeeklyReports(){
+ const db=window.disciplineSupabase;
+ const today=disciplineToday(),monday=disciplineMonday(today);
+ pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">WORKSPACE / WEEKLY REPORTS</div><h1>Weekly Results & Publishing</h1><p class="page-intro">Calculate Monday–Sunday results and publish the official scores to linked student and parent portals.</p></div><span class="demo-pill"><span class="pulse-dot"></span> ADMIN CONTROL</span></div><section class="panel registry-panel"><div class="attendance-toolbar"><div class="field"><label for="weeklyStart">Week starting (Monday)</label><input id="weeklyStart" type="date" value="'+monday+'"></div><div class="attendance-actions"><button class="button button-outline" id="loadWeeklyResults">Load results</button><button class="button button-primary" id="publishWeeklyResults">Publish weekly results</button></div></div><p id="weeklyPublishInfo" class="registry-disclaimer">Publishing makes the selected week's calculated results visible in the private student and parent portals.</p></section><section class="panel registry-panel"><div class="panel-heading"><div><h3>Weekly student results</h3><p>Only published rows appear in student and parent portals.</p></div></div><div class="table-scroll"><table class="registry-table"><thead><tr><th>STUDENT</th><th>AWARDS</th><th>DEDUCTIONS</th><th>RECEIVED</th><th>TRANSFERRED</th><th>WEEKLY NET</th><th>LIFETIME</th></tr></thead><tbody id="weeklyResultRows"><tr><td colspan="7">Loading…</td></tr></tbody></table></div></section><section class="panel registry-panel"><h3>How the score is calculated</h3><ul class="simple-list"><li>Weekly net = all mark balance changes recorded during the selected Monday–Sunday period.</li><li>Received includes incoming transfers and appreciation marks.</li><li>Transferred includes marks sent to other students.</li><li>Lifetime balance = starting marks plus all saved mark transactions to date.</li><li>Negative weekly and lifetime balances are permitted.</li></ul></section>';
+ if(!db){showToast("Database is unavailable.");return;}
+ const input=document.getElementById("weeklyStart"),tbody=document.getElementById("weeklyResultRows"),info=document.getElementById("weeklyPublishInfo"),publish=document.getElementById("publishWeeklyResults");
+ async function load(){
+  if(disciplineMonday(input.value)!==input.value){info.textContent="Please choose a Monday as the week start date.";tbody.innerHTML='<tr><td colspan="7">Select a Monday to continue.</td></tr>';publish.disabled=true;return;}
+  publish.disabled=false;const end=new Date(input.value+"T12:00:00");end.setDate(end.getDate()+6);const endText=end.getFullYear()+"-"+String(end.getMonth()+1).padStart(2,"0")+"-"+String(end.getDate()).padStart(2,"0");
+  const r=await db.from("weekly_results").select("student_id,total_awards,total_deductions,total_received,total_transferred,weekly_net,lifetime_balance,published_at,students(full_name,student_code)").eq("week_start",input.value).order("weekly_net",{ascending:false});
+  if(r.error){info.textContent="Could not load results: "+r.error.message;return;}
+  info.textContent="Week: "+input.value+" to "+endText+" · "+(r.data||[]).length+" student result(s) currently calculated.";
+  tbody.innerHTML=(r.data||[]).map(x=>'<tr><td><strong>'+escapeHTML(x.students?.full_name||"Student")+'</strong><small class="registry-email">'+escapeHTML(x.students?.student_code||"")+'</small></td><td>+'+x.total_awards+'</td><td>−'+x.total_deductions+'</td><td>+'+x.total_received+'</td><td>−'+x.total_transferred+'</td><td><strong>'+((x.weekly_net>0?"+":"")+x.weekly_net)+'</strong></td><td>'+x.lifetime_balance+'</td></tr>').join("")||'<tr><td colspan="7">No results published for this week yet. Select Publish to calculate and publish them.</td></tr>';
+  if((r.data||[]).some(x=>x.published_at))info.textContent+=" Published results are visible to linked portal users.";
+ }
+ document.getElementById("loadWeeklyResults").addEventListener("click",load);
+ input.addEventListener("change",load);
+ publish.addEventListener("click",async()=>{
+  if(disciplineMonday(input.value)!==input.value){showToast("Choose a Monday first.");return;}
+  publish.disabled=true;publish.textContent="Publishing…";
+  try{const r=await db.rpc("admin_publish_weekly_results",{p_week_start:input.value});if(r.error)throw r.error;
+   info.textContent="Published "+r.data.students_published+" student result(s) for "+r.data.week_start+" to "+r.data.week_end+".";
+   showToast("Weekly results published to linked portals.");await load();
+  }catch(e){info.textContent="Could not publish: "+e.message;showToast("Publishing failed: "+e.message);}
+  finally{publish.disabled=false;publish.textContent="Publish weekly results";}
+ });
+ await load();
 }
 
 function renderPlaceholder(page){

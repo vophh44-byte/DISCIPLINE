@@ -121,7 +121,7 @@ async function renderStudents(){
       </form>
     </section>
     <section class="panel registry-panel">
-      <div class="panel-heading"><div><h3>Student profiles</h3><p id="studentListCaption">Loading records…</p></div><input class="registry-search" id="studentSearch" type="search" placeholder="Search name, ID or class…" aria-label="Search students"></div>
+      <div class="panel-heading"><div><h3>Student profiles</h3><p id="studentListCaption">Loading records…</p></div><div class="registry-actions"><input class="registry-search" id="studentSearch" type="search" placeholder="Search name, ID or class…" aria-label="Search students"><button class="button button-outline" type="button" id="exportStudents">Export CSV</button></div></div>
       <div class="table-scroll"><table class="registry-table"><thead><tr><th>STUDENT</th><th>STUDENT ID</th><th>CLASS / GROUP</th><th>PARENT / GUARDIAN</th><th>CONTACT</th><th>STATUS</th><th>ACTIONS</th></tr></thead><tbody id="studentRows"></tbody></table></div>
       <p class="registry-empty" id="studentEmpty" hidden>No student profiles found.</p>
     </section>
@@ -232,6 +232,28 @@ async function renderStudents(){
 
   document.getElementById("studentCancelEdit").addEventListener("click",resetForm);
   search.addEventListener("input",drawRows);
+  document.getElementById("exportStudents").addEventListener("click",()=>{
+    const q=search.value.trim().toLowerCase();
+    const exportRows=records.filter(s=>s.is_active).filter(s=>{
+      const g=guardianOf(s);
+      return [s.full_name,s.student_code,s.class_group,g.guardian_name,g.phone,g.email].join(" ").toLowerCase().includes(q);
+    });
+    if(!exportRows.length){showToast("There are no active student records to export.");return;}
+    const csvCell=value=>'"'+String(value??"").replace(/"/g,'""')+'"';
+    const headings=["Student name","Student ID","Class / group","Guardian name","Guardian phone","Guardian email","Status"];
+    const lines=[headings,...exportRows.map(s=>{
+      const g=guardianOf(s);
+      return [s.full_name,s.student_code,s.class_group,g.guardian_name,g.phone,g.email,"Active"];
+    })].map(row=>row.map(csvCell).join(","));
+    const blob=new Blob(["\\uFEFF"+lines.join("\\r\\n")],{type:"text/csv;charset=utf-8;"});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement("a");
+    link.href=url;
+    link.download="discipline-students-"+disciplineToday()+".csv";
+    document.body.appendChild(link);link.click();link.remove();
+    URL.revokeObjectURL(url);
+    showToast(exportRows.length+" active student record(s) exported.");
+  });
   rows.addEventListener("click",async e=>{
     const edit=e.target.closest("[data-edit-student]");
     const archive=e.target.closest("[data-archive-student]");

@@ -4,6 +4,7 @@ const pageMeta = {
  parents:{title:"Parent Management",desc:"Manage parent accounts and family links.",icon:"♧"},
  accounts:{title:"Portal Accounts",desc:"Create parent and driver accounts and assign routes.",icon:"◎"},
  drivercheckins:{title:"Driver Check-ins",desc:"Review morning and evening check-ins submitted by drivers.",icon:"↗"},
+ driverroutes:{title:"Drivers & Routes",desc:"Manage driver accounts, routes and assigned students.",icon:"▣"},
  attendance:{title:"Morning Attendance",desc:"Record attendance for the institute-bound journey.",icon:"✓"},
  journeys:{title:"Journey Sessions",desc:"Manage morning and evening journey records.",icon:"↗"},
  marks:{title:"Award & Deduct Marks",desc:"Record positive contributions and discipline deductions.",icon:"＋"},
@@ -39,7 +40,7 @@ function setActivePage(page){
   location.hash=page==="dashboard"?"":page;
   const renderers={
     dashboard:renderDashboard,students:renderStudents,parents:renderParents,accounts:renderAccounts,
-    attendance:renderAttendance,journeys:renderJourneys,drivercheckins:renderDriverCheckins,marks:renderMarks,dedications:renderDedications,
+    attendance:renderAttendance,journeys:renderJourneys,drivercheckins:renderDriverCheckins,driverroutes:renderDriverRoutes,marks:renderMarks,dedications:renderDedications,
     leaderboard:renderLeaderboard,ledger:renderLedger,incidents:renderIncidents,
     analytics:renderAnalytics,reports:renderWeeklyReports,certificates:renderCertificates,portals:renderPortals,settings:renderSettings
   };
@@ -413,7 +414,97 @@ async function renderJourneys(){
  try{await refresh();}catch(e){showToast("Could not load sessions: "+e.message);}
 }
 
-async function renderDriverCheckins(){
+async async function renderDriverRoutes(){
+ const db=window.disciplineSupabase;
+ pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">ADMINISTRATION / TRANSPORT</div><h1>Drivers & Routes</h1><p class="page-intro">Review driver accounts, update route assignments and pause or resume routes. Past journey records are kept.</p></div><button class="button button-primary" data-page="accounts">Create driver account</button></div><div class="stats-grid"><article class="stat-card"><div class="stat-label">Driver accounts</div><div class="stat-value" id="driverRouteDrivers">—</div></article><article class="stat-card"><div class="stat-label">Active routes</div><div class="stat-value" id="driverRouteActive">—</div></article><article class="stat-card"><div class="stat-label">Students assigned</div><div class="stat-value" id="driverRouteStudents">—</div></article></div><div id="driverRouteMessage" class="registry-disclaimer" role="status">Loading driver routes…</div><div id="driverRouteCards"></div><div id="driverRouteEditor"></div><footer class="page-footer"><span>© 2026 DISCIPLINE.</span><span>DRIVER ACCESS MANAGEMENT</span></footer>';
+ if(!db){document.getElementById("driverRouteMessage").textContent="Database connection unavailable. Refresh and try again.";return;}
+ const message=document.getElementById("driverRouteMessage"),cards=document.getElementById("driverRouteCards"),editor=document.getElementById("driverRouteEditor");
+ let drivers=[],routes=[],assignments=[],students=[];
+ const today=disciplineToday();
+ async function load(){
+  message.textContent="Loading driver routes…";
+  const results=await Promise.all([
+   db.from("profiles").select("user_id,display_name,email,is_active").eq("role","driver").order("display_name"),
+   db.from("driver_routes").select("id,driver_user_id,route_name,vehicle_label,is_active,created_at,updated_at").order("created_at",{ascending:false}),
+   db.from("driver_route_students").select("id,route_id,student_id,valid_from,valid_to"),
+   db.from("students").select("id,student_code,full_name,class_group,is_active").order("full_name")
+  ]);
+  const failed=results.find(x=>x.error);
+  if(failed){message.textContent="Could not load driver management data: "+failed.error.message;cards.innerHTML="";return false;}
+  drivers=results[0].data||[];routes=results[1].data||[];assignments=results[2].data||[];students=results[3].data||[];
+  const driverMap=new Map(drivers.map(x=>[x.user_id,x]));
+  const studentMap=new Map(students.map(x=>[x.id,x]));
+  const activeRoutes=routes.filter(x=>x.is_active);
+  const activeAssignments=assignments.filter(x=>!x.valid_to||x.valid_to>=today).filter(x=>x.valid_from<=today);
+  document.getElementById("driverRouteDrivers").textContent=drivers.length;
+  document.getElementById("driverRouteActive").textContent=activeRoutes.length;
+  document.getElementById("driverRouteStudents").textContent=new Set(activeAssignments.filter(x=>activeRoutes.some(r=>r.id===x.route_id)).map(x=>x.student_id)).size;
+  message.textContent=drivers.length+" driver account(s) · "+activeRoutes.length+" active route(s)";
+  if(!drivers.length){
+    cards.innerHTML='<section class="panel registry-panel"><h3>No driver accounts yet</h3><p class="page-intro">Create a Driver account in Portal Accounts, then assign its route and students.</p><button class="button button-primary" data-page="accounts">Create first driver</button></section>';
+    return true;
+  }
+  cards.innerHTML=drivers.map(driver=>{
+   const driverRoutes=routes.filter(r=>r.driver_user_id===driver.user_id);
+   const routeHtml=driverRoutes.length?driverRoutes.map(route=>{
+    const routeAssignments=assignments.filter(a=>a.route_id===route.id);
+    const current=routeAssignments.filter(a=>!a.valid_to||a.valid_to>=today).filter(a=>a.valid_from<=today);
+    const names=current.map(a=>studentMap.get(a.student_id)).filter(Boolean).map(s=>escapeHTML(s.full_name)+" <small>("+escapeHTML(s.student_code)+")</small>").join(", ");
+    return '<article class="driver-route-card"><div class="driver-route-card-head"><div><span class="stat-label">'+(route.is_active?"ACTIVE ROUTE":"PAUSED ROUTE")+'</span><h3>'+escapeHTML(route.route_name)+'</h3><p>'+escapeHTML(route.vehicle_label||"Vehicle not specified")+'</p></div><span class="session-status '+(route.is_active?"completed":"")+'">'+(route.is_active?"Active":"Paused")+'</span></div><div class="driver-route-meta"><span><strong>'+current.length+'</strong> assigned student(s)</span><span>Created '+escapeHTML(new Date(route.created_at).toLocaleDateString("en-IN"))+'</span></div><p class="driver-route-students">'+(names||"No active student assignments")+'</p><div class="attendance-actions"><button type="button" class="button button-outline" data-edit-driver-route="'+route.id+'" '+(!route.is_active?"disabled":"")+'>Edit route</button><button type="button" class="button '+(route.is_active?"button-quiet":"button-outline")+'" data-toggle-driver-route="'+route.id+'" data-active="'+(route.is_active?"true":"false")+'">'+(route.is_active?"Pause route":"Resume route")+'</button></div></article>';
+   }).join(""):'<article class="driver-route-card"><h3>No route assigned</h3><p>This driver account does not have an active route yet.</p><button class="button button-outline" data-page="accounts">Assign route in Portal Accounts</button></article>';
+   return '<section class="panel registry-panel driver-account-group"><div class="panel-heading"><div><h2>'+escapeHTML(driver.display_name||"Driver")+'</h2><p>'+escapeHTML(driver.email||"No email on file")+(driver.is_active?"":" · Account inactive")+'</p></div><span class="session-status '+(driver.is_active?"completed":"")+'">'+(driver.is_active?"Account active":"Account inactive")+'</span></div>'+routeHtml+'</section>';
+  }).join("");
+  return true;
+ }
+ function openEditor(routeId){
+  const route=routes.find(x=>x.id===routeId);
+  if(!route||!route.is_active){message.textContent="Only active routes can be edited here. Resume a paused route or create a new route for this driver.";return;}
+  const driver=drivers.find(x=>x.user_id===route.driver_user_id);
+  if(!driver){message.textContent="The driver profile could not be found.";return;}
+  const activeIds=assignments.filter(a=>a.route_id===route.id&&!a.valid_to).map(a=>a.student_id);
+  const activeStudents=students.filter(s=>s.is_active);
+  editor.innerHTML='<section class="panel registry-panel driver-route-editor"><div class="panel-heading"><div><h2>Edit route</h2><p>Changes affect future check-ins. Previously saved journey records remain.</p></div><button class="button button-quiet" type="button" id="closeDriverRouteEditor">Close</button></div><form id="driverRouteEditForm"><div class="form-grid"><div class="field"><label>Driver name</label><input value="'+escapeHTML(driver.display_name||"")+'" disabled></div><div class="field"><label>Driver email</label><input value="'+escapeHTML(driver.email||"")+'" disabled></div><div class="field"><label for="editDriverRouteName">Route name</label><input id="editDriverRouteName" required maxlength="100" value="'+escapeHTML(route.route_name)+'"></div><div class="field"><label for="editDriverVehicle">Vehicle label</label><input id="editDriverVehicle" maxlength="80" value="'+escapeHTML(route.vehicle_label||"")+'" placeholder="Optional"></div></div><div class="field driver-editor-students"><label for="editDriverStudents">Assigned students</label><select id="editDriverStudents" multiple size="8" required>'+activeStudents.map(s=>'<option value="'+s.id+'" '+(activeIds.includes(s.id)?"selected":"")+'>'+escapeHTML(s.student_code)+' — '+escapeHTML(s.full_name)+(s.class_group?" ("+escapeHTML(s.class_group)+")":"")+'</option>').join("")+'</select><small class="registry-disclaimer">Select at least one active student. On this route, changes to existing assignments take effect after today.</small></div><div class="attendance-actions"><button class="button button-primary" id="saveDriverRoute" type="submit">Save route changes</button><span id="driverRouteEditStatus" class="registry-disclaimer" role="status"></span></div></form></section>';
+  editor.scrollIntoView({behavior:"smooth",block:"start"});
+  document.getElementById("closeDriverRouteEditor").addEventListener("click",()=>{editor.innerHTML="";});
+  document.getElementById("driverRouteEditForm").addEventListener("submit",async event=>{
+   event.preventDefault();
+   const save=document.getElementById("saveDriverRoute"),status=document.getElementById("driverRouteEditStatus");
+   const selected=Array.from(document.getElementById("editDriverStudents").selectedOptions).map(x=>x.value);
+   const routeName=document.getElementById("editDriverRouteName").value.trim();
+   const vehicle=document.getElementById("editDriverVehicle").value.trim();
+   if(!selected.length){status.textContent="Select at least one student.";return;}
+   save.disabled=true;save.textContent="Saving…";status.textContent="Updating assignments…";
+   try{
+    const {data,error}=await db.functions.invoke("create-portal-account",{body:{role:"driver",display_name:driver.display_name||"Driver",email:driver.email,route_name:routeName,vehicle_label:vehicle,student_ids:selected}});
+    if(error||!data||!data.success)throw new Error((data&&data.error)||error?.message||"Could not save route changes.");
+    status.textContent="Route updated successfully.";
+    editor.innerHTML="";
+    const ok=await load();
+    if(ok)message.textContent="Route changes saved. Historical journey check-ins were retained.";
+    showToast("Driver route updated.");
+   }catch(error){status.textContent=error.message||"Could not save route changes.";save.disabled=false;save.textContent="Save route changes";}
+  });
+ }
+ cards.addEventListener("click",async event=>{
+  const edit=event.target.closest("[data-edit-driver-route]");
+  if(edit){openEditor(edit.dataset.editDriverRoute);return;}
+  const toggle=event.target.closest("[data-toggle-driver-route]");
+  if(toggle){
+   const route=routes.find(x=>x.id===toggle.dataset.toggleDriverRoute);
+   if(!route)return;
+   const next=!route.is_active;
+   if(!confirm((next?"Resume":"Pause")+" "+route.route_name+"? "+(next?"The assigned driver will regain access to this route.":"The driver will lose access to this route. Existing journey records will be kept.")))return;
+   toggle.disabled=true;
+   const {error}=await db.from("driver_routes").update({is_active:next,updated_at:new Date().toISOString()}).eq("id",route.id);
+   if(error){message.textContent="Could not change route status: "+error.message;toggle.disabled=false;return;}
+   await load();
+   showToast(next?"Route resumed.":"Route paused.");
+  }
+ });
+ await load();
+}
+
+function renderDriverCheckins(){
  const db=window.disciplineSupabase;
  pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">JOURNEY CONTROL / DRIVER ACTIVITY</div><h1>Driver Check-ins</h1><p class="page-intro">Review journey updates submitted by assigned drivers.</p></div></div><section class="panel registry-panel"><div class="driver-toolbar"><div class="field"><label for="driverCheckinDate">Date</label><input type="date" id="driverCheckinDate" value="'+disciplineToday()+'"></div><div class="field"><label for="driverCheckinJourney">Journey</label><select id="driverCheckinJourney"><option value="morning">Morning · Home to institute</option><option value="evening">Evening · Institute to home</option></select></div></div><p id="driverCheckinInfo" class="registry-disclaimer" role="status">Loading driver records…</p></section><div class="stats-grid"><article class="stat-card"><div class="stat-label">Total check-ins</div><div class="stat-value" id="driverCheckinTotal">—</div></article><article class="stat-card"><div class="stat-label">Boarded</div><div class="stat-value" id="driverCheckinBoarded">—</div></article><article class="stat-card"><div class="stat-label">Other statuses</div><div class="stat-value" id="driverCheckinOther">—</div></article></div><section class="panel registry-panel"><div class="panel-heading"><div><h3>Submitted journey records</h3><p>Latest saved status for each assigned student.</p></div></div><div class="table-scroll"><table class="registry-table driver-roster-table"><thead><tr><th>STUDENT</th><th>ROUTE / VEHICLE</th><th>STATUS</th><th>NOTE</th><th>UPDATED</th></tr></thead><tbody id="driverCheckinRows"><tr><td colspan="5">Loading…</td></tr></tbody></table></div></section>';
  const date=document.getElementById("driverCheckinDate"),journey=document.getElementById("driverCheckinJourney"),info=document.getElementById("driverCheckinInfo"),rows=document.getElementById("driverCheckinRows");

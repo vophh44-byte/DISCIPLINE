@@ -55,6 +55,7 @@
   const button = document.getElementById("loginButton");
   const forgotButton = document.getElementById("forgotPasswordButton");
   let selectedPortal = null;
+  let parentJourneyChannel = null;
   let isPasswordRecovery = cameFromPasswordRecovery;
   const isInviteSetup = new URLSearchParams(window.location.search).get("setup") === "1";
 
@@ -241,6 +242,11 @@
   }
 
   async function renderReadOnlyPortal(role, profile, user) {
+    if (role === "parent" && parentJourneyChannel) {
+      const oldChannel = parentJourneyChannel;
+      parentJourneyChannel = null;
+      await client.removeChannel(oldChannel);
+    }
     const name = profile.display_name || user.email || (role === "parent" ? "Parent" : "Student");
     portalShell(role, name);
     const page = document.getElementById("pageContent");
@@ -294,15 +300,16 @@
         continue;
       }
 
-      const [incidentResult, responseResult, certificateResult, attendanceResult, notificationResult, driverJourneyResult] = await Promise.all([
+      const [incidentResult, responseResult, certificateResult, attendanceResult, notificationResult, driverJourneyResult, driverRunResult] = await Promise.all([
         client.from("incidents").select("id,category,severity,factual_description,exact_words,action_taken,occurred_at").eq("student_id", student.id).order("occurred_at", { ascending: false }).limit(50),
         client.from("parent_responses").select("id,incident_id,weekly_result_id,response_type,message,created_at").eq("parent_user_id", user.id).eq("student_id", student.id).order("created_at", { ascending: false }).limit(50),
         client.from("certificates").select("id,title,description,issued_at").eq("student_id", student.id).not("published_at", "is", null).order("issued_at", { ascending: false }).limit(20),
         client.from("attendance").select("status,recorded_at,journey_sessions(session_date,session_type)").eq("student_id", student.id).order("recorded_at", { ascending: false }).limit(30),
         client.from("notifications").select("id,title,message,read_at,created_at").eq("recipient_user_id", user.id).eq("related_student_id", student.id).order("created_at", { ascending: false }).limit(20),
-        client.from("driver_journey_checkins").select("journey_date,journey_type,status,note,recorded_at").eq("student_id", student.id).order("journey_date", { ascending: false }).order("recorded_at", { ascending: false }).limit(20)
+        client.from("driver_journey_checkins").select("journey_date,journey_type,status,note,recorded_at").eq("student_id", student.id).order("journey_date", { ascending: false }).order("recorded_at", { ascending: false }).limit(20),
+        client.from("driver_route_runs").select("id,route_id,journey_date,journey_type,status,started_at,finished_at,driver_routes(route_name,vehicle_label)").eq("journey_date", driverToday()).order("started_at", { ascending: false })
       ]);
-      const queryError = incidentResult.error || responseResult.error || certificateResult.error || attendanceResult.error || notificationResult.error || driverJourneyResult.error;
+      const queryError = incidentResult.error || responseResult.error || certificateResult.error || attendanceResult.error || notificationResult.error || driverJourneyResult.error || driverRunResult.error;
       if (queryError) {
         container.insertAdjacentHTML("beforeend", '<section class="panel registry-panel"><h3>'+esc(student.full_name)+'</h3><p>Some family report data could not be loaded: '+esc(queryError.message)+'</p></section>');
         continue;
@@ -313,9 +320,20 @@
       const attendance = attendanceResult.data || [];
       const notifications = notificationResult.data || [];
       const driverJourneys = driverJourneyResult.data || [];
+      const driverRuns = driverRunResult.data || [];
       const presentCount = attendance.filter(x => x.status === "present" || x.status === "late").length;
       const attendanceHtml = attendance.map(x => '<tr><td>'+esc(x.journey_sessions?.session_date || new Date(x.recorded_at).toLocaleDateString("en-IN"))+'</td><td>'+esc(x.journey_sessions?.session_type || "Morning")+'</td><td>'+esc(x.status)+'</td></tr>').join("");
       const driverJourneyHtml = driverJourneys.map(x => '<tr><td>'+esc(x.journey_date)+'</td><td>'+esc(x.journey_type === "morning" ? "Morning · Home to institute" : "Evening · Institute to home")+'</td><td><strong>'+esc(x.status.replaceAll("_"," "))+'</strong></td><td>'+esc(x.note || "—")+'</td><td>'+esc(new Date(x.recorded_at).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}))+'</td></tr>').join("");
+      function parentJourneyCard(type, label) {
+        const run = driverRuns.find(x => x.journey_type === type);
+        const status = run ? run.status : "not_started";
+        const statusLabel = status === "completed" ? "Completed" : status === "in_progress" ? "In progress" : "Not started";
+        const statusClass = status === "completed" ? "completed" : status === "in_progress" ? "in-progress" : "pending";
+        const route = run?.driver_routes || {};
+        const startTime = run?.started_at ? new Date(run.started_at).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}) : "—";
+        const finishTime = run?.finished_at ? new Date(run.finished_at).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}) : "—";
+        return '<article class="parent-journey-card"><div class="parent-journey-card-head"><div><span class="stat-label">'+label+'</span><strong>'+(esc(route.route_name || "Assigned route"))+'</strong></div><span class="session-status '+statusClass+'">'+statusLabel+'</span></div><p class="parent-journey-vehicle">'+esc(route.vehicle_label || "Vehicle details unavailable")+'</p><div class="parent-journey-times"><span>Started <strong>'+startTime+'</strong></span><span>Finished <strong>'+finishTime+'</strong></span></div></article>';
+      }
       const weeklyHtml = weeklyRows.map(x =>
         '<tr><td>'+esc(x.week_start)+' – '+esc(x.week_end)+'</td><td class="'+(x.weekly_net >= 0 ? "positive-text" : "negative-text")+'">'+(x.weekly_net > 0 ? "+" : "")+esc(x.weekly_net)+'</td><td>'+esc(x.total_awards)+'</td><td>'+esc(x.total_deductions)+'</td><td>'+responseForm(student.id, x.id, "weekly")+'</td></tr>'
       ).join("");
@@ -332,6 +350,7 @@
         '<div class="registry-stats"><article class="stat-card"><div class="stat-label">Latest published weekly score</div><div class="stat-value">'+(latestWeekly ? esc(latestWeekly.weekly_net) : "—")+'</div></article><article class="stat-card"><div class="stat-label">Lifetime balance</div><div class="stat-value">'+esc(lifetimeBalance)+'</div></article><article class="stat-card"><div class="stat-label">Attendance marked present / late</div><div class="stat-value">'+presentCount+' / '+attendance.length+'</div></article></div>'+
         '<h3>Published weekly reports</h3><div class="table-scroll"><table class="registry-table"><thead><tr><th>WEEK</th><th>NET</th><th>AWARDS</th><th>DEDUCTIONS</th><th>YOUR RESPONSE</th></tr></thead><tbody>'+(weeklyHtml || '<tr><td colspan="5">No weekly results have been published yet.</td></tr>')+'</tbody></table></div>'+
         '<h3>Verified behaviour reports</h3>'+(incidentHtml || '<p>No verified incident reports have been published to this parent portal.</p>')+
+        '<h3>Today’s journey status</h3><p class="registry-disclaimer">Trip status updates appear automatically while this page is open. This shows journey progress, not the vehicle’s live location.</p><div class="parent-journey-grid">'+parentJourneyCard("morning","Morning · Home to institute")+parentJourneyCard("evening","Evening · Institute to home")+'</div>'+
         '<h3>Driver journey updates</h3><p class="registry-disclaimer">Boarding and drop-off updates saved by the assigned driver.</p><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>JOURNEY</th><th>STATUS</th><th>NOTE</th><th>TIME</th></tr></thead><tbody>'+(driverJourneyHtml || '<tr><td colspan="5">No driver updates have been recorded yet.</td></tr>')+'</tbody></table></div>'+
         '<h3>Morning attendance history</h3><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>JOURNEY</th><th>STATUS</th></tr></thead><tbody>'+(attendanceHtml || '<tr><td colspan="3">No attendance records yet.</td></tr>')+'</tbody></table></div>'+
         '<h3>Achievements & certificates</h3><ul class="simple-list">'+(certificateHtml || '<li>No certificates have been published yet.</li>')+'</ul>'+
@@ -426,6 +445,18 @@
           }
         }
       });
+    }
+
+    if (role === "parent") {
+      const refreshParentJourney = () => {
+        renderReadOnlyPortal("parent", profile, user).catch(error => {
+          console.error("Parent journey refresh failed:", error);
+        });
+      };
+      parentJourneyChannel = client.channel("parent-journey-status-" + user.id)
+        .on("postgres_changes", { event: "*", schema: "public", table: "driver_route_runs" }, refreshParentJourney)
+        .on("postgres_changes", { event: "*", schema: "public", table: "driver_journey_checkins" }, refreshParentJourney)
+        .subscribe();
     }
   }
 

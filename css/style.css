@@ -241,3 +241,67 @@ body:not(.is-authenticated) .app-shell{display:none}
 .parent-notification-heading{margin-top:22px;padding:12px 0;border-top:1px solid var(--border)}
 .parent-notification-heading p{margin:4px 0 0;color:var(--muted);font-size:10px}
 .parent-notification-heading [data-unread-count]{font-weight:800;color:var(--gold-2)}
+
+
+/* Driver journey controls and route progress */
+.driver-run-panel{border-color:rgba(213,179,106,.24)}
+.driver-run-top{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.driver-run-top h3{font:800 18px Manrope,sans-serif;margin:6px 0}
+.driver-run-top .registry-disclaimer{margin:5px 0 0}
+.driver-run-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.driver-run-actions .button{min-width:150px}
+.session-status.in-progress{background:rgba(83,190,139,.12);color:#75d7a6}
+.driver-run-admin-list{display:grid;gap:10px}
+.driver-run-admin-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px;border:1px solid var(--border);border-radius:11px;background:rgba(255,255,255,.015)}
+.driver-run-admin-main{display:grid;gap:4px;min-width:0}
+.driver-run-admin-main strong{font:700 13px Manrope,sans-serif;overflow-wrap:anywhere}
+.driver-run-admin-main small{font-size:10px;color:var(--muted)}
+.driver-run-admin-times{grid-column:1/-1;display:flex;gap:22px;flex-wrap:wrap;padding-top:9px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)}
+.driver-run-admin-times strong{color:var(--text);margin-left:4px}
+
+/* Mobile web layout: prevent page-wide horizontal overflow and keep controls touch-friendly */
+html,body{max-width:100%;overflow-x:hidden}
+.app-shell,.main-area,.page-content,.panel,.registry-panel,.dashboard-grid,.lower-grid{min-width:0}
+.table-scroll{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+input,select,textarea{max-width:100%}
+img,svg,video,canvas{max-width:100%}
+@media(max-width:640px){
+ .auth-gate{padding:14px 10px;align-items:start}
+ .auth-card{padding:25px 18px;margin:auto 0}
+ .auth-card-wide{width:100%;max-width:100%}
+ .portal-choice-grid{grid-template-columns:1fr}
+ .portal-choice{min-height:72px}
+ .page-content{width:100%;min-width:0}
+ .registry-head,.welcome-row{min-width:0}
+ .registry-head h1{font-size:25px;overflow-wrap:anywhere}
+ .section-heading,.panel-heading{gap:10px}
+ .driver-run-top{align-items:flex-start;flex-direction:column}
+ .driver-run-actions{display:grid;grid-template-columns:1fr}
+ .driver-run-actions .button{width:100%;min-height:44px}
+ .driver-run-admin-card{grid-template-columns:minmax(0,1fr);gap:9px}
+ .driver-run-admin-times{gap:12px}
+ .driver-mobile-cards{width:100%;min-width:0;border-collapse:separate;border-spacing:0 9px}
+ .driver-mobile-cards thead{display:none}
+ .driver-mobile-cards tbody{display:block;width:100%}
+ .driver-mobile-cards tbody tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;padding:14px;border:1px solid var(--border);border-radius:11px;background:var(--surface)}
+ .driver-mobile-cards tbody td{display:block;min-width:0;padding:0;border:0;white-space:normal;overflow-wrap:anywhere}
+ .driver-mobile-cards tbody td:first-child{grid-column:1/-1}
+ .driver-mobile-cards tbody td:last-child{grid-column:1/-1}
+ .driver-mobile-cards tbody td::before{content:attr(data-label);display:block;margin-bottom:5px;color:var(--muted);font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+ .driver-mobile-cards select,.driver-mobile-cards input{width:100%;min-width:0;min-height:44px;font-size:16px}
+ .driver-mobile-cards [data-driver-save]{width:100%;min-height:44px}
+ .driver-mobile-cards tbody td[colspan]::before{display:none}
+ .topbar{min-width:0}
+ .topbar-left,.topbar-actions{min-width:0}
+ .topbar-actions{gap:6px}
+ .notification-button{flex:0 0 auto}
+ .modal{width:calc(100vw - 24px);max-height:calc(100vh - 24px);overflow-y:auto}
+}
+@media(max-width:380px){
+ .page-content{padding-left:11px;padding-right:11px}
+ .topbar{padding-left:10px;padding-right:10px}
+ .driver-mobile-cards tbody tr{padding:11px;gap:10px}
+ .stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .stat-card{min-width:0}
+ .registry-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+}

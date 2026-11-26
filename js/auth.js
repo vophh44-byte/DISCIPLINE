@@ -51,7 +51,9 @@
   const button = document.getElementById("loginButton");
   const forgotButton = document.getElementById("forgotPasswordButton");
   let selectedPortal = null;
-  let isPasswordRecovery = false;
+  // Capture the recovery type before Supabase processes and removes the URL fragment.
+  const recoveryFragment = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  let isPasswordRecovery = recoveryFragment.get("type") === "recovery";
   const isInviteSetup = new URLSearchParams(window.location.search).get("setup") === "1";
 
   function showPicker() {
@@ -149,26 +151,53 @@
       const save = document.getElementById("saveNewPassword");
       save.disabled = true;
       save.textContent = "Saving…";
-      const { error } = await client.auth.updateUser({ password });
-      if (error) {
-        recoveryMessage.textContent = "Password update failed. Please request a new reset link.";
+      try {
+        const { data: updateData, error } = await client.auth.updateUser({ password });
+        if (error) throw error;
+        if (isInviteSetup) {
+          history.replaceState({}, document.title, window.location.pathname);
+          recoveryMessage.textContent = "Password saved. Opening your dashboard…";
+          isPasswordRecovery = false;
+          const { data: sessionData } = await client.auth.getSession();
+          if (sessionData.session) await openForSession(sessionData.session);
+          return;
+        }
+
+        // A recovery session must remain alive until updateUser succeeds.
+        // Then sign out deliberately so the new password is used at next login.
+        const userId = updateData?.user?.id;
+        let accountRole = "";
+        if (userId) {
+          const { data: profile } = await client.from("profiles")
+            .select("role").eq("user_id", userId).maybeSingle();
+          accountRole = profile?.role || "";
+        }
+        await client.auth.signOut();
+        isPasswordRecovery = false;
+        history.replaceState({}, document.title, window.location.pathname);
+        const roleHint = accountRole === "student"
+          ? " This email is registered as a Student account, not a Parent account. Ask the administrator to change its portal role if Parent access is intended."
+          : "";
+        card.querySelector("#loginHeading").textContent = "Password updated";
+        card.querySelector("#loginDescription").textContent = "Your new password has been saved successfully." + roleHint;
+        form.innerHTML = '<button class="button button-primary" id="returnToPortals" type="button">Return to portals</button><div class="auth-message" id="passwordSavedMessage" role="status">You can now sign in with your new password.</div>';
+        document.getElementById("returnToPortals").addEventListener("click", showPicker);
+      } catch (error) {
+        const detail = error && error.message ? error.message : "Unknown authentication error.";
+        recoveryMessage.textContent = "Password update failed: " + detail;
         save.disabled = false;
         save.textContent = "Save password";
-      } else if (isInviteSetup) {
-        history.replaceState({}, document.title, window.location.pathname);
-        recoveryMessage.textContent = "Password saved. Opening your dashboard…";
-        const { data: sessionData } = await client.auth.getSession();
-        if (sessionData.session) await openForSession(sessionData.session);
-      } else {
-        await client.auth.signOut();
-        recoveryMessage.textContent = "Password updated. Sign in with your new password.";
-        form.innerHTML = '<a class="button button-primary" href="' + window.location.pathname + '">Return to sign in</a>';
       }
-    });
+    });;
   }
 
   client.auth.onAuthStateChange(event => {
-    if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && isInviteSetup)) showNewPasswordForm();
+    if (event === "PASSWORD_RECOVERY") {
+      isPasswordRecovery = true;
+      showNewPasswordForm();
+    } else if (event === "SIGNED_IN" && isInviteSetup) {
+      showNewPasswordForm();
+    }
   });
 
   function esc(v) {
@@ -496,7 +525,7 @@
 
   client.auth.getSession().then(({ data, error }) => {
     if (!error && data.session) {
-      if (isInviteSetup) showNewPasswordForm();
+      if (isInviteSetup || isPasswordRecovery) showNewPasswordForm();
       else openForSession(data.session);
     }
   });

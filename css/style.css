@@ -235,3 +235,9 @@ body:not(.is-authenticated) .app-shell{display:none}
 .driver-editor-students select{width:100%;min-height:180px;padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:9px;color:var(--text);font:500 11px 'DM Sans',sans-serif}
 .driver-editor-students option{padding:7px}
 @media(max-width:560px){.driver-route-card{padding:14px}.driver-route-card-head{flex-direction:column}.driver-route-meta{gap:9px}}
+
+
+/* Parent portal journey notification controls */
+.parent-notification-heading{margin-top:22px;padding:12px 0;border-top:1px solid var(--border)}
+.parent-notification-heading p{margin:4px 0 0;color:var(--muted);font-size:10px}
+.parent-notification-heading [data-unread-count]{font-weight:800;color:var(--gold-2)}

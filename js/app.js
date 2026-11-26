@@ -2,7 +2,8 @@ const pageMeta = {
  dashboard:{title:"Command Center",desc:"Your daily system overview.",icon:"▦"},
  students:{title:"Student Registry",desc:"Create and manage student profiles.",icon:"♙"},
  parents:{title:"Parent Management",desc:"Manage parent accounts and family links.",icon:"♧"},
- accounts:{title:"Portal Accounts",desc:"Create student and parent sign-in accounts.",icon:"◎"},
+ accounts:{title:"Portal Accounts",desc:"Create parent and driver accounts and assign routes.",icon:"◎"},
+ drivercheckins:{title:"Driver Check-ins",desc:"Review morning and evening check-ins submitted by drivers.",icon:"↗"},
  attendance:{title:"Morning Attendance",desc:"Record attendance for the institute-bound journey.",icon:"✓"},
  journeys:{title:"Journey Sessions",desc:"Manage morning and evening journey records.",icon:"↗"},
  marks:{title:"Award & Deduct Marks",desc:"Record positive contributions and discipline deductions.",icon:"＋"},
@@ -38,7 +39,7 @@ function setActivePage(page){
   location.hash=page==="dashboard"?"":page;
   const renderers={
     dashboard:renderDashboard,students:renderStudents,parents:renderParents,accounts:renderAccounts,
-    attendance:renderAttendance,journeys:renderJourneys,marks:renderMarks,dedications:renderDedications,
+    attendance:renderAttendance,journeys:renderJourneys,drivercheckins:renderDriverCheckins,marks:renderMarks,dedications:renderDedications,
     leaderboard:renderLeaderboard,ledger:renderLedger,incidents:renderIncidents,
     analytics:renderAnalytics,reports:renderWeeklyReports,certificates:renderCertificates,portals:renderPortals,settings:renderSettings
   };
@@ -410,6 +411,31 @@ async function renderJourneys(){
   }catch(err){showToast(err.message);btn.disabled=false;}
  });
  try{await refresh();}catch(e){showToast("Could not load sessions: "+e.message);}
+}
+
+async function renderDriverCheckins(){
+ const db=window.disciplineSupabase;
+ pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">JOURNEY CONTROL / DRIVER ACTIVITY</div><h1>Driver Check-ins</h1><p class="page-intro">Review journey updates submitted by assigned drivers.</p></div></div><section class="panel registry-panel"><div class="driver-toolbar"><div class="field"><label for="driverCheckinDate">Date</label><input type="date" id="driverCheckinDate" value="'+disciplineToday()+'"></div><div class="field"><label for="driverCheckinJourney">Journey</label><select id="driverCheckinJourney"><option value="morning">Morning · Home to institute</option><option value="evening">Evening · Institute to home</option></select></div></div><p id="driverCheckinInfo" class="registry-disclaimer" role="status">Loading driver records…</p></section><div class="stats-grid"><article class="stat-card"><div class="stat-label">Total check-ins</div><div class="stat-value" id="driverCheckinTotal">—</div></article><article class="stat-card"><div class="stat-label">Boarded</div><div class="stat-value" id="driverCheckinBoarded">—</div></article><article class="stat-card"><div class="stat-label">Other statuses</div><div class="stat-value" id="driverCheckinOther">—</div></article></div><section class="panel registry-panel"><div class="panel-heading"><div><h3>Submitted journey records</h3><p>Latest saved status for each assigned student.</p></div></div><div class="table-scroll"><table class="registry-table driver-roster-table"><thead><tr><th>STUDENT</th><th>ROUTE / VEHICLE</th><th>STATUS</th><th>NOTE</th><th>UPDATED</th></tr></thead><tbody id="driverCheckinRows"><tr><td colspan="5">Loading…</td></tr></tbody></table></div></section>';
+ const date=document.getElementById("driverCheckinDate"),journey=document.getElementById("driverCheckinJourney"),info=document.getElementById("driverCheckinInfo"),rows=document.getElementById("driverCheckinRows");
+ async function load(){
+  info.textContent="Loading driver records…";rows.innerHTML='<tr><td colspan="5">Loading…</td></tr>';
+  const {data,error}=await db.from("driver_journey_checkins")
+   .select("id,journey_date,journey_type,status,note,recorded_at,students(full_name,student_code,class_group),driver_routes(route_name,vehicle_label)")
+   .eq("journey_date",date.value).eq("journey_type",journey.value).order("recorded_at",{ascending:false});
+  if(error){info.textContent="Could not load check-ins: "+error.message;rows.innerHTML='<tr><td colspan="5">Records unavailable.</td></tr>';return;}
+  const list=data||[],boarded=list.filter(x=>x.status==="boarded").length;
+  document.getElementById("driverCheckinTotal").textContent=list.length;
+  document.getElementById("driverCheckinBoarded").textContent=boarded;
+  document.getElementById("driverCheckinOther").textContent=list.length-boarded;
+  info.textContent=list.length+" saved check-in(s) · "+(journey.value==="morning"?"Morning":"Evening")+" journey · "+date.value;
+  rows.innerHTML=list.map(x=>{
+   const student=x.students||{},route=x.driver_routes||{};
+   return '<tr><td><strong>'+escapeHTML(student.full_name||"Student")+'</strong><small class="registry-email">'+escapeHTML(student.student_code||"")+(student.class_group?" · "+escapeHTML(student.class_group):"")+'</small></td><td>'+escapeHTML(route.route_name||"—")+'<small class="registry-email">'+escapeHTML(route.vehicle_label||"")+'</small></td><td><span class="activity-type '+(x.status==="absent"||x.status==="not_on_vehicle"?"negative":x.status==="late"?"neutral":"positive")+'">'+escapeHTML(x.status.replaceAll("_"," "))+'</span></td><td>'+escapeHTML(x.note||"—")+'</td><td>'+escapeHTML(new Date(x.recorded_at).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}))+'</td></tr>';
+  }).join("")||'<tr><td colspan="5">No driver check-ins saved for this journey yet.</td></tr>';
+ }
+ date.addEventListener("change",()=>load().catch(e=>{info.textContent=e.message;}));
+ journey.addEventListener("change",()=>load().catch(e=>{info.textContent=e.message;}));
+ await load();
 }
 
 async function renderMarks(){

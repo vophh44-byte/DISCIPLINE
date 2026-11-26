@@ -179,8 +179,15 @@
       const history = tx.map(t => '<tr><td>'+esc(new Date(t.occurred_at).toLocaleDateString("en-IN"))+'</td><td>'+esc(t.reason || t.transaction_type)+'</td><td>'+esc(t.balance_delta > 0 ? "+" : "")+esc(t.balance_delta)+'</td></tr>').join("");
 
       if (role !== "parent") {
+        const certificateResult = await client.from("certificates")
+          .select("title,description,issued_at").eq("student_id", student.id)
+          .not("published_at", "is", null).order("issued_at", { ascending: false }).limit(20);
+        const certificateHtml = (certificateResult.data || []).map(x =>
+          '<li><strong>'+esc(x.title)+'</strong> · '+esc(x.description || "Achievement recognised")+' <small>'+esc(new Date(x.issued_at).toLocaleDateString("en-IN"))+'</small></li>'
+        ).join("");
         container.insertAdjacentHTML("beforeend",
-          '<section class="panel registry-panel"><div class="panel-heading"><div><h3>'+esc(student.full_name)+'</h3><p>'+esc(student.student_code)+' · '+esc(student.class_group || "Student")+'</p></div></div><div class="registry-stats"><article class="stat-card"><div class="stat-label">Latest published weekly score</div><div class="stat-value">'+(latestWeekly ? esc(latestWeekly.weekly_net) : "—")+'</div></article><article class="stat-card"><div class="stat-label">Lifetime balance</div><div class="stat-value">'+esc(lifetimeBalance)+'</div></article></div><h3>Recent mark history</h3><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>ACTIVITY</th><th>CHANGE</th></tr></thead><tbody>'+(history || '<tr><td colspan="3">No mark records yet.</td></tr>')+'</tbody></table></div></section>');
+          '<section class="panel registry-panel"><div class="panel-heading"><div><h3>'+esc(student.full_name)+'</h3><p>'+esc(student.student_code)+' · '+esc(student.class_group || "Student")+'</p></div></div><div class="registry-stats"><article class="stat-card"><div class="stat-label">Latest published weekly score</div><div class="stat-value">'+(latestWeekly ? esc(latestWeekly.weekly_net) : "—")+'</div></article><article class="stat-card"><div class="stat-label">Lifetime balance</div><div class="stat-value">'+esc(lifetimeBalance)+'</div></article></div><h3>Achievements & certificates</h3><ul class="simple-list">'+(certificateHtml || '<li>No certificates have been published yet.</li>')+'</ul><h3>Recent mark history</h3><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>ACTIVITY</th><th>CHANGE</th></tr></thead><tbody>'+(history || '<tr><td colspan="3">No mark records yet.</td></tr>')+'</tbody></table></div></section>');
+        if(certificateResult.error) console.warn("Could not load certificates for student portal:", certificateResult.error);
         continue;
       }
 

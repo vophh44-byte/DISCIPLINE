@@ -299,7 +299,7 @@
         client.from("parent_responses").select("id,incident_id,weekly_result_id,response_type,message,created_at").eq("parent_user_id", user.id).eq("student_id", student.id).order("created_at", { ascending: false }).limit(50),
         client.from("certificates").select("id,title,description,issued_at").eq("student_id", student.id).not("published_at", "is", null).order("issued_at", { ascending: false }).limit(20),
         client.from("attendance").select("status,recorded_at,journey_sessions(session_date,session_type)").eq("student_id", student.id).order("recorded_at", { ascending: false }).limit(30),
-        client.from("notifications").select("id,title,message,read_at,created_at").eq("recipient_user_id", user.id).order("created_at", { ascending: false }).limit(20),
+        client.from("notifications").select("id,title,message,read_at,created_at").eq("recipient_user_id", user.id).eq("related_student_id", student.id).order("created_at", { ascending: false }).limit(20),
         client.from("driver_journey_checkins").select("journey_date,journey_type,status,note,recorded_at").eq("student_id", student.id).order("journey_date", { ascending: false }).order("recorded_at", { ascending: false }).limit(20)
       ]);
       const queryError = incidentResult.error || responseResult.error || certificateResult.error || attendanceResult.error || notificationResult.error || driverJourneyResult.error;
@@ -324,6 +324,7 @@
       ).join("");
       const responseHtml = responses.map(x => '<tr><td>'+esc(new Date(x.created_at).toLocaleDateString("en-IN"))+'</td><td>'+esc(x.incident_id ? "Incident report" : x.weekly_result_id ? "Weekly result" : "General message")+'</td><td>'+esc(x.response_type.replaceAll("_", " "))+'</td><td>'+esc(x.message || "—")+'</td></tr>').join("");
       const certificateHtml = certificates.map(x => '<li><strong>'+esc(x.title)+'</strong> · '+esc(x.description || "Achievement recognised")+' <small>'+esc(new Date(x.issued_at).toLocaleDateString("en-IN"))+'</small></li>').join("");
+      const unreadNotifications = notifications.filter(x => !x.read_at).length;
       const notificationHtml = notifications.map(x => '<li><strong>'+esc(x.title)+'</strong><p>'+esc(x.message)+'</p><small>'+esc(new Date(x.created_at).toLocaleString("en-IN"))+'</small>'+(x.read_at ? '<span class="session-status completed">Read</span>' : '<button class="button button-quiet" type="button" data-mark-notification-read="'+esc(x.id)+'">Mark read</button>')+'</li>').join("");
 
       container.insertAdjacentHTML("beforeend",
@@ -335,7 +336,7 @@
         '<h3>Morning attendance history</h3><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>JOURNEY</th><th>STATUS</th></tr></thead><tbody>'+(attendanceHtml || '<tr><td colspan="3">No attendance records yet.</td></tr>')+'</tbody></table></div>'+
         '<h3>Achievements & certificates</h3><ul class="simple-list">'+(certificateHtml || '<li>No certificates have been published yet.</li>')+'</ul>'+
         '<h3>Your previous responses</h3><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>ABOUT</th><th>RESPONSE</th><th>MESSAGE</th></tr></thead><tbody>'+(responseHtml || '<tr><td colspan="4">No responses submitted yet.</td></tr>')+'</tbody></table></div>'+
-        '<h3>Notifications</h3><ul class="simple-list">'+(notificationHtml || '<li>No notifications yet.</li>')+'</ul>'+
+        '<div class="panel-heading parent-notification-heading"><div><h3>Notifications</h3><p><span data-unread-count="'+esc(student.id)+'" data-count="'+unreadNotifications+'">'+unreadNotifications+' unread</span> · Updates for this student only</p></div>'+(unreadNotifications ? '<button class="button button-quiet" type="button" data-mark-all-notifications-read="'+esc(student.id)+'">Mark all read</button>' : '')+'</div><ul class="simple-list">'+(notificationHtml || '<li>No notifications yet.</li>')+'</ul>'+
         '<h3>Recent mark history</h3><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>ACTIVITY</th><th>CHANGE</th></tr></thead><tbody>'+(history || '<tr><td colspan="3">No mark records yet.</td></tr>')+'</tbody></table></div></section>'
       );
     }
@@ -379,6 +380,30 @@
         button.disabled = false;
       });
       container.addEventListener("click", async event => {
+        const markAll = event.target.closest("[data-mark-all-notifications-read]");
+        if (markAll) {
+          markAll.disabled = true;
+          const studentId = markAll.dataset.markAllNotificationsRead;
+          const { error } = await client.from("notifications")
+            .update({ read_at: new Date().toISOString() })
+            .eq("recipient_user_id", user.id)
+            .eq("related_student_id", studentId)
+            .is("read_at", null);
+          if (error) {
+            markAll.disabled = false;
+            markAll.textContent = "Could not mark all read";
+            return;
+          }
+          const panel = markAll.closest("section.panel");
+          panel.querySelectorAll("[data-mark-notification-read]").forEach(button => {
+            button.replaceWith(Object.assign(document.createElement("span"), { className: "session-status completed", textContent: "Read" }));
+          });
+          const count = panel.querySelector("[data-unread-count]");
+          if (count) { count.dataset.count = "0"; count.textContent = "0 unread"; }
+          markAll.remove();
+          return;
+        }
+
         const button = event.target.closest("[data-mark-notification-read]");
         if (!button) return;
         button.disabled = true;
@@ -390,7 +415,15 @@
           button.disabled = false;
           button.textContent = "Could not mark read";
         } else {
+          const panel = button.closest("section.panel");
           button.replaceWith(Object.assign(document.createElement("span"), { className: "session-status completed", textContent: "Read" }));
+          const count = panel.querySelector("[data-unread-count]");
+          if (count) {
+            const remaining = Math.max(0, Number(count.dataset.count || 0) - 1);
+            count.dataset.count = String(remaining);
+            count.textContent = remaining + " unread";
+            if (remaining === 0) panel.querySelector("[data-mark-all-notifications-read]")?.remove();
+          }
         }
       });
     }

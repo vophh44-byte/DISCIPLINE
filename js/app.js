@@ -39,6 +39,7 @@ function setActivePage(page){
   else if(page==="attendance"){ location.hash=page; renderAttendance(); }
   else if(page==="journeys"){ location.hash=page; renderJourneys(); }
   else if(page==="marks"){ location.hash=page; renderMarks(); }
+  else if(page==="dedications"){ location.hash=page; renderDedications(); }
   else { location.hash=page; renderPlaceholder(page); }
   closeSidebar();
 }
@@ -383,6 +384,50 @@ async function renderMarks(){
   finally{btn.disabled=false;btn.textContent="Save mark transaction";}
  });
  await loadMarkData();
+}
+
+async function renderDedications(){
+ const db=window.disciplineSupabase;
+ pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">WORKSPACE / DEDICATION HALL</div><h1>Dedication Hall</h1><p class="page-intro">Encourage generosity, recognition and positive student relationships.</p></div><span class="demo-pill"><span class="pulse-dot"></span> LIVE DATABASE</span></div><section class="panel registry-panel"><div class="panel-heading"><div><h3>Create a dedication</h3><p>Choose a transfer or appreciation entry. Both are recorded in the permanent mark ledger.</p></div></div><form id="dedicationForm"><div class="form-grid"><div class="field"><label for="dedicationMode">Dedication type *</label><select id="dedicationMode"><option value="transfer">Transfer marks — giver loses marks</option><option value="appreciation">Appreciation — recipient gains marks</option></select></div><div class="field" id="dedicationFromWrap"><label for="dedicationFrom">Giving / appreciating student</label><select id="dedicationFrom"><option value="">Choose student</option></select><small id="dedicationFromHelp" class="registry-disclaimer">For transfers, this student's balance will decrease.</small></div><div class="field"><label for="dedicationTo">Recipient student *</label><select id="dedicationTo" required><option value="">Choose student</option></select></div><div class="field"><label for="dedicationAmount">Marks *</label><input id="dedicationAmount" type="number" min="1" max="10000" step="1" required placeholder="e.g. 3"></div><div class="field full"><label for="dedicationReason">Reason / message *</label><textarea id="dedicationReason" rows="3" maxlength="500" required placeholder="Explain the reason for this dedication (3–500 characters)"></textarea></div></div><div class="registry-form-actions"><button class="button button-primary" id="saveDedication" type="submit">Save dedication</button><span id="dedicationMessage" class="registry-disclaimer" role="status"></span></div></form></section><section class="panel registry-panel"><div class="panel-heading"><div><h3>Recent dedication records</h3><p>Transfers and appreciation marks from the live ledger.</p></div></div><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>STUDENT</th><th>TYPE</th><th>DETAIL</th><th>MARKS</th><th>BALANCE AFTER</th></tr></thead><tbody id="dedicationHistory"><tr><td colspan="6">Loading…</td></tr></tbody></table></div></section>';
+ if(!db){showToast("Database is unavailable.");return;}
+ const [sr,tr]=await Promise.all([
+  db.from("students").select("id,student_code,full_name").eq("is_active",true).order("full_name"),
+  db.from("mark_transactions").select("id,student_id,transaction_type,amount,balance_delta,reason,balance_after,occurred_at,related_transaction_id,students(full_name,student_code)").in("transaction_type",["transfer_out","transfer_in","appreciation"]).order("occurred_at",{ascending:false}).limit(100)
+ ]);
+ if(sr.error){showToast("Could not load students: "+sr.error.message);return;}
+ const students=sr.data||[],from=document.getElementById("dedicationFrom"),to=document.getElementById("dedicationTo"),mode=document.getElementById("dedicationMode"),history=document.getElementById("dedicationHistory");
+ const opts='<option value="">Choose student</option>'+students.map(x=>'<option value="'+x.id+'">'+escapeHTML(x.student_code)+' — '+escapeHTML(x.full_name)+'</option>').join("");
+ from.innerHTML=opts;to.innerHTML=opts;
+ function updateMode(){
+  const appreciation=mode.value==="appreciation";
+  document.getElementById("dedicationFromWrap").querySelector("label").textContent=appreciation?"Recognised by (optional)":"Giving student *";
+  document.getElementById("dedicationFromHelp").textContent=appreciation?"Optional attribution only; this student's balance will not decrease.":"This student's balance will decrease by the transferred amount.";
+  from.required=!appreciation;
+  document.getElementById("saveDedication").textContent=appreciation?"Save appreciation":"Transfer marks";
+ }
+ mode.addEventListener("change",updateMode);updateMode();
+ if(tr.error){history.innerHTML='<tr><td colspan="6">Could not load records: '+escapeHTML(tr.error.message)+'</td></tr>';}
+ else history.innerHTML=(tr.data||[]).map(x=>{
+  const type=x.transaction_type==="transfer_out"?"Transfer sent":x.transaction_type==="transfer_in"?"Transfer received":"Appreciation";
+  const detail=x.transaction_type==="transfer_out"?"Marks given to another student":x.transaction_type==="transfer_in"?"Marks received":x.reason;
+  return '<tr><td>'+escapeHTML(new Date(x.occurred_at).toLocaleString("en-IN"))+'</td><td>'+escapeHTML(x.students?.full_name||"Student")+'<small class="registry-email">'+escapeHTML(x.students?.student_code||"")+'</small></td><td>'+type+'</td><td>'+escapeHTML(detail)+'</td><td class="'+(x.balance_delta>0?"positive-text":"negative-text")+'">'+(x.balance_delta>0?"+":"")+x.balance_delta+'</td><td>'+x.balance_after+'</td></tr>';
+ }).join("")||'<tr><td colspan="6">No dedication records yet.</td></tr>';
+ document.getElementById("dedicationForm").addEventListener("submit",async e=>{
+  e.preventDefault();const btn=document.getElementById("saveDedication"),msg=document.getElementById("dedicationMessage");
+  if(mode.value==="transfer"&&from.value===to.value){msg.textContent="Choose two different students.";return;}
+  btn.disabled=true;btn.textContent="Saving securely…";msg.textContent="";
+  try{
+   const r=await db.rpc("admin_record_dedication",{p_mode:mode.value,p_from_student_id:from.value||null,p_to_student_id:to.value,p_amount:Number(document.getElementById("dedicationAmount").value),p_reason:document.getElementById("dedicationReason").value.trim()});
+   if(r.error)throw r.error;
+   e.target.reset();updateMode();
+   const giver=r.data.giver_balance_after!==undefined?" Giver balance: "+r.data.giver_balance_after+".":"";
+   msg.textContent="Saved successfully. Recipient balance: "+r.data.recipient_balance_after+"."+giver;
+   showToast("Dedication saved to the mark ledger.");
+   const fresh=await db.from("mark_transactions").select("id,student_id,transaction_type,amount,balance_delta,reason,balance_after,occurred_at,related_transaction_id,students(full_name,student_code)").in("transaction_type",["transfer_out","transfer_in","appreciation"]).order("occurred_at",{ascending:false}).limit(100);
+   if(!fresh.error)history.innerHTML=(fresh.data||[]).map(x=>'<tr><td>'+escapeHTML(new Date(x.occurred_at).toLocaleString("en-IN"))+'</td><td>'+escapeHTML(x.students?.full_name||"Student")+'</td><td>'+escapeHTML(x.transaction_type)+'</td><td>'+escapeHTML(x.reason)+'</td><td class="'+(x.balance_delta>0?"positive-text":"negative-text")+'">'+(x.balance_delta>0?"+":"")+x.balance_delta+'</td><td>'+x.balance_after+'</td></tr>').join("")||'<tr><td colspan="6">No dedication records yet.</td></tr>';
+  }catch(err){msg.textContent="Not saved: "+err.message;showToast("Could not save dedication: "+err.message);}
+  finally{btn.disabled=false;updateMode();}
+ });
 }
 
 function renderPlaceholder(page){

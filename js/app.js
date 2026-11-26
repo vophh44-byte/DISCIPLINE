@@ -955,7 +955,44 @@ async function renderIncidents(){
  dateParts.forEach(x=>dt[x.type]=x.value);
  const localDateTime=dt.year+"-"+dt.month+"-"+dt.day+"T"+dt.hour+":"+dt.minute;
  const categories=[["noise_disturbance","Noise / disturbance"],["fighting_aggression","Fighting / aggression"],["disrespect","Disrespect"],["misbehaviour","Misbehaviour"],["safety","Safety concern"],["abusive_language","Abusive language"],["cleanliness","Cleanliness"],["bullying","Bullying"],["other","Other"]];
- pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">BEHAVIOUR / PRIVATE ADMIN RECORDS</div><h1>Incident Center</h1><p class="page-intro">Record factual observations privately. New incidents are not automatically shared with parents.</p></div></div><section class="panel registry-panel"><div class="panel-heading"><div><h3>Record an incident</h3><p>Use neutral language and include only details you have verified.</p></div></div><form id="incidentForm"><div class="form-grid"><div class="field"><label for="incidentStudent">Student *</label><select id="incidentStudent" required><option value="">Loading students…</option></select></div><div class="field"><label for="incidentCategory">Category *</label><select id="incidentCategory">'+categories.map(x=>'<option value="'+x[0]+'">'+x[1]+'</option>').join("")+'</select></div><div class="field"><label for="incidentSeverity">Severity *</label><select id="incidentSeverity"><option value="low">Low</option><option value="moderate">Moderate</option><option value="high">High</option><option value="critical">Critical</option></select></div><div class="field"><label for="incidentWhen">Date and time *</label><input id="incidentWhen" type="datetime-local" value="'+localDateTime+'" required></div><div class="field"><label for="incidentSession">Journey session (optional)</label><select id="incidentSession"><option value="">Not linked</option></select></div><div class="field"><label for="incidentDeduction">Deduction marks (optional)</label><input id="incidentDeduction" type="number" min="0" max="10000" step="1" value="0"></div><div class="field full"><label for="incidentDescription">Factual description *</label><textarea id="incidentDescription" rows="4" maxlength="3000" required placeholder="Describe only what was observed, without assumptions."></textarea></div><div class="field full"><label for="incidentExactWords">Exact words (only when essential and verified)</label><textarea id="incidentExactWords" rows="2" maxlength="1000" placeholder="Optional. Restricted to administrator records until separately reviewed."></textarea></div><div class="field full"><label for="incidentAction">Action taken</label><textarea id="incidentAction" rows="2" maxlength="1000" placeholder="Optional action or follow-up."></textarea></div></div><div class="registry-form-actions"><button class="button button-primary" id="saveIncident" type="submit">Save private incident</button><span id="incidentMessage" class="registry-disclaimer" role="status"></span></div></form></section><section class="panel registry-panel"><div class="panel-heading"><div><h3>Recent incidents</h3><p>Incidents stay private until an administrator verifies the details and publishes the report to linked parents.</p></div></div><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>STUDENT</th><th>CATEGORY</th><th>SEVERITY</th><th>OBSERVATION</th><th>DEDUCTION</th><th>PARENT ACCESS</th></tr></thead><tbody id="incidentRows"><tr><td colspan="7">Loading…</td></tr></tbody></table></div></section>';
+ pageContent.innerHTML=`
+  <div class="incidents-head">
+   <div><div class="eyebrow"><span class="eyebrow-line"></span> SAFEGUARDING / PRIVATE ADMIN RECORDS</div><h1>Incident Center</h1><p class="page-intro">Document verified observations carefully. Reports remain private until an administrator reviews and publishes them.</p></div>
+   <span class="incidents-private-tag">PRIVATE BY DEFAULT</span>
+  </div>
+  <section class="incidents-guidance"><span class="incidents-guidance-mark">i</span><div><strong>Record facts, not assumptions</strong><p>Use neutral language, include only details you have verified, and share a report with parents only after reviewing its accuracy and relevance.</p></div></section>
+  <section class="incidents-overview" aria-label="Incident register summary">
+   <article class="incidents-stat"><span>Recent incidents</span><strong id="incidentTotal">—</strong><small>Latest 100 records</small></article>
+   <article class="incidents-stat"><span>Private records</span><strong id="incidentPrivate">—</strong><small>Not currently visible to parents</small></article>
+   <article class="incidents-stat"><span>Published reports</span><strong id="incidentPublished">—</strong><small>Visible to linked parent accounts</small></article>
+  </section>
+  <section class="incidents-form-panel">
+   <div class="incidents-section-heading"><div><span class="incidents-step">STEP 01 · DOCUMENT</span><h2>Record an incident</h2><p>Complete the details below. Any optional deduction is recorded with the incident.</p></div><span class="incidents-form-mark">NEW RECORD</span></div>
+   <form id="incidentForm">
+    <div class="incidents-form-grid">
+     <div class="field"><label for="incidentStudent">Student *</label><select id="incidentStudent" required><option value="">Loading students…</option></select></div>
+     <div class="field"><label for="incidentCategory">Category *</label><select id="incidentCategory">${categories.map(x=>'<option value="'+x[0]+'">'+x[1]+'</option>').join("")}</select></div>
+     <div class="field"><label for="incidentSeverity">Severity *</label><select id="incidentSeverity"><option value="low">Low</option><option value="moderate">Moderate</option><option value="high">High</option><option value="critical">Critical</option></select></div>
+     <div class="field"><label for="incidentWhen">Date and time *</label><input id="incidentWhen" type="datetime-local" value="${localDateTime}" required></div>
+     <div class="field"><label for="incidentSession">Journey session (optional)</label><select id="incidentSession"><option value="">Not linked</option></select></div>
+     <div class="field"><label for="incidentDeduction">Deduction marks (optional)</label><input id="incidentDeduction" type="number" min="0" max="10000" step="1" value="0"><small>Enter 0 if no deduction is appropriate.</small></div>
+     <div class="field full"><label for="incidentDescription">Factual description *</label><textarea id="incidentDescription" rows="4" maxlength="3000" required placeholder="Describe what was directly observed, when it happened and any relevant context."></textarea></div>
+     <div class="field full"><label for="incidentExactWords">Exact words (only when essential and verified)</label><textarea id="incidentExactWords" rows="2" maxlength="1000" placeholder="Optional. Include exact wording only when necessary and accurately verified."></textarea><small>Exact words remain in the administrator record until separately reviewed.</small></div>
+     <div class="field full"><label for="incidentAction">Action taken</label><textarea id="incidentAction" rows="2" maxlength="1000" placeholder="Optional action, support provided or follow-up required."></textarea></div>
+    </div>
+    <div class="incidents-form-footer"><div><button class="button button-primary" id="saveIncident" type="submit">Save private incident</button><span id="incidentMessage" class="incidents-message" role="status"></span></div><small>New records are not automatically shared with parents.</small></div>
+   </form>
+  </section>
+  <section class="incidents-records-panel">
+   <div class="incidents-section-heading"><div><span class="incidents-step">STEP 02 · REVIEW</span><h2>Recent incident records</h2><p>Review details and control whether a verified report is visible to linked parents.</p></div><span class="incidents-record-limit">LATEST 100</span></div>
+   <div class="incidents-filter-bar">
+    <div class="field"><label for="incidentSearch">Search records</label><input id="incidentSearch" class="registry-search" type="search" placeholder="Student, ID, category or description…"></div>
+    <div class="field"><label for="incidentVisibility">Parent visibility</label><select id="incidentVisibility"><option value="">All records</option><option value="private">Private only</option><option value="published">Published only</option></select></div>
+   </div>
+   <div class="incidents-results-line" id="incidentResultCount">Loading records…</div>
+   <div class="table-scroll"><table class="registry-table incidents-table"><thead><tr><th>DATE</th><th>STUDENT</th><th>CATEGORY / SEVERITY</th><th>OBSERVATION</th><th>DEDUCTION</th><th>PARENT ACCESS</th></tr></thead><tbody id="incidentRows"><tr><td colspan="6">Loading…</td></tr></tbody></table></div>
+  </section>
+  <footer class="page-footer"><span>DISCIPLINE · Incident Center</span><span>Private administrator records · Controlled parent publishing</span></footer>`;
  if(!db){showToast("Database connection is unavailable.");return;}
  const studentSelect=document.getElementById("incidentStudent"),sessionSelect=document.getElementById("incidentSession"),body=document.getElementById("incidentRows");
  const [students,sessions]=await Promise.all([
@@ -965,11 +1002,27 @@ async function renderIncidents(){
  if(students.error)throw students.error;
  studentSelect.innerHTML='<option value="">Choose a student</option>'+(students.data||[]).map(x=>'<option value="'+x.id+'">'+escapeHTML(x.student_code)+' — '+escapeHTML(x.full_name)+'</option>').join("");
  if(!sessions.error)(sessions.data||[]).forEach(x=>{const o=document.createElement("option");o.value=x.id;o.textContent=x.session_type+" · "+x.session_date;sessionSelect.appendChild(o);});
+ let incidentRecords=[];
  async function load(){
   const r=await db.from("incidents").select("id,student_id,category,severity,factual_description,exact_words,action_taken,transcript_verified,published_to_parent_at,occurred_at,mark_transaction_id,students(full_name,student_code)").order("occurred_at",{ascending:false}).limit(100);
-  if(r.error){body.innerHTML='<tr><td colspan="6">Could not load incidents: '+escapeHTML(r.error.message)+'</td></tr>';return;}
-  body.innerHTML=(r.data||[]).map(x=>'<tr><td>'+escapeHTML(new Date(x.occurred_at).toLocaleString("en-IN"))+'</td><td><strong>'+escapeHTML(x.students?.full_name||"Student")+'</strong><small class="registry-email">'+escapeHTML(x.students?.student_code||"")+'</small></td><td>'+escapeHTML(x.category)+'</td><td>'+escapeHTML(x.severity)+'</td><td>'+escapeHTML(x.factual_description)+(x.exact_words?'<small class="registry-email">Verified words: '+escapeHTML(x.exact_words)+'</small>':'')+'</td><td>'+(x.mark_transaction_id?"Recorded":"—")+'</td><td>'+(x.published_to_parent_at?'<span class="session-status completed">Published</span> <button type="button" class="button button-quiet" data-unpublish-incident="'+x.id+'">Unpublish</button>':(x.transcript_verified?'<span class="session-status pending">Verified · private</span> ':'')+'<button type="button" class="button button-outline" data-publish-incident="'+x.id+'" data-student-id="'+x.student_id+'">Verify & publish</button>')+'</td></tr>').join("")||'<tr><td colspan="7">No incidents have been recorded.</td></tr>';
+  if(r.error){body.innerHTML='<tr><td colspan="6">Could not load incidents: '+escapeHTML(r.error.message)+'</td></tr>';showToast("Could not load incident records.");return;}
+  incidentRecords=r.data||[];
+  document.getElementById("incidentTotal").textContent=incidentRecords.length;
+  document.getElementById("incidentPrivate").textContent=incidentRecords.filter(x=>!x.published_to_parent_at).length;
+  document.getElementById("incidentPublished").textContent=incidentRecords.filter(x=>!!x.published_to_parent_at).length;
+  drawIncidentRows();
  }
+ function drawIncidentRows(){
+  const q=document.getElementById("incidentSearch").value.trim().toLowerCase(),visibility=document.getElementById("incidentVisibility").value;
+  const filtered=incidentRecords.filter(x=>{
+   const published=!!x.published_to_parent_at;
+   return (!visibility||(visibility==="published"?published:!published))&&[x.students?.full_name,x.students?.student_code,x.category,x.severity,x.factual_description,x.exact_words,x.action_taken].join(" ").toLowerCase().includes(q);
+  });
+  body.innerHTML=filtered.map(x=>'<tr><td>'+escapeHTML(new Date(x.occurred_at).toLocaleString("en-IN"))+'</td><td><strong>'+escapeHTML(x.students?.full_name||"Student")+'</strong><small class="registry-email">'+escapeHTML(x.students?.student_code||"")+'</small></td><td><strong>'+escapeHTML(x.category.replace(/_/g," "))+'</strong><small class="incidents-severity severity-'+escapeHTML(x.severity)+'">'+escapeHTML(x.severity)+'</small></td><td class="incidents-observation">'+escapeHTML(x.factual_description)+(x.exact_words?'<small class="registry-email">Verified words: '+escapeHTML(x.exact_words)+'</small>':'')+'</td><td>'+(x.mark_transaction_id?'<span class="incidents-deduction-recorded">Recorded</span>':'—')+'</td><td>'+(x.published_to_parent_at?'<span class="session-status completed">Published</span> <button type="button" class="button button-quiet" data-unpublish-incident="'+x.id+'">Unpublish</button>':(x.transcript_verified?'<span class="session-status pending">Verified · private</span> ':'')+'<button type="button" class="button button-outline" data-publish-incident="'+x.id+'" data-student-id="'+x.student_id+'">Verify & publish</button>')+'</td></tr>').join("")||'<tr><td colspan="6" class="incidents-empty-cell">No matching incidents. Try changing the search or visibility filter.</td></tr>';
+  document.getElementById("incidentResultCount").textContent="Showing "+filtered.length+" of "+incidentRecords.length+" recent incident record(s)";
+ }
+ document.getElementById("incidentSearch").addEventListener("input",drawIncidentRows);
+ document.getElementById("incidentVisibility").addEventListener("change",drawIncidentRows);
  body.addEventListener("click",async event=>{
   const publish=event.target.closest("[data-publish-incident]");
   const unpublish=event.target.closest("[data-unpublish-incident]");
@@ -1026,7 +1079,6 @@ async function renderIncidents(){
  });
  await load();
 }
-
 async function renderAnalytics(){
  const db=window.disciplineSupabase,week=disciplineMonday(disciplineToday()),next=new Date(week+"T12:00:00");
  next.setDate(next.getDate()+7);

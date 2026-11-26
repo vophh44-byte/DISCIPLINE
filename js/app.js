@@ -850,20 +850,52 @@ async function renderParents(){
 
 async function renderLedger(){
  const db=window.disciplineSupabase;
- pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">MARK MANAGEMENT / AUDIT TRAIL</div><h1>Discipline Ledger</h1><p class="page-intro">Search the saved, append-only history of awards, deductions and dedications.</p></div><span class="demo-pill">LIVE DATABASE</span></div><section class="panel registry-panel"><div class="panel-heading"><div><h3>All mark transactions</h3><p>Most recent 500 transactions.</p></div><div class="attendance-actions"><select id="ledgerType"><option value="">All types</option><option value="award">Awards</option><option value="deduction">Deductions</option><option value="transfer_out">Transfers sent</option><option value="transfer_in">Transfers received</option><option value="appreciation">Appreciation</option><option value="correction">Corrections</option></select><input id="ledgerSearch" class="registry-search" placeholder="Search student or reason…"></div></div><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>STUDENT</th><th>TYPE</th><th>REASON</th><th>CHANGE</th><th>BEFORE</th><th>AFTER</th></tr></thead><tbody id="ledgerRows"><tr><td colspan="7">Loading…</td></tr></tbody></table></div></section>';
+ pageContent.innerHTML=`
+  <div class="ledger-head">
+   <div><div class="eyebrow"><span class="eyebrow-line"></span> ACCOUNTABILITY / AUDIT TRAIL</div><h1>Discipline Ledger</h1><p class="page-intro">A clear, searchable history of every saved award, deduction, transfer and correction.</p></div>
+   <span class="ledger-live-tag">LIVE DATABASE · READ ONLY</span>
+  </div>
+  <section class="ledger-overview" aria-label="Ledger summary">
+   <article class="ledger-stat"><span>Transactions loaded</span><strong id="ledgerTotal">—</strong><small>Latest 500 saved records</small></article>
+   <article class="ledger-stat"><span>Positive balance changes</span><strong id="ledgerPositive">—</strong><small>Within the loaded records</small></article>
+   <article class="ledger-stat"><span>Negative balance changes</span><strong id="ledgerNegative">—</strong><small>Within the loaded records</small></article>
+  </section>
+  <section class="ledger-records-panel">
+   <div class="ledger-section-heading"><div><span class="ledger-step">TRANSACTION REGISTER</span><h2>All mark transactions</h2><p>Use the filters to find a student or review a particular transaction type.</p></div><span class="ledger-record-limit">LATEST 500</span></div>
+   <div class="ledger-filter-bar">
+    <div class="field ledger-type-filter"><label for="ledgerType">Transaction type</label><select id="ledgerType"><option value="">All types</option><option value="award">Awards</option><option value="deduction">Deductions</option><option value="transfer_out">Transfers sent</option><option value="transfer_in">Transfers received</option><option value="appreciation">Appreciation</option><option value="correction">Corrections</option></select></div>
+    <div class="field ledger-search-filter"><label for="ledgerSearch">Search records</label><input id="ledgerSearch" class="registry-search" placeholder="Student name, ID or reason…" aria-label="Search ledger records"></div>
+    <button class="button button-outline ledger-clear-button" id="ledgerClear" type="button">Clear filters</button>
+   </div>
+   <div class="ledger-results-line"><span id="ledgerResultCount">Loading transactions…</span><span>Balances are shown before and after each change.</span></div>
+   <div class="table-scroll"><table class="registry-table ledger-table"><thead><tr><th>DATE & TIME</th><th>STUDENT</th><th>TYPE</th><th>REASON</th><th>CHANGE</th><th>BEFORE</th><th>AFTER</th></tr></thead><tbody id="ledgerRows"><tr><td colspan="7">Loading…</td></tr></tbody></table></div>
+   <p class="ledger-footnote">This register displays the most recent 500 transactions. Historical entries are preserved; this screen does not edit or delete ledger records.</p>
+  </section>
+  <footer class="page-footer"><span>DISCIPLINE · Transaction audit trail</span><span>Saved records · Administrator access</span></footer>`;
  if(!db){showToast("Database connection is unavailable.");return;}
  const body=document.getElementById("ledgerRows");
  const r=await db.from("mark_transactions").select("id,student_id,transaction_type,amount,balance_delta,reason,balance_before,balance_after,occurred_at,students(full_name,student_code)").order("occurred_at",{ascending:false}).limit(500);
- if(r.error){body.innerHTML='<tr><td colspan="7">Could not load ledger: '+escapeHTML(r.error.message)+'</td></tr>';return;}
+ if(r.error){body.innerHTML='<tr><td colspan="7">Could not load ledger: '+escapeHTML(r.error.message)+'</td></tr>';document.getElementById("ledgerResultCount").textContent="Ledger could not be loaded.";showToast("Could not load ledger.");return;}
  const rows=r.data||[];
+ const positive=rows.filter(x=>Number(x.balance_delta)>0).reduce((n,x)=>n+Number(x.balance_delta||0),0);
+ const negative=rows.filter(x=>Number(x.balance_delta)<0).reduce((n,x)=>n+Math.abs(Number(x.balance_delta||0)),0);
+ document.getElementById("ledgerTotal").textContent=rows.length;
+ document.getElementById("ledgerPositive").textContent="+"+positive;
+ document.getElementById("ledgerNegative").textContent="−"+negative;
  function draw(){
   const q=document.getElementById("ledgerSearch").value.trim().toLowerCase(),type=document.getElementById("ledgerType").value;
   const filtered=rows.filter(x=>(!type||x.transaction_type===type)&&[x.students?.full_name,x.students?.student_code,x.reason,x.transaction_type].join(" ").toLowerCase().includes(q));
-  body.innerHTML=filtered.map(x=>'<tr><td>'+escapeHTML(new Date(x.occurred_at).toLocaleString("en-IN"))+'</td><td><strong>'+escapeHTML(x.students?.full_name||"Student")+'</strong><small class="registry-email">'+escapeHTML(x.students?.student_code||"")+'</small></td><td>'+escapeHTML(x.transaction_type)+'</td><td>'+escapeHTML(x.reason||"—")+'</td><td class="'+(x.balance_delta>0?"positive-text":"negative-text")+'">'+(x.balance_delta>0?"+":"")+x.balance_delta+'</td><td>'+x.balance_before+'</td><td>'+x.balance_after+'</td></tr>').join("")||'<tr><td colspan="7">No matching transactions.</td></tr>';
+  body.innerHTML=filtered.map(x=>{
+   const delta=Number(x.balance_delta||0),kind=String(x.transaction_type||"").replace(/_/g," ");
+   return '<tr><td><span class="ledger-date">'+escapeHTML(new Date(x.occurred_at).toLocaleDateString("en-IN"))+'</span><small class="registry-email">'+escapeHTML(new Date(x.occurred_at).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}))+'</small></td><td><strong>'+escapeHTML(x.students?.full_name||"Student")+'</strong><small class="registry-email">'+escapeHTML(x.students?.student_code||"")+'</small></td><td><span class="ledger-type-chip type-'+escapeHTML(x.transaction_type)+'">'+escapeHTML(kind)+'</span></td><td class="ledger-reason">'+escapeHTML(x.reason||"—")+'</td><td class="'+(delta>0?"positive-text":delta<0?"negative-text":"ledger-neutral")+'"><strong>'+(delta>0?"+":"")+delta+'</strong></td><td>'+escapeHTML(x.balance_before)+'</td><td><strong>'+escapeHTML(x.balance_after)+'</strong></td></tr>';
+  }).join("")||'<tr><td colspan="7" class="ledger-empty-cell">No matching transactions. Try another search or clear the filters.</td></tr>';
+  document.getElementById("ledgerResultCount").textContent="Showing "+filtered.length+" of "+rows.length+" loaded transaction(s)";
  }
- document.getElementById("ledgerSearch").addEventListener("input",draw);document.getElementById("ledgerType").addEventListener("change",draw);draw();
+ document.getElementById("ledgerSearch").addEventListener("input",draw);
+ document.getElementById("ledgerType").addEventListener("change",draw);
+ document.getElementById("ledgerClear").addEventListener("click",()=>{document.getElementById("ledgerSearch").value="";document.getElementById("ledgerType").value="";draw();});
+ draw();
 }
-
 async function renderLeaderboard(){
  const db=window.disciplineSupabase,week=disciplineMonday(disciplineToday());
  pageContent.innerHTML=`

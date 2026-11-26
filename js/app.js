@@ -494,6 +494,11 @@ async function renderDriverRoutes(){
    const route=routes.find(x=>x.id===toggle.dataset.toggleDriverRoute);
    if(!route)return;
    const next=!route.is_active;
+   if(!next){
+    const {data:openRun,error:runError}=await db.from("driver_route_runs").select("id").eq("route_id",route.id).eq("journey_date",disciplineToday()).eq("status","in_progress").limit(1).maybeSingle();
+    if(runError){message.textContent="Could not verify the active trip before pausing: "+runError.message;return;}
+    if(openRun){message.textContent="Finish this driver's active journey before pausing the route.";showToast("Active journey must be finished first.");return;}
+   }
    if(!confirm((next?"Resume":"Pause")+" "+route.route_name+"? "+(next?"The assigned driver will regain access to this route.":"The driver will lose access to this route. Existing journey records will be kept.")))return;
    toggle.disabled=true;
    const {error}=await db.from("driver_routes").update({is_active:next,updated_at:new Date().toISOString()}).eq("id",route.id);

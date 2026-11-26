@@ -63,30 +63,72 @@ function closeSidebar(){
 
 async function renderDashboard(){
  const db=window.disciplineSupabase;
- pageContent.innerHTML='<div class="welcome-row"><div><div class="eyebrow">DISCIPLINE / ADMINISTRATION</div><h1>Command Center</h1><p class="page-intro">Live overview of your student journey system.</p></div><button class="button button-primary" data-page="students">Student Registry</button></div><div class="stats-grid"><article class="stat-card"><div class="stat-label">Active students</div><div class="stat-value" id="dashStudents">—</div></article><article class="stat-card"><div class="stat-label">Present this morning</div><div class="stat-value" id="dashAttendance">—</div></article><article class="stat-card"><div class="stat-label">Marks awarded this week</div><div class="stat-value" id="dashAwards">—</div></article><article class="stat-card"><div class="stat-label">Marks deducted this week</div><div class="stat-value" id="dashDeductions">—</div></article></div><section class="panel registry-panel"><div class="panel-heading"><div><h3>Recent mark activity</h3><p>Latest saved transactions from Supabase</p></div><button class="text-button" data-page="marks">Manage marks →</button></div><div class="table-scroll"><table class="registry-table"><thead><tr><th>STUDENT</th><th>TYPE</th><th>REASON</th><th>CHANGE</th><th>DATE</th></tr></thead><tbody id="dashRecent"><tr><td colspan="5">Loading…</td></tr></tbody></table></div></section><section class="panel registry-panel"><div class="panel-heading"><div><h3>Quick actions</h3><p>Open the live administrator tools</p></div></div><div class="attendance-actions"><button class="button button-outline" data-page="attendance">Morning Attendance</button><button class="button button-outline" data-page="marks">Award & Deduct Marks</button><button class="button button-outline" data-page="dedications">Dedication Hall</button><button class="button button-outline" data-page="reports">Weekly Results</button></div></section><footer class="page-footer"><span>© 2026 DISCIPLINE.</span><span>LIVE ADMINISTRATOR WORKSPACE</span></footer>';
- if(!db){pageContent.insertAdjacentHTML("beforeend",'<p class="registry-disclaimer">Database client is not ready. Refresh the page after signing in.</p>');return;}
+ const today=disciplineToday(),week=disciplineMonday(today),next=new Date(week+"T12:00:00");
+ next.setDate(next.getDate()+7);
+ const weekEnd=next.getFullYear()+"-"+String(next.getMonth()+1).padStart(2,"0")+"-"+String(next.getDate()).padStart(2,"0");
+ const prettyDate=new Intl.DateTimeFormat("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric",timeZone:"Asia/Kolkata"}).format(new Date(today+"T12:00:00+05:30"));
+ pageContent.innerHTML=`
+  <div class="dash-welcome">
+   <div><div class="eyebrow"><span class="eyebrow-line"></span> DISCIPLINE / OVERVIEW</div><h1>Good ${new Date().getHours()<12?"morning":new Date().getHours()<17?"afternoon":"evening"}, Administrator</h1><p class="page-intro">${prettyDate} · Here is what is happening across your institute.</p></div>
+   <button class="button button-primary" data-page="students">＋ Add student</button>
+  </div>
+  <section class="dash-stats" aria-label="Key system figures">
+   <article class="dash-stat"><span class="dash-stat-label">Active students</span><div class="dash-stat-value" id="dashStudents">—</div><small>Currently registered</small></article>
+   <article class="dash-stat"><span class="dash-stat-label">Morning attendance</span><div class="dash-stat-value" id="dashAttendance">—</div><small id="dashAttendanceNote">Today's register</small></article>
+   <article class="dash-stat"><span class="dash-stat-label">Marks awarded</span><div class="dash-stat-value" id="dashAwards">—</div><small>This week</small></article>
+   <article class="dash-stat"><span class="dash-stat-label">Marks deducted</span><div class="dash-stat-value" id="dashDeductions">—</div><small>This week</small></article>
+  </section>
+  <div class="dash-main-grid">
+   <section class="panel dash-panel">
+    <div class="dash-section-head"><div><h2>Recent mark activity</h2><p>The latest changes recorded in the system</p></div><button class="text-button" data-page="ledger">View ledger →</button></div>
+    <div class="table-scroll"><table class="registry-table dash-table"><thead><tr><th>STUDENT</th><th>ACTIVITY</th><th>MARKS</th><th>DATE</th></tr></thead><tbody id="dashRecent"><tr><td colspan="4">Loading activity…</td></tr></tbody></table></div>
+   </section>
+   <aside class="dash-side">
+    <section class="panel dash-panel">
+     <div class="dash-section-head"><div><h2>Quick actions</h2><p>Common administrator tasks</p></div></div>
+     <div class="dash-action-list">
+      <button class="dash-action" data-page="attendance"><span class="dash-action-icon">✓</span><span><strong>Take attendance</strong><small>Record today's morning register</small></span><b>›</b></button>
+      <button class="dash-action" data-page="marks"><span class="dash-action-icon">＋</span><span><strong>Award or deduct marks</strong><small>Update a student's discipline score</small></span><b>›</b></button>
+      <button class="dash-action" data-page="driverroutes"><span class="dash-action-icon">↗</span><span><strong>Manage journeys</strong><small>Drivers, vehicles and routes</small></span><b>›</b></button>
+      <button class="dash-action" data-page="reports"><span class="dash-action-icon">▤</span><span><strong>Weekly results</strong><small>Review and publish student results</small></span><b>›</b></button>
+     </div>
+    </section>
+    <section class="dash-note"><span class="dash-note-mark">i</span><div><strong>A simple daily routine</strong><p>Record attendance, update marks when needed, then review weekly results before publishing.</p></div></section>
+   </aside>
+  </div>
+  <footer class="page-footer"><span>DISCIPLINE · Administrator workspace</span><span>All figures are based on saved records.</span></footer>`;
+ if(!db){pageContent.insertAdjacentHTML("beforeend",'<p class="registry-disclaimer">Database connection is not ready. Refresh after signing in.</p>');return;}
  try{
-  const today=disciplineToday(),week=disciplineMonday(today),next=new Date(week+"T12:00:00");next.setDate(next.getDate()+7);
-  const weekEnd=next.getFullYear()+"-"+String(next.getMonth()+1).padStart(2,"0")+"-"+String(next.getDate()).padStart(2,"0");
   const [students,session,weeklyTx,recent]=await Promise.all([
    db.from("students").select("id",{count:"exact",head:true}).eq("is_active",true),
    db.from("journey_sessions").select("id").eq("session_type","morning").eq("session_date",today).maybeSingle(),
    db.from("mark_transactions").select("transaction_type,amount,balance_delta").gte("occurred_at",week+"T00:00:00+05:30").lt("occurred_at",weekEnd+"T00:00:00+05:30"),
-   db.from("mark_transactions").select("transaction_type,amount,balance_delta,reason,occurred_at,students(full_name,student_code)").order("occurred_at",{ascending:false}).limit(8)
+   db.from("mark_transactions").select("transaction_type,amount,balance_delta,reason,occurred_at,students(full_name,student_code)").order("occurred_at",{ascending:false}).limit(7)
   ]);
   if(students.error)throw students.error;if(session.error)throw session.error;if(weeklyTx.error)throw weeklyTx.error;if(recent.error)throw recent.error;
   document.getElementById("dashStudents").textContent=students.count??0;
   if(session.data){
    const at=await db.from("attendance").select("status").eq("session_id",session.data.id);
    if(at.error)throw at.error;
-   const present=(at.data||[]).filter(x=>x.status==="present"||x.status==="late").length;
-   document.getElementById("dashAttendance").textContent=present+" / "+(at.data||[]).length;
-  }else document.getElementById("dashAttendance").textContent="Not started";
+   const records=at.data||[],present=records.filter(x=>x.status==="present"||x.status==="late").length;
+   document.getElementById("dashAttendance").textContent=present+" / "+records.length;
+   document.getElementById("dashAttendanceNote").textContent=records.length?Math.round(present/records.length*100)+"% present or late":"Register started · no entries yet";
+  }else{
+   document.getElementById("dashAttendance").textContent="—";
+   document.getElementById("dashAttendanceNote").textContent="Not started today";
+  }
   const tx=weeklyTx.data||[];
-  document.getElementById("dashAwards").textContent=tx.filter(x=>x.transaction_type==="award").reduce((n,x)=>n+x.amount,0);
-  document.getElementById("dashDeductions").textContent=tx.filter(x=>x.transaction_type==="deduction").reduce((n,x)=>n+x.amount,0);
-  document.getElementById("dashRecent").innerHTML=(recent.data||[]).map(x=>'<tr><td>'+escapeHTML(x.students?.full_name||"Student")+'<small class="registry-email">'+escapeHTML(x.students?.student_code||"")+'</small></td><td>'+escapeHTML(x.transaction_type)+'</td><td>'+escapeHTML(x.reason||"—")+'</td><td class="'+(x.balance_delta>0?"positive-text":"negative-text")+'">'+(x.balance_delta>0?"+":"")+x.balance_delta+'</td><td>'+escapeHTML(new Date(x.occurred_at).toLocaleString("en-IN"))+'</td></tr>').join("")||'<tr><td colspan="5">No mark transactions have been recorded yet.</td></tr>';
- }catch(e){showToast("Dashboard could not load live data: "+e.message);document.getElementById("dashRecent").innerHTML='<tr><td colspan="5">Could not load live records. Check your connection and refresh.</td></tr>';}
+  document.getElementById("dashAwards").textContent=tx.filter(x=>x.transaction_type==="award").reduce((n,x)=>n+Number(x.amount||0),0);
+  document.getElementById("dashDeductions").textContent=tx.filter(x=>x.transaction_type==="deduction").reduce((n,x)=>n+Number(x.amount||0),0);
+  document.getElementById("dashRecent").innerHTML=(recent.data||[]).map(x=>{
+   const delta=Number(x.balance_delta||0),student=x.students||{};
+   return '<tr><td><strong>'+escapeHTML(student.full_name||"Student")+'</strong><small class="registry-email">'+escapeHTML(student.student_code||"")+'</small></td><td><span class="dash-activity-tag '+(delta>=0?"is-award":"is-deduction")+'">'+escapeHTML(x.transaction_type==="award"?"Award":x.transaction_type==="deduction"?"Deduction":x.transaction_type)+'</span><small class="registry-email">'+escapeHTML(x.reason||"")+'</small></td><td class="'+(delta>=0?"positive-text":"negative-text")+'"><strong>'+(delta>0?"+":"")+delta+'</strong></td><td>'+escapeHTML(new Date(x.occurred_at).toLocaleDateString("en-IN"))+'</td></tr>';
+  }).join("")||'<tr><td colspan="4" class="dash-empty">No mark activity yet. Your latest transactions will appear here.</td></tr>';
+ }catch(e){
+  console.error("Dashboard data error:",e);
+  document.getElementById("dashRecent").innerHTML='<tr><td colspan="4" class="dash-empty">Some dashboard figures could not be loaded. Please refresh or check your connection.</td></tr>';
+  showToast("Some dashboard information could not be loaded.");
+ }
 }
 
 function escapeHTML(value){

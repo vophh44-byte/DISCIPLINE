@@ -187,3 +187,10 @@ body:not(.is-authenticated) .app-shell{display:none}
 .registry-response-form button{white-space:nowrap}
 .registry-response-form [data-response-status]{grid-column:1/-1}
 @media(max-width:760px){.registry-response-form{grid-template-columns:1fr}.registry-response-form [data-response-status]{grid-column:1}.registry-response-form button{width:100%}}
+
+/* Administrator parent-response review queue */
+.parent-response-table{min-width:1180px}
+.parent-response-table textarea{width:180px;min-height:54px;resize:vertical;font:inherit;font-size:12px}
+.parent-response-table td{vertical-align:top}
+.parent-response-table .button{margin-top:5px}
+@media(max-width:760px){.parent-response-table{min-width:1000px}}

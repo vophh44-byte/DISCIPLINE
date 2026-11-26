@@ -331,24 +331,37 @@ async function renderStudents(){
 async function renderAccounts(){
   if(!window.disciplineSupabase){pageContent.innerHTML='<section class="panel"><h2>Portal Accounts</h2><p>Authentication is not ready. Please refresh the page.</p></section>';return;}
   pageContent.innerHTML=`
-    <div class="welcome-row"><div><div class="eyebrow"><span class="eyebrow-line"></span> ADMINISTRATION / ACCESS CONTROL</div><h1>Portal Accounts</h1><p class="page-intro">Create secure sign-in accounts and link each person to the correct student profile.</p></div></div>
-    <section class="panel registry-panel">
-      <div class="panel-heading"><div><h3>Create or link a portal account</h3><p>Invite a parent or driver. Each person signs in through the matching portal option.</p></div></div>
-      <form id="portalAccountForm">
-        <div class="form-grid">
-          <div class="field"><label for="portalRole">Account type</label><select id="portalRole" required><option value="parent">Parent / Guardian</option><option value="driver">Driver</option></select></div>
-          <div class="field"><label for="portalName">Full name</label><input id="portalName" required maxlength="100" placeholder="Full name"></div>
-          <div class="field"><label for="portalEmail">Email</label><input id="portalEmail" type="email" required maxlength="254" placeholder="name@example.com"></div>
-          <div class="field" id="driverRouteFields" hidden><label for="portalRouteName">Route name</label><input id="portalRouteName" maxlength="100" placeholder="e.g. North Route"></div>
-          <div class="field" id="driverVehicleFields" hidden><label for="portalVehicleLabel">Vehicle label (optional)</label><input id="portalVehicleLabel" maxlength="80" placeholder="e.g. Van 1"></div>
-          <div class="field"><label for="portalStudent" id="portalStudentLabel">Link to student</label><select id="portalStudent" required><option value="">Loading student profiles…</option></select><small class="registry-disclaimer" id="portalStudentHint">Choose the child linked to this parent.</small></div>
-        </div>
-        <div class="notice-banner" style="margin-top:16px"><div class="notice-icon">i</div><div><strong>Account security</strong><span>Users receive an invitation email and create their own password. Never enter or share their password here.</span></div></div>
-        <div class="modal-actions"><button class="button button-primary" id="createPortalAccount" type="submit">Create / link account</button></div>
-        <p id="portalAccountMessage" class="auth-message" role="status"></p>
-      </form>
-    </section>
-    <section class="panel registry-panel"><div class="panel-heading"><div><h3>Before inviting</h3><p>Check these items to avoid linking the wrong family.</p></div></div><ul class="simple-list"><li>Register the student first in Student Registry.</li><li>Use an email address the student or parent can access.</li><li>Create a separate parent account for each parent email.</li><li>A parent account can be linked to one student in this first release.</li></ul></section>
+    <div class="accounts-admin-head"><div><div class="eyebrow"><span class="eyebrow-line"></span> ADMINISTRATION / ACCESS CONTROL</div><h1>Portal Accounts</h1><p class="page-intro">Give every parent and driver secure access to the right part of DISCIPLINE.</p></div><div class="accounts-secure-tag"><span>✦</span> Secure account setup</div></div>
+    <div class="accounts-overview">
+      <div class="accounts-overview-card"><span class="accounts-overview-icon">01</span><div><strong>Choose a role</strong><small>Parent or route driver</small></div></div>
+      <div class="accounts-overview-card"><span class="accounts-overview-icon accounts-icon-blue">02</span><div><strong>Connect records</strong><small>Link students or route riders</small></div></div>
+      <div class="accounts-overview-card"><span class="accounts-overview-icon accounts-icon-green">03</span><div><strong>Send invitation</strong><small>They create their own password</small></div></div>
+    </div>
+    <div class="accounts-workspace">
+      <section class="panel accounts-create-panel">
+        <div class="accounts-panel-heading"><div><span class="accounts-step-label">ACCOUNT DETAILS</span><h2>Create or link an account</h2><p>Enter the person's details, then connect their student records.</p></div><span class="accounts-heading-symbol">＋</span></div>
+        <form id="portalAccountForm">
+          <div class="accounts-form-section"><div class="accounts-form-section-title"><span>1</span><div><strong>Person and portal</strong><small>Who will sign in to DISCIPLINE?</small></div></div>
+            <div class="form-grid accounts-form-grid">
+              <div class="field"><label for="portalRole">Account type</label><select id="portalRole" required><option value="parent">Parent / Guardian</option><option value="driver">Driver</option></select></div>
+              <div class="field"><label for="portalName">Full name</label><input id="portalName" required maxlength="100" placeholder="Full name"></div>
+              <div class="field accounts-email-field"><label for="portalEmail">Email address</label><input id="portalEmail" type="email" required maxlength="254" placeholder="name@example.com"></div>
+              <div class="field" id="driverRouteFields" hidden><label for="portalRouteName">Route name</label><input id="portalRouteName" maxlength="100" placeholder="e.g. North Route"></div>
+              <div class="field" id="driverVehicleFields" hidden><label for="portalVehicleLabel">Vehicle label (optional)</label><input id="portalVehicleLabel" maxlength="80" placeholder="e.g. Van 1"></div>
+            </div>
+          </div>
+          <div class="accounts-form-section accounts-student-section"><div class="accounts-form-section-title"><span>2</span><div><strong>Student connection</strong><small>Choose the child or the students assigned to this driver.</small></div></div>
+            <div class="field"><label for="portalStudent" id="portalStudentLabel">Link to student</label><select id="portalStudent" required><option value="">Loading student profiles…</option></select><small class="registry-disclaimer" id="portalStudentHint">Choose the child linked to this parent.</small></div>
+          </div>
+          <div class="accounts-security-note"><span class="accounts-security-icon">✓</span><div><strong>Password safety is built in</strong><p>Users receive an invitation email and create their own password. Never enter or share their password here.</p></div></div>
+          <div class="accounts-submit-row"><p id="portalAccountMessage" class="auth-message" role="status"></p><button class="button button-primary" id="createPortalAccount" type="submit">Create / link account <span>→</span></button></div>
+        </form>
+      </section>
+      <aside class="accounts-guide-column">
+        <section class="panel accounts-guide-panel"><div class="accounts-guide-heading"><span>BEFORE YOU INVITE</span><span class="accounts-guide-check">✓</span></div><h3>A quick checklist</h3><p class="accounts-guide-intro">A few checks help keep family and journey records connected correctly.</p><ul class="accounts-check-list"><li><span>✓</span><div><strong>Register the student first</strong><small>Add the student in Student Registry before creating an account.</small></div></li><li><span>✓</span><div><strong>Confirm the email address</strong><small>Use an inbox the parent or driver can access.</small></div></li><li><span>✓</span><div><strong>Use separate parent logins</strong><small>Create a separate account for each parent email.</small></div></li><li><span>✓</span><div><strong>Check student assignments</strong><small>Parent accounts link to one student in this first release. Drivers can be assigned multiple students.</small></div></li></ul></section>
+        <section class="accounts-help-card"><span>NEED TO MAKE A CHANGE?</span><strong>Manage family connections</strong><p>Use Parent Management to review parent-to-student links and family responses.</p></section>
+      </aside>
+    </div>
     <footer class="page-footer"><span>© 2026 DISCIPLINE.</span><span>SECURE ACCOUNT PROVISIONING</span></footer>`;
   const select=document.getElementById("portalStudent");
   const {data:students,error}=await window.disciplineSupabase.from("students").select("id,student_code,full_name,class_group").eq("is_active",true).order("full_name");

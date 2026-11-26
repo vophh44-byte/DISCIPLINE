@@ -1277,7 +1277,8 @@ async function renderIncidents(){
    });
    if(result.error)throw result.error;
    const incidentId=result.data?.incident_id;
-   let audioUploaded=false;
+   let audioUploaded=false,audioUploadFailed=false;
+   const hadRecordedAudio=!!recordedAudioBlob;
    if(recordedAudioBlob&&incidentId){
     const formData=new FormData();
     const extension=recordedAudioBlob.type.includes("mp4")?"mp4":recordedAudioBlob.type.includes("ogg")?"ogg":"webm";
@@ -1285,6 +1286,7 @@ async function renderIncidents(){
     formData.append("audio",recordedAudioBlob,"incident-audio."+extension);
     const upload=await db.functions.invoke("incident-audio",{body:formData});
     if(upload.error||upload.data?.error){
+     audioUploadFailed=true;
      msg.textContent="Incident saved, but temporary audio upload failed: "+(upload.data?.error||upload.error?.message||"Unknown error");
      showToast("Incident saved; audio evidence was not uploaded. "+(upload.data?.error||upload.error?.message||""));
     }else{audioUploaded=true;msg.textContent="Incident and temporary audio saved privately. Review the transcript to delete the audio.";}
@@ -1295,7 +1297,7 @@ async function renderIncidents(){
    e.target.reset();document.getElementById("incidentWhen").value=localDateTime;
    await load();
    if(audioUploaded)showToast("Incident saved with private temporary audio. Verify transcript to delete it.");
-   else if(!recordedAudioBlob)showToast("Incident saved privately and consistently.");
+   else if(!audioUploadFailed)showToast(hadRecordedAudio?"Incident saved, but no temporary audio was attached.":"Incident saved privately and consistently.");
   }catch(err){msg.textContent="Not saved: "+err.message;showToast("Incident save failed: "+err.message);}
   finally{btn.disabled=false;btn.textContent="Save private incident";}
  });

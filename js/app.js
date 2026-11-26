@@ -266,7 +266,7 @@ async function renderAccounts(){
   pageContent.innerHTML=`
     <div class="welcome-row"><div><div class="eyebrow"><span class="eyebrow-line"></span> ADMINISTRATION / ACCESS CONTROL</div><h1>Portal Accounts</h1><p class="page-intro">Create secure sign-in accounts and link each person to the correct student profile.</p></div></div>
     <section class="panel registry-panel">
-      <div class="panel-heading"><div><h3>Create a portal account</h3><p>An invitation email will be sent so the user can set their own password.</p></div></div>
+      <div class="panel-heading"><div><h3>Create or link a portal account</h3><p>New users receive an invitation. Existing active accounts can be linked without sending another invitation.</p></div></div>
       <form id="portalAccountForm">
         <div class="form-grid">
           <div class="field"><label for="portalRole">Account type</label><select id="portalRole" required><option value="student">Student</option><option value="parent">Parent / Guardian</option></select></div>
@@ -275,7 +275,7 @@ async function renderAccounts(){
           <div class="field"><label for="portalStudent">Link to student</label><select id="portalStudent" required><option value="">Loading student profiles…</option></select></div>
         </div>
         <div class="notice-banner" style="margin-top:16px"><div class="notice-icon">i</div><div><strong>Account security</strong><span>Users receive an invitation email and create their own password. Never enter or share their password here.</span></div></div>
-        <div class="modal-actions"><button class="button button-primary" id="createPortalAccount" type="submit">Send invitation</button></div>
+        <div class="modal-actions"><button class="button button-primary" id="createPortalAccount" type="submit">Create / link account</button></div>
         <p id="portalAccountMessage" class="auth-message" role="status"></p>
       </form>
     </section>
@@ -292,9 +292,15 @@ async function renderAccounts(){
     btn.disabled=true;btn.textContent="Sending invitation…";msg.textContent="";
     const payload={role:document.getElementById("portalRole").value,display_name:document.getElementById("portalName").value.trim(),email:document.getElementById("portalEmail").value.trim(),student_id:select.value};
     const {data,error}=await window.disciplineSupabase.functions.invoke("create-portal-account",{body:payload});
-    if(error||!data||!data.success){msg.textContent=(data&&data.error)||error?.message||"Could not create account. Please try again.";}
-    else {msg.style.color="#7ed6a5";msg.textContent="Invitation sent to "+data.email+". The user must open the email and set a password.";e.target.reset();}
-    btn.disabled=false;btn.textContent="Send invitation";
+    if(error||!data||!data.success){msg.textContent=(data&&data.error)||error?.message||"Could not create or link account. Please try again.";}
+    else {
+      msg.style.color="#7ed6a5";
+      msg.textContent=data.existing_account
+        ?"Existing "+data.role+" account for "+data.email+" is linked to the selected student. No new invitation was sent."
+        :"Invitation sent to "+data.email+". The user must open the email and set a password.";
+      e.target.reset();
+    }
+    btn.disabled=false;btn.textContent="Create / link account";
   });
 }
 

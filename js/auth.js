@@ -175,26 +175,155 @@
   }
 
   async function renderReadOnlyPortal(role, profile, user) {
-    const name = profile.display_name || user.email || "Parent";
+    const name = profile.display_name || user.email || (role === "parent" ? "Parent" : "Student");
     portalShell(role, name);
     const page = document.getElementById("pageContent");
-    page.innerHTML = '<div class="registry-head"><div><div class="eyebrow">DISCIPLINE / PARENT</div><h1>Welcome, ' + esc(name) + '</h1><p class="page-intro">Private updates for the student profiles linked to your account.</p></div></div><div class="registry-stats"><article class="stat-card"><div class="stat-label">Linked profile(s)</div><div class="stat-value" id="linkedCount">…</div></article><article class="stat-card"><div class="stat-label">Portal access</div><div class="stat-value" style="font-size:18px">View & respond</div></article></div><div id="portalChildren"></div><footer class="page-footer"><span>© 2026 DISCIPLINE.</span><span>PRIVATE PARENT PORTAL</span></footer>';
+    page.innerHTML = '<div class="registry-head"><div><div class="eyebrow">DISCIPLINE / '+role.toUpperCase()+'</div><h1>Welcome, '+esc(name)+'</h1><p class="page-intro">'+(role==="parent"?"Private updates for the student profiles linked to your account.":"Your personal, read-only journey dashboard.")+'</p></div></div><div class="registry-stats"><article class="stat-card"><div class="stat-label">Linked profile(s)</div><div class="stat-value" id="linkedCount">…</div></article><article class="stat-card"><div class="stat-label">Portal access</div><div class="stat-value" style="font-size:18px">'+(role==="parent"?"View & respond":"View only")+'</div></article></div><div id="portalChildren"></div><footer class="page-footer"><span>© 2026 DISCIPLINE.</span><span>'+(role==="parent"?"PRIVATE PARENT PORTAL":"PRIVATE STUDENT PORTAL · VIEW ONLY")+'</span></footer>';
     const container = document.getElementById("portalChildren");
-    const { data: links, error: linkError } = await client.from("parent_student_links").select("student_id,relationship_label").eq("parent_user_id", user.id);
-    if (linkError) { container.textContent = "Unable to load linked student profiles. Please contact the administrator."; return; }
-    const ids = (links || []).map(x => x.student_id);
-    document.getElementById("linkedCount").textContent = ids.length;
-    if (!ids.length) {
+    let links = [];
+    if (role === "student") {
+      const { data, error } = await client.from("student_accounts").select("student_id").eq("user_id", user.id);
+      if (error) { container.textContent = "Unable to load your student link. Please contact the administrator."; return; }
+      links = (data || []).map(x => x.student_id);
+    } else {
+      const { data, error } = await client.from("parent_student_links").select("student_id,relationship_label").eq("parent_user_id", user.id);
+      if (error) { container.textContent = "Unable to load linked student profiles. Please contact the administrator."; return; }
+      links = (data || []).map(x => x.student_id);
+    }
+    document.getElementById("linkedCount").textContent = links.length;
+    if (!links.length) {
       container.innerHTML = '<section class="panel registry-panel"><h3>No linked profile yet</h3><p class="page-intro">Your account is active, but the administrator has not linked a student profile yet.</p></section>';
       return;
     }
-    // The existing parent dashboard renderer remains the source of family report data.
-    // Reuse its previously deployed implementation by loading the portal through app.js helper.
-    if (typeof window.renderDisciplineParentPortal === "function") {
-      await window.renderDisciplineParentPortal(profile, user, container);
-      return;
+    const { data: students, error: studentError } = await client.from("students")
+      .select("id,full_name,student_code,class_group,starting_marks").in("id", links);
+    if (studentError) { container.textContent = "Unable to load permitted student details."; return; }
+
+    function responseForm(studentId, relationId, relationType) {
+      const options = relationType === "incident"
+        ? '<option value="acknowledged">Acknowledge report</option><option value="review_requested">Request review</option><option value="clarification_requested">Request clarification</option>'
+        : '<option value="acknowledged">Acknowledge result</option><option value="review_requested">Request review</option>';
+      return '<form class="registry-response-form" data-parent-response-form data-student-id="'+esc(studentId)+'" data-relation-id="'+esc(relationId)+'" data-relation-type="'+relationType+'"><div class="field"><label>Response</label><select data-response-type>'+options+'</select></div><div class="field"><label>Message (optional)</label><textarea data-response-message rows="2" maxlength="500" placeholder="Add a note for the administrator"></textarea></div><button class="button button-outline" type="submit">Send response</button><span class="registry-disclaimer" data-response-status role="status"></span></form>';
     }
-    container.innerHTML = '<section class="panel registry-panel"><h3>Parent dashboard</h3><p>Your linked account is ready, but the detailed parent report module needs to be reloaded. Refresh the page.</p></section>';
+
+    for (const student of (students || [])) {
+      const commonQueries = [
+        client.from("weekly_results").select("id,weekly_net,lifetime_balance,week_start,week_end,published_at,total_awards,total_deductions,total_received,total_transferred").eq("student_id", student.id).not("published_at", "is", null).order("week_start", { ascending: false }).limit(8),
+        client.from("mark_transactions").select("transaction_type,amount,balance_delta,balance_after,reason,occurred_at").eq("student_id", student.id).order("occurred_at", { ascending: false }).limit(8)
+      ];
+      const [weeklyResult, txResult] = await Promise.all(commonQueries);
+      if (weeklyResult.error || txResult.error) {
+        container.insertAdjacentHTML("beforeend", '<section class="panel registry-panel"><h3>'+esc(student.full_name)+'</h3><p>Unable to load this profile’s results. Please contact the administrator.</p></section>');
+        continue;
+      }
+      const weeklyRows = weeklyResult.data || [];
+      const tx = txResult.data || [];
+      const latestWeekly = weeklyRows[0] || null;
+      const lifetimeBalance = tx.length ? tx[0].balance_after : (student.starting_marks || 0);
+      const history = tx.map(t => '<tr><td>'+esc(new Date(t.occurred_at).toLocaleDateString("en-IN"))+'</td><td>'+esc(t.reason || t.transaction_type)+'</td><td>'+esc(t.balance_delta > 0 ? "+" : "")+esc(t.balance_delta)+'</td></tr>').join("");
+
+      if (role !== "parent") {
+        container.insertAdjacentHTML("beforeend",
+          '<section class="panel registry-panel"><div class="panel-heading"><div><h3>'+esc(student.full_name)+'</h3><p>'+esc(student.student_code)+' · '+esc(student.class_group || "Student")+'</p></div></div><div class="registry-stats"><article class="stat-card"><div class="stat-label">Latest published weekly score</div><div class="stat-value">'+(latestWeekly ? esc(latestWeekly.weekly_net) : "—")+'</div></article><article class="stat-card"><div class="stat-label">Lifetime balance</div><div class="stat-value">'+esc(lifetimeBalance)+'</div></article></div><h3>Recent mark history</h3><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>ACTIVITY</th><th>CHANGE</th></tr></thead><tbody>'+(history || '<tr><td colspan="3">No mark records yet.</td></tr>')+'</tbody></table></div></section>');
+        continue;
+      }
+
+      const [incidentResult, responseResult, certificateResult, attendanceResult, notificationResult] = await Promise.all([
+        client.from("incidents").select("id,category,severity,factual_description,exact_words,action_taken,occurred_at").eq("student_id", student.id).order("occurred_at", { ascending: false }).limit(50),
+        client.from("parent_responses").select("id,incident_id,weekly_result_id,response_type,message,created_at").eq("parent_user_id", user.id).eq("student_id", student.id).order("created_at", { ascending: false }).limit(50),
+        client.from("certificates").select("id,title,description,issued_at").eq("student_id", student.id).not("published_at", "is", null).order("issued_at", { ascending: false }).limit(20),
+        client.from("attendance").select("status,recorded_at,journey_sessions(session_date,session_type)").eq("student_id", student.id).order("recorded_at", { ascending: false }).limit(30),
+        client.from("notifications").select("id,title,message,read_at,created_at").eq("recipient_user_id", user.id).order("created_at", { ascending: false }).limit(20)
+      ]);
+      const queryError = incidentResult.error || responseResult.error || certificateResult.error || attendanceResult.error || notificationResult.error;
+      if (queryError) {
+        container.insertAdjacentHTML("beforeend", '<section class="panel registry-panel"><h3>'+esc(student.full_name)+'</h3><p>Some family report data could not be loaded: '+esc(queryError.message)+'</p></section>');
+        continue;
+      }
+      const incidents = incidentResult.data || [];
+      const responses = responseResult.data || [];
+      const certificates = certificateResult.data || [];
+      const attendance = attendanceResult.data || [];
+      const notifications = notificationResult.data || [];
+      const presentCount = attendance.filter(x => x.status === "present" || x.status === "late").length;
+      const attendanceHtml = attendance.map(x => '<tr><td>'+esc(x.journey_sessions?.session_date || new Date(x.recorded_at).toLocaleDateString("en-IN"))+'</td><td>'+esc(x.journey_sessions?.session_type || "Morning")+'</td><td>'+esc(x.status)+'</td></tr>').join("");
+      const weeklyHtml = weeklyRows.map(x =>
+        '<tr><td>'+esc(x.week_start)+' – '+esc(x.week_end)+'</td><td class="'+(x.weekly_net >= 0 ? "positive-text" : "negative-text")+'">'+(x.weekly_net > 0 ? "+" : "")+esc(x.weekly_net)+'</td><td>'+esc(x.total_awards)+'</td><td>'+esc(x.total_deductions)+'</td><td>'+responseForm(student.id, x.id, "weekly")+'</td></tr>'
+      ).join("");
+      const incidentHtml = incidents.map(x =>
+        '<article class="panel registry-panel"><div class="panel-heading"><div><h3>'+esc(x.category.replaceAll("_", " "))+'</h3><p>'+esc(new Date(x.occurred_at).toLocaleString("en-IN"))+' · '+esc(x.severity)+'</p></div></div><p>'+esc(x.factual_description)+'</p>'+(x.exact_words ? '<p><strong>Verified words:</strong> '+esc(x.exact_words)+'</p>' : '')+(x.action_taken ? '<p><strong>Action taken:</strong> '+esc(x.action_taken)+'</p>' : '')+responseForm(student.id, x.id, "incident")+'</article>'
+      ).join("");
+      const responseHtml = responses.map(x => '<tr><td>'+esc(new Date(x.created_at).toLocaleDateString("en-IN"))+'</td><td>'+esc(x.incident_id ? "Incident report" : x.weekly_result_id ? "Weekly result" : "General message")+'</td><td>'+esc(x.response_type.replaceAll("_", " "))+'</td><td>'+esc(x.message || "—")+'</td></tr>').join("");
+      const certificateHtml = certificates.map(x => '<li><strong>'+esc(x.title)+'</strong> · '+esc(x.description || "Achievement recognised")+' <small>'+esc(new Date(x.issued_at).toLocaleDateString("en-IN"))+'</small></li>').join("");
+      const notificationHtml = notifications.map(x => '<li><strong>'+esc(x.title)+'</strong><p>'+esc(x.message)+'</p><small>'+esc(new Date(x.created_at).toLocaleString("en-IN"))+'</small>'+(x.read_at ? '<span class="session-status completed">Read</span>' : '<button class="button button-quiet" type="button" data-mark-notification-read="'+esc(x.id)+'">Mark read</button>')+'</li>').join("");
+
+      container.insertAdjacentHTML("beforeend",
+        '<section class="panel registry-panel"><div class="panel-heading"><div><h2>'+esc(student.full_name)+'</h2><p>'+esc(student.student_code)+' · '+esc(student.class_group || "Student")+'</p></div></div>'+
+        '<div class="registry-stats"><article class="stat-card"><div class="stat-label">Latest published weekly score</div><div class="stat-value">'+(latestWeekly ? esc(latestWeekly.weekly_net) : "—")+'</div></article><article class="stat-card"><div class="stat-label">Lifetime balance</div><div class="stat-value">'+esc(lifetimeBalance)+'</div></article><article class="stat-card"><div class="stat-label">Attendance marked present / late</div><div class="stat-value">'+presentCount+' / '+attendance.length+'</div></article></div>'+
+        '<h3>Published weekly reports</h3><div class="table-scroll"><table class="registry-table"><thead><tr><th>WEEK</th><th>NET</th><th>AWARDS</th><th>DEDUCTIONS</th><th>YOUR RESPONSE</th></tr></thead><tbody>'+(weeklyHtml || '<tr><td colspan="5">No weekly results have been published yet.</td></tr>')+'</tbody></table></div>'+
+        '<h3>Verified behaviour reports</h3>'+(incidentHtml || '<p>No verified incident reports have been published to this parent portal.</p>')+
+        '<h3>Morning attendance history</h3><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>JOURNEY</th><th>STATUS</th></tr></thead><tbody>'+(attendanceHtml || '<tr><td colspan="3">No attendance records yet.</td></tr>')+'</tbody></table></div>'+
+        '<h3>Achievements & certificates</h3><ul class="simple-list">'+(certificateHtml || '<li>No certificates have been published yet.</li>')+'</ul>'+
+        '<h3>Your previous responses</h3><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>ABOUT</th><th>RESPONSE</th><th>MESSAGE</th></tr></thead><tbody>'+(responseHtml || '<tr><td colspan="4">No responses submitted yet.</td></tr>')+'</tbody></table></div>'+
+        '<h3>Notifications</h3><ul class="simple-list">'+(notificationHtml || '<li>No notifications yet.</li>')+'</ul>'+
+        '<h3>Recent mark history</h3><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>ACTIVITY</th><th>CHANGE</th></tr></thead><tbody>'+(history || '<tr><td colspan="3">No mark records yet.</td></tr>')+'</tbody></table></div></section>'
+      );
+    }
+
+    if (role === "student") {
+      const weekStart = disciplineMonday(disciplineToday());
+      const board = await client.rpc("get_published_student_leaderboard", { p_week_start: weekStart, p_limit: 10 });
+      const entries = board.data || [];
+      const boardRows = entries.map(x => '<tr><td><strong>#'+esc(x.rank)+'</strong></td><td><strong>'+esc(x.full_name)+'</strong><small class="registry-email">'+esc(x.student_code)+'</small></td><td class="'+(x.weekly_net >= 0 ? "positive-text" : "negative-text")+'">'+(x.weekly_net > 0 ? "+" : "")+esc(x.weekly_net)+'</td></tr>').join("");
+      container.insertAdjacentHTML("beforeend",
+        '<section class="panel registry-panel"><div class="panel-heading"><div><h3>Hall of Excellence</h3><p>Public rankings · week starting '+esc(weekStart)+'</p></div></div>' +
+        (board.error ? '<p>Leaderboard unavailable: '+esc(board.error.message)+'</p>' :
+        '<div class="table-scroll"><table class="registry-table"><thead><tr><th>RANK</th><th>STUDENT</th><th>WEEKLY SCORE</th></tr></thead><tbody>'+(boardRows || '<tr><td colspan="3">No published weekly results yet.</td></tr>')+'</tbody></table></div>') +
+        '<p class="registry-disclaimer">Only published weekly scores and basic student identifiers appear here. Private balances and incident details are not shown.</p></section>'
+      );
+    }
+
+    if (role === "parent") {
+      container.addEventListener("submit", async event => {
+        const form = event.target.closest("form[data-parent-response-form]");
+        if (!form) return;
+        event.preventDefault();
+        const status = form.querySelector("[data-response-status]");
+        const button = form.querySelector('button[type="submit"]');
+        const payload = {
+          parent_user_id: user.id,
+          student_id: form.dataset.studentId,
+          incident_id: form.dataset.relationType === "incident" ? form.dataset.relationId : null,
+          weekly_result_id: form.dataset.relationType === "weekly" ? form.dataset.relationId : null,
+          response_type: form.querySelector("[data-response-type]").value,
+          message: form.querySelector("[data-response-message]").value.trim() || null
+        };
+        button.disabled = true;
+        status.textContent = "Sending…";
+        const { error } = await client.from("parent_responses").insert(payload);
+        if (error) status.textContent = "Could not send: " + error.message;
+        else {
+          status.textContent = "Response sent to the administrator.";
+          form.querySelector("[data-response-message]").value = "";
+        }
+        button.disabled = false;
+      });
+      container.addEventListener("click", async event => {
+        const button = event.target.closest("[data-mark-notification-read]");
+        if (!button) return;
+        button.disabled = true;
+        const { error } = await client.from("notifications")
+          .update({ read_at: new Date().toISOString() })
+          .eq("id", button.dataset.markNotificationRead)
+          .eq("recipient_user_id", user.id);
+        if (error) {
+          button.disabled = false;
+          button.textContent = "Could not mark read";
+        } else {
+          button.replaceWith(Object.assign(document.createElement("span"), { className: "session-status completed", textContent: "Read" }));
+        }
+      });
+    }
   }
 
   function driverToday() {

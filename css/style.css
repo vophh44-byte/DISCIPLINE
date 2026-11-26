@@ -398,3 +398,108 @@ img,svg,video,canvas{max-width:100%}
  .student-list-tools>.button{width:100%}
  .student-summary .stat-card{min-height:80px}
 }
+
+
+/* DISCIPLINE visual refresh — bright workspace, clear hierarchy */
+:root{
+ --bg:#f3f6fb;--surface:#ffffff;--surface-2:#f7f9fc;--surface-3:#edf2f8;
+ --border:#e3e9f1;--text:#17263b;--muted:#65758b;--muted-2:#8b98a9;
+ --gold:#b48635;--gold-2:#8d6725;--green:#23845f;--red:#c14f59;--blue:#3976b8;
+ --shadow:0 10px 30px rgba(24,42,67,.06)
+}
+body{background:var(--bg);color:var(--text)}
+.sidebar{background:#14243a;border-right:1px solid #243650;box-shadow:5px 0 25px rgba(20,36,58,.06)}
+.brand{padding-bottom:30px}
+.nav-item{color:#b4c0d0;padding:11px 13px;font-size:12px;border-radius:10px}
+.nav-item:hover{background:rgba(255,255,255,.075);color:#fff}
+.nav-item.active{background:#263a55;color:#f2d69c;box-shadow:inset 3px 0 #d7ad61}
+.nav-item.active .nav-icon{color:#f2d69c}
+.workspace-label{color:#8191a6}
+.nav-divider{background:#2a3c54}
+.admin-card{background:#1c304a;border-color:#31445d}
+.main-area{background:var(--bg)}
+.topbar{background:rgba(255,255,255,.94);border-bottom:1px solid #e4eaf2;box-shadow:0 3px 14px rgba(25,45,72,.035)}
+.breadcrumb{color:#8a98aa}.breadcrumb b{color:#c0c9d5}.breadcrumb strong{color:#24364e}
+.top-admin>div:nth-child(2) strong{color:#24364e}
+.top-admin>div:nth-child(2) span{color:#8794a5}
+.icon-button{background:#f5f7fa;border-color:#e2e8f0;color:#53647b}
+.demo-pill{color:#8c6728;background:#fbf5e9;border-color:#efdfbf}
+.pulse-dot{background:#c39749;box-shadow:0 0 0 4px rgba(195,151,73,.12)}
+.page-content{max-width:1580px;padding:34px clamp(18px,3vw,46px) 28px}
+h1{color:#182a42}
+.page-intro{color:#728197}
+.eyebrow{color:#a47b32}
+.eyebrow-line{background:#c49a50}
+.button{border-radius:10px;min-height:38px;font-size:11px}
+.button-primary{background:#c49a50;border-color:#b88a3d;color:#fff;box-shadow:0 5px 13px rgba(180,134,53,.18)}
+.button-primary:hover{background:#ad8038;filter:none}
+.button-quiet{background:#f4f6f9;border-color:#e2e8f0;color:#52637a}
+.button-outline{background:#fff;border-color:#d9c49c;color:#8d6725}
+.button-secondary{background:#f1f4f8;border-color:#e0e6ef;color:#52637a}
+.panel,.registry-panel,.dash-panel{background:#fff;border:1px solid #e4eaf2;border-radius:16px;box-shadow:0 7px 24px rgba(25,45,72,.045)}
+.registry-panel{padding:23px;margin-bottom:18px}
+.registry-head{margin-bottom:25px}
+.registry-head h1{color:#182a42}
+.registry-stats .stat-card,.student-summary .stat-card{background:#fff;border:1px solid #e4eaf2;border-radius:14px;box-shadow:0 5px 18px rgba(25,45,72,.035)}
+.stat-label,.student-summary .stat-card .stat-label{color:#65758b}
+.stat-value{color:#1b2d45}
+.stat-foot,.stat-card small{color:#78879a}
+.registry-form .field label,#studentForm .field label{color:#52637a}
+.registry-form input,.registry-search,.student-search-wrap{background:#f8fafc;border-color:#dfe6ef;color:#1b2d45}
+.registry-form input:focus,.registry-search:focus,.student-search-wrap:focus-within{border-color:#c49a50;box-shadow:0 0 0 3px rgba(196,154,80,.12)}
+.registry-table{border-collapse:separate;border-spacing:0}
+.registry-table thead th{background:#f5f7fa;color:#718096;border-bottom:1px solid #e4eaf2;font-size:9px;letter-spacing:.09em}
+.registry-table td{color:#34465e;border-bottom:1px solid #edf1f6}
+.registry-table tbody tr:hover{background:#f8fafc}
+.registry-email{color:#8290a2}
+.page-footer{color:#8794a5;border-top-color:#e2e8f0}
+.session-status{border-radius:20px}
+.dash-welcome{align-items:center;margin-bottom:27px}
+.dash-welcome h1{font-size:clamp(28px,3vw,36px);color:#192c45;letter-spacing:-1.3px}
+.dash-stats{gap:16px;margin-bottom:20px}
+.dash-stat{position:relative;overflow:hidden;background:#fff;border:1px solid #e4eaf2;border-radius:16px;padding:21px 22px;box-shadow:0 6px 22px rgba(25,45,72,.045)}
+.dash-stat:before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:#c49a50}
+.dash-stat:nth-child(2):before{background:#4b8fc7}
+.dash-stat:nth-child(3):before{background:#389a75}
+.dash-stat:nth-child(4):before{background:#c76a70}
+.dash-stat-label{color:#6d7c91;font-size:11px}
+.dash-stat-value{color:#1c304a;font-size:32px;margin:15px 0 5px}
+.dash-stat small{color:#8a97a8;font-size:10px}
+.dash-main-grid{gap:19px}
+.dash-panel{padding:22px}
+.dash-section-head h2{color:#1e3048;font-size:16px}
+.dash-section-head p{color:#8290a2;font-size:11px}
+.dash-action{border-top-color:#edf1f5;padding:14px 3px}
+.dash-action strong{color:#30435b;font-size:12px}
+.dash-action small{color:#8794a5;font-size:10px}
+.dash-action-icon{background:#f7f0e4;color:#a57a32;border-radius:11px;width:38px;height:38px}
+.dash-note{background:#f0f6fb;border-color:#dce9f4;border-radius:14px}
+.dash-note strong{color:#38536f}
+.dash-note p{color:#71859a}
+.dash-note-mark{background:#e0edf7;color:#467ba9}
+.dash-activity-tag.is-award{color:#237d5d;background:#e8f5ef}
+.dash-activity-tag.is-deduction{color:#b34f58;background:#fbecee}
+.positive-text{color:#23845f!important}.negative-text{color:#c14f59!important}
+.student-step{color:#a77c32}
+.student-panel-heading h2,.student-list-head h2{color:#1d3049}
+.student-panel-heading p,.student-list-head p{color:#7c8a9d}
+.student-search-wrap{background:#f8fafc}
+.student-search-wrap .registry-search{color:#24364e}
+.notice-banner{background:#fbf6ec;border-color:#eee0c4;color:#594725}
+.notice-banner span{color:#82704e}
+.auth-gate{background:radial-gradient(ellipse at 50% 0%,rgba(196,154,80,.12),transparent 55%),#f3f6fb}
+.auth-card{background:#fff;border:1px solid #e5eaf1;box-shadow:0 20px 60px rgba(25,45,72,.12);color:#1d3049}
+.auth-card h1,.auth-card h2,.auth-card strong{color:#1d3049}
+.auth-card p,.auth-note{color:#718096}
+.auth-form label{color:#52637a}
+.auth-form input{background:#f8fafc;border-color:#dfe6ef;color:#1b2d45}
+.portal-choice{background:#fff;border-color:#e3e9f1;color:#23364f}
+.portal-choice:hover{border-color:#c49a50;background:#fdfaf4}
+.portal-choice small{color:#7a899c}
+.toast{box-shadow:0 8px 28px rgba(20,36,58,.16)}
+@media(max-width:700px){
+ .page-content{padding-top:23px}
+ .registry-panel{padding:16px}
+ .dash-stat{padding:16px}
+ .dash-panel{padding:16px}
+}

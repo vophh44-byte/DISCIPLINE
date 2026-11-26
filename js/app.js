@@ -245,7 +245,7 @@ async function renderStudents(){
       const g=guardianOf(s);
       return [s.full_name,s.student_code,s.class_group,g.guardian_name,g.phone,g.email,"Active"];
     })].map(row=>row.map(csvCell).join(","));
-    const blob=new Blob(["\\uFEFF"+lines.join("\\r\\n")],{type:"text/csv;charset=utf-8;"});
+    const blob=new Blob(["\uFEFF"+lines.join("\r\n") ],{type:"text/csv;charset=utf-8;"});
     const url=URL.createObjectURL(blob);
     const link=document.createElement("a");
     link.href=url;

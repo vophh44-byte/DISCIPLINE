@@ -1245,3 +1245,51 @@ table tbody tr:hover{background:#f7f9fc}
 @media(max-width:900px){.weekly-overview{grid-template-columns:repeat(2,minmax(0,1fr))}.weekly-publish-controls{grid-template-columns:minmax(180px,.65fr) 1fr}}
 @media(max-width:650px){.weekly-head{align-items:flex-start;flex-direction:column}.weekly-admin-tag{align-self:flex-start}.weekly-publish-panel,.weekly-results-panel,.weekly-method-panel{padding:15px}.weekly-publish-controls{grid-template-columns:1fr;padding:11px}.weekly-publish-actions{justify-content:flex-start}.weekly-publish-actions .button{flex:1}.weekly-overview{gap:8px}.weekly-stat{padding:13px 14px}.weekly-stat>strong{font-size:21px}.weekly-filter-bar{grid-template-columns:1fr;padding:11px}.weekly-section-heading{align-items:flex-start;flex-direction:column}.weekly-results-line{align-items:flex-start;flex-direction:column;gap:4px}.weekly-method-grid{grid-template-columns:1fr}}
 @media(max-width:380px){.weekly-overview{grid-template-columns:1fr}.weekly-publish-actions{flex-direction:column;align-items:stretch}.weekly-publish-actions .button{width:100%}}
+
+
+/* Achievement Certificates — recognition and controlled publishing */
+.certificates-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin:3px 0 16px}
+.certificates-head h1{margin:8px 0 5px;color:#172b45;font-size:clamp(28px,3vw,35px);letter-spacing:-1.2px}
+.certificates-access-tag,.certificates-record-limit,.certificates-form-label{display:inline-flex;align-items:center;padding:9px 12px;border:1px solid #e5ebf2;border-radius:30px;background:#fff;color:#65758b;font-size:8px;font-weight:800;letter-spacing:.7px;white-space:nowrap}
+.certificates-guidance{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;margin-bottom:15px;background:#f8f5ed;border:1px solid #eee5d3;border-radius:12px}
+.certificates-guidance-mark{display:grid;place-items:center;flex:0 0 26px;width:26px;height:26px;border-radius:50%;background:#efe4cc;color:#805d28;font:800 12px Manrope,sans-serif}
+.certificates-guidance strong{color:#394c62;font-size:10px}
+.certificates-guidance p{margin:3px 0 0;color:#687b91;font-size:9px;line-height:1.55}
+.certificates-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.certificates-stat{display:flex;flex-direction:column;gap:5px;padding:16px 18px;background:#fff!important;border:1px solid #dfe6ef;border-radius:13px;box-shadow:0 5px 18px rgba(25,45,72,.035)}
+.certificates-stat>span{color:#718198;font-size:9px;font-weight:800}
+.certificates-stat>strong{color:#203650;font:800 23px Manrope,sans-serif}
+.certificates-stat>small{color:#8290a2;font-size:9px}
+.certificates-form-panel,.certificates-records-panel{padding:20px 21px;margin-bottom:15px;background:#fff!important;border:1px solid #dfe6ef!important;border-radius:15px;box-shadow:0 5px 18px rgba(25,45,72,.035)}
+.certificates-section-heading{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:17px}
+.certificates-step{color:#a17a3c;font-size:8px;font-weight:800;letter-spacing:1.1px}
+.certificates-section-heading h2{margin:5px 0;color:#203650;font:800 17px Manrope,sans-serif}
+.certificates-section-heading p{margin:0;color:#718198;font-size:10px;line-height:1.55}
+.certificates-form-label{background:#f8fafc}
+.certificates-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px}
+.certificates-form-grid .field{min-width:0}
+.certificates-form-grid .field label,.certificates-filter-bar .field label{color:#687a91;font-size:8px;font-weight:800;letter-spacing:.7px}
+.certificates-form-grid .field input,.certificates-form-grid .field select,.certificates-form-grid .field textarea,.certificates-filter-bar .field input,.certificates-filter-bar .field select{width:100%;min-height:41px;padding:9px 10px;background:#fbfcfd!important;color:#263a54!important;border:1px solid #d6dfeb!important;border-radius:9px;font-size:10px}
+.certificates-form-grid .field textarea{min-height:83px;resize:vertical}
+.certificates-form-grid .field.full{grid-column:1/-1}
+.certificates-form-grid .field small{display:block;margin-top:5px;color:#718198;font-size:9px;line-height:1.45}
+.certificates-form-footer{display:flex;align-items:center;justify-content:space-between;gap:14px;padding-top:15px;margin-top:15px;border-top:1px solid #edf0f4}
+.certificates-form-footer>div{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.certificates-form-footer>small{color:#8290a2;font-size:9px;line-height:1.45}
+.certificates-message{color:#526780;font-size:9px}
+.certificates-filter-bar{display:grid;grid-template-columns:minmax(240px,1fr) minmax(190px,.55fr);gap:12px;padding:13px;margin-bottom:11px;background:#f8fafc;border:1px solid #e6ecf2;border-radius:11px}
+.certificates-filter-bar .field{min-width:0}
+.certificates-results-line{display:flex;justify-content:space-between;gap:12px;margin:0 0 10px;color:#718198;font-size:9px}
+.certificates-results-line strong{color:#40536c;font-weight:800}
+.certificates-table{min-width:850px}
+.certificates-table th{color:#718198!important;white-space:nowrap}
+.certificates-table td{color:#40536c;vertical-align:middle}
+.certificates-table td strong{color:#263a54}
+.certificates-table td small{display:block;margin-top:4px}
+.certificates-date{font-weight:700;color:#40536c;white-space:nowrap}
+.certificates-description{min-width:180px;max-width:330px;line-height:1.55}
+.certificates-table .button{margin:3px 0;white-space:nowrap}
+.certificates-empty-cell{padding:27px!important;text-align:center;color:#718198!important;line-height:1.55}
+.certificates-footnote{margin:13px 0 0;color:#718198;font-size:9px;line-height:1.55}
+@media(max-width:760px){.certificates-head{align-items:flex-start;flex-direction:column}.certificates-access-tag{align-self:flex-start}.certificates-form-footer{align-items:flex-start;flex-direction:column}.certificates-section-heading{align-items:flex-start}}
+@media(max-width:560px){.certificates-overview{grid-template-columns:1fr;gap:8px}.certificates-stat{padding:13px 15px}.certificates-form-panel,.certificates-records-panel{padding:15px}.certificates-form-grid{grid-template-columns:1fr;gap:11px}.certificates-form-grid .field.full{grid-column:auto}.certificates-filter-bar{grid-template-columns:1fr;padding:11px}.certificates-section-heading{flex-direction:column}.certificates-results-line{align-items:flex-start;flex-direction:column;gap:4px}.certificates-form-footer>div{align-items:flex-start;flex-direction:column}}

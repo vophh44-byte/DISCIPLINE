@@ -219,3 +219,19 @@ body:not(.is-authenticated) .app-shell{display:none}
 .driver-roster-table input{min-width:160px;width:100%}
 .driver-roster-table select{min-width:135px}
 @media(max-width:560px){.auth-card-wide{padding:25px 18px}.portal-choice{padding:13px}.driver-toolbar{grid-template-columns:1fr}.driver-route-head{align-items:flex-start;flex-direction:column}}
+
+
+/* Administrator driver and route management */
+.driver-account-group{margin-bottom:16px}
+.driver-route-card{border:1px solid var(--border);border-radius:12px;padding:18px;margin-top:12px;background:rgba(255,255,255,.018)}
+.driver-route-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.driver-route-card-head h3{font:800 17px Manrope,sans-serif;margin:5px 0}
+.driver-route-card-head p{font-size:11px;color:var(--muted);margin:0}
+.driver-route-meta{display:flex;flex-wrap:wrap;gap:14px;margin-top:15px;padding-top:12px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)}
+.driver-route-meta strong{color:var(--text)}
+.driver-route-students{font-size:11px;line-height:1.8;color:var(--text);margin:12px 0}
+.driver-route-editor{margin-top:20px;scroll-margin-top:24px}
+.driver-editor-students{margin-top:16px}
+.driver-editor-students select{width:100%;min-height:180px;padding:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:9px;color:var(--text);font:500 11px 'DM Sans',sans-serif}
+.driver-editor-students option{padding:7px}
+@media(max-width:560px){.driver-route-card{padding:14px}.driver-route-card-head{flex-direction:column}.driver-route-meta{gap:9px}}

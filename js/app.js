@@ -11,7 +11,8 @@ const pageMeta = {
  ledger:{title:"Discipline Ledger",desc:"Review the complete history of mark transactions.",icon:"▤"},
  incidents:{title:"Incident Center",desc:"Record behaviour concerns and verified incident details.",icon:"!"},
  analytics:{title:"Performance Analytics",desc:"Understand weekly trends and student improvement.",icon:"⌁"},
- reports:{title:"Reports & Certificates",desc:"Prepare parent reports and student achievement records.",icon:"▧"},
+ reports:{title:"Weekly Results",desc:"Calculate and publish official Monday–Sunday student results.",icon:"▧"},
+ certificates:{title:"Certificates",desc:"Issue and publish student achievement certificates.",icon:"✦"},
  portals:{title:"Portal Previews",desc:"Preview the student and parent experiences.",icon:"◎"},
  settings:{title:"Settings",desc:"Configure system preferences and security.",icon:"⚙"}
 };
@@ -39,7 +40,7 @@ function setActivePage(page){
     dashboard:renderDashboard,students:renderStudents,parents:renderParents,accounts:renderAccounts,
     attendance:renderAttendance,journeys:renderJourneys,marks:renderMarks,dedications:renderDedications,
     leaderboard:renderLeaderboard,ledger:renderLedger,incidents:renderIncidents,
-    analytics:renderAnalytics,reports:renderWeeklyReports,portals:renderPortals,settings:renderSettings
+    analytics:renderAnalytics,reports:renderWeeklyReports,certificates:renderCertificates,portals:renderPortals,settings:renderSettings
   };
   try{
     const task=(renderers[page]||(()=>renderPlaceholder(page)))();
@@ -697,6 +698,78 @@ async function renderAnalytics(){
  rows.forEach(x=>{const day=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(x.occurred_at));if(!byDay[day])byDay[day]={awards:0,deductions:0,net:0};if(x.transaction_type==="award")byDay[day].awards+=x.amount;if(x.transaction_type==="deduction")byDay[day].deductions+=x.amount;byDay[day].net+=x.balance_delta;});
  document.getElementById("analyticsAwards").textContent=awards;document.getElementById("analyticsDeductions").textContent=deductions;document.getElementById("analyticsNet").textContent=(net>0?"+":"")+net;document.getElementById("analyticsIncidents").textContent=inc.count??0;document.getElementById("analyticsWeek").textContent="Week "+week+" to "+new Date(end+"T12:00:00").toLocaleDateString("en-IN");
  document.getElementById("analyticsRows").innerHTML=Object.keys(byDay).sort().map(day=>'<tr><td>'+day+'</td><td>+'+byDay[day].awards+'</td><td>−'+byDay[day].deductions+'</td><td class="'+(byDay[day].net>=0?"positive-text":"negative-text")+'">'+(byDay[day].net>0?"+":"")+byDay[day].net+'</td></tr>').join("")||'<tr><td colspan="4">No mark activity recorded this week.</td></tr>';
+}
+
+
+async function renderCertificates(){
+ const db=window.disciplineSupabase;
+ pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">RECOGNITION / ADMINISTRATION</div><h1>Achievement Certificates</h1><p class="page-intro">Issue a certificate, review its details, and publish it to the linked student and parent portals when ready.</p></div></div><section class="panel registry-panel"><div class="panel-heading"><div><h3>Issue a certificate</h3><p>New certificates remain private until you publish them.</p></div></div><form id="certificateForm"><div class="form-grid"><div class="field"><label for="certificateStudent">Student *</label><select id="certificateStudent" required><option value="">Loading students…</option></select></div><div class="field"><label for="certificateTitle">Certificate title *</label><input id="certificateTitle" type="text" maxlength="120" required placeholder="e.g. Outstanding Cooperation"></div><div class="field full"><label for="certificateDescription">Achievement description</label><textarea id="certificateDescription" rows="3" maxlength="1000" placeholder="Describe the achievement in clear, encouraging language."></textarea></div></div><div class="registry-form-actions"><button class="button button-primary" id="issueCertificate" type="submit">Issue certificate</button><span id="certificateMessage" class="registry-disclaimer" role="status"></span></div></form></section><section class="panel registry-panel"><div class="panel-heading"><div><h3>Certificate register</h3><p>Review issued certificates and control when each one appears in the portals.</p></div><input id="certificateSearch" class="registry-search" placeholder="Search student or certificate…"></div><div class="table-scroll"><table class="registry-table"><thead><tr><th>ISSUED</th><th>STUDENT</th><th>CERTIFICATE</th><th>DESCRIPTION</th><th>PORTAL STATUS</th><th>ACTION</th></tr></thead><tbody id="certificateRows"><tr><td colspan="6">Loading…</td></tr></tbody></table></div></section>';
+ if(!db){showToast("Database connection is unavailable.");return;}
+ const studentSelect=document.getElementById("certificateStudent"),body=document.getElementById("certificateRows");
+ const students=await db.from("students").select("id,student_code,full_name").eq("is_active",true).order("full_name");
+ if(students.error)throw students.error;
+ studentSelect.innerHTML='<option value="">Choose a student</option>'+(students.data||[]).map(x=>'<option value="'+x.id+'">'+escapeHTML(x.student_code)+' — '+escapeHTML(x.full_name)+'</option>').join("");
+ let records=[];
+ async function load(){
+  const r=await db.from("certificates").select("id,student_id,title,description,issued_at,published_at,students(full_name,student_code)").order("issued_at",{ascending:false}).limit(300);
+  if(r.error){body.innerHTML='<tr><td colspan="6">Could not load certificates: '+escapeHTML(r.error.message)+'</td></tr>';return;}
+  records=r.data||[];
+  draw();
+ }
+ function draw(){
+  const q=document.getElementById("certificateSearch").value.trim().toLowerCase();
+  const filtered=records.filter(x=>[x.title,x.description,x.students?.full_name,x.students?.student_code].join(" ").toLowerCase().includes(q));
+  body.innerHTML=filtered.map(x=>'<tr><td>'+escapeHTML(new Date(x.issued_at).toLocaleDateString("en-IN"))+'</td><td><strong>'+escapeHTML(x.students?.full_name||"Student")+'</strong><small class="registry-email">'+escapeHTML(x.students?.student_code||"")+'</small></td><td><strong>'+escapeHTML(x.title)+'</strong></td><td>'+escapeHTML(x.description||"—")+'</td><td><span class="session-status '+(x.published_at?"completed":"pending")+'">'+(x.published_at?"Published":"Private draft")+'</span></td><td>'+(x.published_at?'<button class="button button-outline" data-unpublish-certificate="'+x.id+'">Unpublish</button>':'<button class="button button-primary" data-publish-certificate="'+x.id+'" data-certificate-student="'+x.student_id+'">Publish to portals</button>')+'</td></tr>').join("")||'<tr><td colspan="6">No certificates have been issued yet.</td></tr>';
+ }
+ document.getElementById("certificateSearch").addEventListener("input",draw);
+ document.getElementById("certificateForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const btn=document.getElementById("issueCertificate"),msg=document.getElementById("certificateMessage");
+  const title=document.getElementById("certificateTitle").value.trim();
+  if(!studentSelect.value||!title){msg.textContent="Choose a student and enter a certificate title.";return;}
+  btn.disabled=true;btn.textContent="Issuing…";msg.textContent="";
+  try{
+   const uid=await disciplineAdminId(db);
+   const r=await db.from("certificates").insert({
+    student_id:studentSelect.value,title,
+    description:document.getElementById("certificateDescription").value.trim()||null,
+    issued_by:uid,published_at:null
+   }).select("id").single();
+   if(r.error)throw r.error;
+   e.target.reset();msg.textContent="Certificate issued as a private draft. Publish it when ready.";
+   await load();showToast("Certificate issued privately.");
+  }catch(error){msg.textContent="Could not issue certificate: "+error.message;showToast(error.message);}
+  finally{btn.disabled=false;btn.textContent="Issue certificate";}
+ });
+ body.addEventListener("click",async event=>{
+  const publish=event.target.closest("[data-publish-certificate]");
+  const unpublish=event.target.closest("[data-unpublish-certificate]");
+  if(!publish&&!unpublish)return;
+  if(publish){
+   if(!confirm("Publish this certificate to the linked student and parent portal(s)?"))return;
+   publish.disabled=true;
+   try{
+    const {error}=await db.from("certificates").update({published_at:new Date().toISOString()}).eq("id",publish.dataset.publishCertificate);
+    if(error)throw error;
+    const linkRows=await db.from("parent_student_links").select("parent_user_id").eq("student_id",publish.dataset.certificateStudent);
+    if(linkRows.error)throw linkRows.error;
+    if((linkRows.data||[]).length){
+     const row=records.find(x=>x.id===publish.dataset.publishCertificate);
+     const notifications=linkRows.data.map(x=>({recipient_user_id:x.parent_user_id,title:"Achievement certificate published",message:"A new achievement certificate is available in your linked student's DISCIPLINE portal: "+(row?.title||"Achievement certificate")+".",related_student_id:publish.dataset.certificateStudent}));
+     const notice=await db.from("notifications").insert(notifications);
+     if(notice.error)showToast("Certificate published, but parent notification failed: "+notice.error.message);
+    }
+    await load();showToast("Certificate published to the linked portal(s).");
+   }catch(error){showToast("Could not publish certificate: "+error.message);publish.disabled=false;}
+  }else{
+   if(!confirm("Unpublish this certificate from student and parent portals? The administrator record will remain."))return;
+   unpublish.disabled=true;
+   const {error}=await db.from("certificates").update({published_at:null}).eq("id",unpublish.dataset.unpublishCertificate);
+   if(error){showToast("Could not unpublish certificate: "+error.message);unpublish.disabled=false;return;}
+   await load();showToast("Certificate unpublished. Historical record retained.");
+  }
+ });
+ await load();
 }
 
 function renderPortals(){

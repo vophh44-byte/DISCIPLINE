@@ -1255,6 +1255,7 @@ async function renderIncidents(){
   e.preventDefault();
   const btn=document.getElementById("saveIncident"),msg=document.getElementById("incidentMessage");
   if(activeRecorder?.state==="recording"){msg.textContent="Stop the audio recording before saving the incident.";return;}
+  if(recordedAudioBlob&&!audioConsent.checked){msg.textContent="Reconfirm the required permission and notice before uploading the recording.";return;}
   const amount=Number(document.getElementById("incidentDeduction").value||0);
   if(!studentSelect.value){msg.textContent="Choose a student.";return;}
   if(!Number.isInteger(amount)||amount<0||amount>10000){msg.textContent="Deduction must be a whole number from 0 to 10,000.";return;}
@@ -1283,6 +1284,7 @@ async function renderIncidents(){
     const formData=new FormData();
     const extension=recordedAudioBlob.type.includes("mp4")?"mp4":recordedAudioBlob.type.includes("ogg")?"ogg":"webm";
     formData.append("action","upload");formData.append("incident_id",incidentId);
+    formData.append("consent_confirmed",audioConsent.checked?"true":"false");
     formData.append("audio",recordedAudioBlob,"incident-audio."+extension);
     const upload=await db.functions.invoke("incident-audio",{body:formData});
     if(upload.error||upload.data?.error){

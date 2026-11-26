@@ -1293,3 +1293,28 @@ table tbody tr:hover{background:#f7f9fc}
 .certificates-footnote{margin:13px 0 0;color:#718198;font-size:9px;line-height:1.55}
 @media(max-width:760px){.certificates-head{align-items:flex-start;flex-direction:column}.certificates-access-tag{align-self:flex-start}.certificates-form-footer{align-items:flex-start;flex-direction:column}.certificates-section-heading{align-items:flex-start}}
 @media(max-width:560px){.certificates-overview{grid-template-columns:1fr;gap:8px}.certificates-stat{padding:13px 15px}.certificates-form-panel,.certificates-records-panel{padding:15px}.certificates-form-grid{grid-template-columns:1fr;gap:11px}.certificates-form-grid .field.full{grid-column:auto}.certificates-filter-bar{grid-template-columns:1fr;padding:11px}.certificates-section-heading{flex-direction:column}.certificates-results-line{align-items:flex-start;flex-direction:column;gap:4px}.certificates-form-footer>div{align-items:flex-start;flex-direction:column}}
+
+
+/* Temporary incident audio — consent, review and deletion states */
+.incidents-audio-capture{padding:15px;background:#f8fafc;border:1px solid #e2e9f1;border-radius:11px}
+.incidents-audio-capture>strong{display:block;color:#263a54;font-size:10px}
+.incidents-audio-capture>p{margin:5px 0 10px;color:#6c7d92;font-size:9px;line-height:1.55}
+.incidents-consent{display:flex;align-items:flex-start;gap:8px;color:#526780;font-size:9px;line-height:1.5}
+.incidents-consent input{margin:1px 0 0;accent-color:#2f587a}
+.incidents-audio-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:11px 0 8px}
+.incidents-audio-actions>span{color:#63758b;font-size:9px}
+.incidents-audio-capture audio{display:block;width:min(100%,420px);height:36px;margin:8px 0}
+.incidents-audio-capture>small{display:block;margin-top:6px;color:#718198;font-size:9px;line-height:1.5}
+.incidents-audio-pending{color:#946b2c!important;font-weight:800}
+.incidents-review-dialog{width:min(620px,calc(100% - 28px));max-width:620px;max-height:calc(100% - 32px);padding:0;border:1px solid #dfe6ef;border-radius:16px;background:#fff;color:#263a54;box-shadow:0 22px 80px rgba(15,30,48,.28)}
+.incidents-review-dialog::backdrop{background:rgba(15,28,44,.58)}
+.incidents-review-dialog form{padding:22px}
+.incidents-review-dialog h2{margin:7px 0;color:#203650;font:800 19px Manrope,sans-serif}
+.incidents-review-notice{margin:0 0 15px;color:#687b91;font-size:10px;line-height:1.6}
+.incidents-review-dialog label{display:block;margin:12px 0 6px;color:#526780;font-size:9px;font-weight:800}
+.incidents-review-dialog textarea{display:block;width:100%;min-height:105px;padding:11px;background:#fbfcfd!important;color:#263a54!important;border:1px solid #d6dfeb!important;border-radius:9px;font:400 11px/1.5 Manrope,sans-serif;resize:vertical}
+.incidents-review-audio{padding:12px;margin:12px 0;background:#f8fafc;border:1px solid #e2e9f1;border-radius:10px}
+.incidents-review-audio audio{display:block;width:100%;height:38px}
+.incidents-review-audio small{display:block;margin-top:5px;color:#718198;font-size:9px}
+.incidents-review-actions{display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap;margin-top:15px;padding-top:13px;border-top:1px solid #edf0f4}
+@media(max-width:560px){.incidents-review-dialog form{padding:16px}.incidents-review-actions{justify-content:stretch}.incidents-review-actions .button{flex:1}}

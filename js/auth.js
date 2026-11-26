@@ -148,15 +148,16 @@
     }
     document.getElementById("linkedCount").textContent=links.length;
     if(!links.length){container.innerHTML='<section class="panel registry-panel"><h3>No linked profile yet</h3><p class="page-intro">Your account is active, but the administrator has not linked a student profile yet.</p></section>';return;}
-    const {data:students,error:studentError}=await client.from("students").select("id,full_name,student_code,class_group").in("id",links);
+    const {data:students,error:studentError}=await client.from("students").select("id,full_name,student_code,class_group,starting_marks").in("id",links);
     if(studentError){container.textContent="Unable to load permitted student details.";return;}
     for(const student of (students||[])){
       const [{data:weekly},{data:tx}] = await Promise.all([
         client.from("weekly_results").select("weekly_net,lifetime_balance,week_start,week_end,published_at").eq("student_id",student.id).order("week_start",{ascending:false}).limit(1).maybeSingle(),
-        client.from("mark_transactions").select("transaction_type,amount,balance_delta,reason,occurred_at").eq("student_id",student.id).order("occurred_at",{ascending:false}).limit(8)
+        client.from("mark_transactions").select("transaction_type,amount,balance_delta,balance_after,reason,occurred_at").eq("student_id",student.id).order("occurred_at",{ascending:false}).limit(8)
       ]);
+      const lifetimeBalance=(tx&&tx.length?tx[0].balance_after:(student.starting_marks||0));
       const history=(tx||[]).map(t=>'<tr><td>'+esc(new Date(t.occurred_at).toLocaleDateString())+'</td><td>'+esc(t.reason||t.transaction_type)+'</td><td>'+esc(t.balance_delta>0?"+":"")+esc(t.balance_delta)+'</td></tr>').join("");
-      container.insertAdjacentHTML("beforeend",'<section class="panel registry-panel"><div class="panel-heading"><div><h3>'+esc(student.full_name)+'</h3><p>'+esc(student.student_code)+' · '+esc(student.class_group||"Student")+'</p></div></div><div class="registry-stats"><article class="stat-card"><div class="stat-label">Latest published weekly score</div><div class="stat-value">'+(weekly&&weekly.published_at?esc(weekly.weekly_net):"—")+'</div></article><article class="stat-card"><div class="stat-label">Lifetime balance</div><div class="stat-value">'+(weekly&&weekly.published_at?esc(weekly.lifetime_balance):"—")+'</div></article></div><h3>Recent mark history</h3><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>ACTIVITY</th><th>CHANGE</th></tr></thead><tbody>'+ (history||'<tr><td colspan="3">No mark records yet.</td></tr>')+'</tbody></table></div></section>');
+      container.insertAdjacentHTML("beforeend",'<section class="panel registry-panel"><div class="panel-heading"><div><h3>'+esc(student.full_name)+'</h3><p>'+esc(student.student_code)+' · '+esc(student.class_group||"Student")+'</p></div></div><div class="registry-stats"><article class="stat-card"><div class="stat-label">Latest published weekly score</div><div class="stat-value">'+(weekly&&weekly.published_at?esc(weekly.weekly_net):"—")+'</div></article><article class="stat-card"><div class="stat-label">Lifetime balance</div><div class="stat-value">'+esc(lifetimeBalance)+'</div></article></div><h3>Recent mark history</h3><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>ACTIVITY</th><th>CHANGE</th></tr></thead><tbody>'+ (history||'<tr><td colspan="3">No mark records yet.</td></tr>')+'</tbody></table></div></section>');
     }
   }
 

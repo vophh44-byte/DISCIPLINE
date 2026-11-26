@@ -1027,3 +1027,50 @@ table tbody tr:hover{background:#f7f9fc}
 .dedication-history-panel .positive-text,.dedication-history-panel .negative-text{font-weight:800}
 @media(max-width:760px){.dedications-head{align-items:flex-start;flex-direction:column}.dedications-tag{align-self:flex-start}.dedication-mode-wrap{grid-template-columns:1fr}.dedication-form-footer{align-items:flex-start;flex-direction:column}.dedication-form-grid{gap:11px}}
 @media(max-width:640px){.dedication-entry-panel,.dedication-history-panel{padding:15px}.dedication-form-grid{grid-template-columns:1fr}.dedication-form-grid .field.full{grid-column:auto}.dedication-history-panel .table-scroll{overflow-x:auto}}
+
+
+/* Hall of Excellence — published weekly leaderboard */
+.leaderboard-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin:3px 0 19px}
+.leaderboard-head h1{margin:8px 0 5px;color:#172b45;font-size:clamp(28px,3vw,35px);letter-spacing:-1.2px}
+.leaderboard-head-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.leaderboard-secure-tag,.leaderboard-published-tag,.leaderboard-list-tag{display:inline-flex;align-items:center;padding:9px 12px;border:1px solid #e5ebf2;border-radius:30px;background:#fff;color:#65758b;font-size:8px;font-weight:800;letter-spacing:.65px;white-space:nowrap}
+.leaderboard-control-panel{display:grid;grid-template-columns:1fr minmax(320px,.85fr);align-items:center;gap:22px;padding:20px 22px;margin-bottom:15px;background:#fff!important;border:1px solid #dfe6ef;border-radius:15px;box-shadow:0 5px 18px rgba(25,45,72,.04)}
+.leaderboard-step{color:#a17a3c;font-size:8px;font-weight:800;letter-spacing:1.1px}
+.leaderboard-control-panel h2,.leaderboard-section-heading h2{margin:5px 0;color:#203650;font:800 17px Manrope,sans-serif}
+.leaderboard-control-panel p,.leaderboard-section-heading p{margin:0;color:#718198;font-size:10px;line-height:1.55}
+.leaderboard-controls{display:flex;align-items:flex-end;gap:10px}
+.leaderboard-controls .field{flex:1;min-width:0}
+.leaderboard-controls .field label{color:#687a91;font-size:8px;font-weight:800;letter-spacing:.7px}
+.leaderboard-controls .field input{width:100%;min-height:42px;padding:9px 10px;background:#fbfcfd!important;color:#263a54!important;border:1px solid #d6dfeb!important;border-radius:9px}
+.leaderboard-controls .button{min-height:42px;white-space:nowrap}
+.leaderboard-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.leaderboard-stat{display:flex;flex-direction:column;gap:5px;padding:16px 18px;background:#fff!important;border:1px solid #dfe6ef;border-radius:13px}
+.leaderboard-stat>span{color:#718198;font-size:9px;font-weight:700}
+.leaderboard-stat>strong{color:#203650;font:800 23px Manrope,sans-serif;overflow-wrap:anywhere}
+.leaderboard-stat>small{color:#8290a2;font-size:9px}
+.leaderboard-podium-panel,.leaderboard-table-panel{padding:20px 21px;margin-bottom:15px;background:#fff!important;border:1px solid #dfe6ef!important;border-radius:15px;box-shadow:0 5px 18px rgba(25,45,72,.035)}
+.leaderboard-section-heading{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:17px}
+.leaderboard-podium{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch;gap:12px}
+.leaderboard-podium-card{display:flex;flex-direction:column;align-items:center;min-width:0;padding:17px 13px 16px;border:1px solid #e4eaf1;border-radius:13px;background:#fbfcfe;text-align:center}
+.leaderboard-podium-card.rank-1{background:#fbf7ee;border-color:#ead9b7}
+.leaderboard-rank-label{color:#8b6a35;font-size:8px;font-weight:900;letter-spacing:1px}
+.leaderboard-medal{display:grid;place-items:center;width:43px;height:43px;margin:11px 0 8px;border-radius:50%;background:#edf1f5;color:#52657c;font:800 14px Manrope,sans-serif}
+.rank-1 .leaderboard-medal{background:#ead9b7;color:#76531f}
+.rank-2 .leaderboard-medal{background:#e4e9ee;color:#52657c}
+.rank-3 .leaderboard-medal{background:#eee1d5;color:#805a3c}
+.leaderboard-podium-card h3{max-width:100%;margin:2px 0 3px;color:#203650;font:800 13px Manrope,sans-serif;overflow-wrap:anywhere}
+.leaderboard-podium-card p{margin:0;color:#718198;font-size:9px}
+.leaderboard-podium-score{margin-top:13px;font:800 21px Manrope,sans-serif}
+.leaderboard-podium-card>small{margin-top:2px;color:#8290a2;font-size:8px}
+.leaderboard-empty,.leaderboard-loading{grid-column:1/-1;margin:0;padding:22px 15px;border:1px dashed #d8e0e9;border-radius:11px;color:#718198;font-size:10px;text-align:center}
+.leaderboard-table-panel .registry-table th{color:#718198}
+.leaderboard-table-panel .registry-table td{color:#40536c}
+.leaderboard-rank-chip{display:inline-flex;align-items:center;justify-content:center;min-width:38px;padding:6px 9px;border-radius:7px;background:#eef2f6;color:#42566e;font-size:10px;font-weight:800}
+.leaderboard-rank-chip.rank-chip-1{background:#f5ead2;color:#78551e}
+.leaderboard-rank-chip.rank-chip-2{background:#e9edf1;color:#4e6177}
+.leaderboard-rank-chip.rank-chip-3{background:#f2e7dd;color:#805a3c}
+.leaderboard-table-panel .positive-text,.leaderboard-table-panel .negative-text{font-weight:800}
+.leaderboard-info{margin:13px 0 0;color:#687b91;font-size:9px}
+.leaderboard-controls .button:disabled{opacity:.6;cursor:wait}
+@media(max-width:760px){.leaderboard-head{align-items:flex-start;flex-direction:column}.leaderboard-head-actions{align-items:flex-start}.leaderboard-control-panel{grid-template-columns:1fr;gap:14px}.leaderboard-overview{gap:8px}.leaderboard-stat{padding:13px}.leaderboard-podium-panel,.leaderboard-table-panel{padding:16px}}
+@media(max-width:560px){.leaderboard-controls{align-items:stretch;flex-direction:column}.leaderboard-controls .button{width:100%}.leaderboard-overview{grid-template-columns:1fr}.leaderboard-podium{grid-template-columns:1fr}.leaderboard-podium-card{display:grid;grid-template-columns:55px 1fr auto;grid-template-rows:auto auto;align-items:center;column-gap:10px;text-align:left;padding:12px}.leaderboard-rank-label{grid-column:2;grid-row:1}.leaderboard-medal{grid-column:1;grid-row:1/3;margin:0}.leaderboard-podium-card h3{grid-column:2;grid-row:2}.leaderboard-podium-card p{grid-column:2;grid-row:3}.leaderboard-podium-score{grid-column:3;grid-row:1/3;margin:0;text-align:right}.leaderboard-podium-card>small{grid-column:3;grid-row:3;text-align:right}.leaderboard-section-heading{align-items:flex-start}}

@@ -1392,3 +1392,8 @@ table tbody tr:hover{background:#f7f9fc}
 .student-profile-generated{font-size:9px;color:#8090a3;margin:16px 0 0}
 @media(max-width:680px){.student-profile-head{display:block}.student-profile-actions{margin-top:12px}.student-profile-summary{grid-template-columns:1fr}.student-profile-details{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:420px){.student-profile-details{grid-template-columns:1fr}}
+
+/* Incident review state and confidential report actions */
+.incidents-report-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.incidents-report-actions .button{white-space:nowrap}
+@media(max-width:760px){.incidents-report-actions{width:100%;justify-content:flex-start}.incidents-report-actions .button{flex:1}}

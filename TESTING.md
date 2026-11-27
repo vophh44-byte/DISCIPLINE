@@ -5,7 +5,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 ## Current automated / configuration checks
 
 - [x] Frontend JavaScript parses: `js/app.js` and `js/auth.js`
-- [x] GitHub Actions syntax, portal privacy, audio cleanup, invitation, anonymous-grant, role-smoke, admin inbox and weekly report export regression checks pass; 68 checks passed on the latest feature commit using Node.js 24
+- [x] GitHub Actions syntax, portal privacy, audio cleanup, invitation, anonymous-grant, role-smoke, admin inbox, weekly report, attendance and driver check-in regression checks pass; 80 checks passed on the latest feature commit using Node.js 24
 - [x] GitHub Pages build and deploy succeeded for commit `05e06f6` ( [deployment run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/45961730460) )
 - [x] All 24 previously unindexed foreign-key columns now have B-tree indexes; PostgreSQL catalog check confirms 42/42 public foreign-key constraints are indexed
 - [x] Row Level Security is enabled on all 19 public application tables; role-specific access still requires the separate manual portal tests
@@ -37,6 +37,11 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] Weekly results support CSV export and print-ready report output; both respect the current student search and publication-status filters
 - [x] Weekly CSV export quotes text fields, guards formula-like text values, uses UTF-8 BOM and includes the selected Monday in the filename
 - [x] Weekly print report escapes student names/IDs, includes scoring period and totals, and uses a responsive print layout
+- [x] Attendance register supports CSV export and printing; both use the active student search and include not-marked students, saved statuses and notes
+- [x] Attendance CSV uses UTF-8 BOM, date-specific filename, quoted cells and formula-like text protection
+- [x] Attendance print report includes present, absent, late, excused and unmarked totals, with student details safely escaped
+- [x] Driver check-in register supports student/route/vehicle/note search, status filtering, CSV export and print reports
+- [x] Driver check-in exports include journey date/type, student, route, vehicle, driver, status, note and timestamp; print view includes status totals and safely escaped details
 - [x] Both deployed Edge Functions are tracked in `supabase/functions`; account provisioning tests administrator authorization, supported roles, active-student validation and student-link conflicts
 - [ ] Signed-in administrator → upload → review → verify → storage deletion end-to-end test
 - [ ] Separate parent account test after publication
@@ -55,6 +60,22 @@ Run [`scripts/security-audit.sql`](scripts/security-audit.sql) in the Supabase S
 3. Enter a student search and/or select a publication-status filter.
 4. Export CSV and confirm the downloaded rows match the current filters and the selected Monday appears in the filename.
 5. Open Print report and confirm the same filtered rows, date range, score totals and portal publication status appear in the print preview.
+
+### Attendance register export and print
+
+1. Open Morning Attendance and select the required date.
+2. Load or start the register so saved attendance statuses are shown.
+3. Use the search field to narrow the student list.
+4. Export CSV and confirm only the matching students are included, with saved statuses, notes and "Not marked" entries.
+5. Print the register and confirm the summary shows present, absent, late, excused and unmarked counts.
+
+### Driver check-in export and print
+
+1. Open Driver Check-ins & Trips and select a date and morning/evening journey.
+2. Search by student, ID, class, route, vehicle, status or note.
+3. Select a specific status when needed.
+4. Export CSV and confirm the date, journey, driver, route, vehicle, student, status, note and update time are included.
+5. Print the report and confirm the status totals and filtered check-in rows match the selected criteria.
 
 ## Manual test procedure
 

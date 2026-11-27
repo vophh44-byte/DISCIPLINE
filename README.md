@@ -38,7 +38,7 @@ Use audio only when the institution has a lawful, appropriate basis and has foll
 
 ## Automated quality checks
 
-The repository runs lightweight, dependency-free checks on pushes and pull requests to `main`. The checks parse the browser JavaScript and verify key portal boundaries: supported roles, student-to-profile linking, published-only weekly results, student-scoped mark history, parent-only incident/report handling, browser configuration secret hygiene, and incident-audio safeguards including multipart permission confirmation, file limits, short-lived playback links and administrator-only access.
+The repository runs lightweight, dependency-free checks on pushes and pull requests to `main`. The checks parse the browser JavaScript and verify key portal boundaries: supported roles, student-to-profile linking, published-only weekly results, student-scoped mark history, parent-only incident/report handling, browser configuration secret hygiene, portal-account administrator authorization and link-conflict protections, and incident-audio consent, file-limit, short-lived playback and administrator-only safeguards.
 
 Run the same checks locally with Node.js 24 or newer:
 

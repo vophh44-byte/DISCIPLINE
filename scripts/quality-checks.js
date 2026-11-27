@@ -10,6 +10,7 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), "u
 const auth = read("js/auth.js");
 const app = read("js/app.js");
 const html = read("index.html");
+const styles = read("css/style.css");
 const config = read("js/supabase-config.js");
 const audioFunction = read("supabase/functions/incident-audio/index.ts");
 const accountFunction = read("supabase/functions/create-portal-account/index.ts");
@@ -343,6 +344,14 @@ check("administrator Command Center shows live parent and incident follow-up que
   assert.match(dashboard, /id="dashAttention"/);
   assert.match(dashboard, /target:"parents"/);
   assert.match(dashboard, /target:"incidents"/);
+});
+check("Command Center review queue refresh is responsive and keyboard accessible", () => {
+  assert.match(app, /id="dashAttentionRefresh"/);
+  assert.match(app, /setActivePage\("dashboard"\)/);
+  assert.match(app, /aria-live="polite"/);
+  assert.match(styles, /\.dash-attention-grid\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(styles, /\.dash-attention-refresh:focus-visible/);
+  assert.match(styles, /@media\(max-width:1000px\)\{\.dash-attention-grid\{grid-template-columns:1fr\}\}/);
 });
 
 check("administrator inbox updates parent and incident navigation counts", () => {

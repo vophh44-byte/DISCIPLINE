@@ -2,7 +2,7 @@ const pageMeta = {
  dashboard:{title:"Command Center",desc:"Your daily system overview.",icon:"▦"},
  students:{title:"Student Registry",desc:"Create and manage student profiles.",icon:"♙"},
  parents:{title:"Parent Management",desc:"Manage parent accounts and family links.",icon:"♧"},
- accounts:{title:"Portal Accounts",desc:"Create parent and driver accounts and assign routes.",icon:"◎"},
+ accounts:{title:"Portal Accounts",desc:"Create parent, student and driver accounts and assign routes.",icon:"◎"},
  drivercheckins:{title:"Driver Check-ins",desc:"Review morning and evening check-ins submitted by drivers.",icon:"↗"},
  driverroutes:{title:"Drivers & Routes",desc:"Manage driver accounts, routes and assigned students.",icon:"▣"},
  attendance:{title:"Morning Attendance",desc:"Record attendance for the institute-bound journey.",icon:"✓"},
@@ -331,9 +331,9 @@ async function renderStudents(){
 async function renderAccounts(){
   if(!window.disciplineSupabase){pageContent.innerHTML='<section class="panel"><h2>Portal Accounts</h2><p>Authentication is not ready. Please refresh the page.</p></section>';return;}
   pageContent.innerHTML=`
-    <div class="accounts-admin-head"><div><div class="eyebrow"><span class="eyebrow-line"></span> ADMINISTRATION / ACCESS CONTROL</div><h1>Portal Accounts</h1><p class="page-intro">Give every parent and driver secure access to the right part of DISCIPLINE.</p></div><div class="accounts-secure-tag"><span>✦</span> Secure account setup</div></div>
+    <div class="accounts-admin-head"><div><div class="eyebrow"><span class="eyebrow-line"></span> ADMINISTRATION / ACCESS CONTROL</div><h1>Portal Accounts</h1><p class="page-intro">Give every parent, student and driver secure access to the right part of DISCIPLINE.</p></div><div class="accounts-secure-tag"><span>✦</span> Secure account setup</div></div>
     <div class="accounts-overview">
-      <div class="accounts-overview-card"><span class="accounts-overview-icon">01</span><div><strong>Choose a role</strong><small>Parent or route driver</small></div></div>
+      <div class="accounts-overview-card"><span class="accounts-overview-icon">01</span><div><strong>Choose a role</strong><small>Parent, student or route driver</small></div></div>
       <div class="accounts-overview-card"><span class="accounts-overview-icon accounts-icon-blue">02</span><div><strong>Connect records</strong><small>Link students or route riders</small></div></div>
       <div class="accounts-overview-card"><span class="accounts-overview-icon accounts-icon-green">03</span><div><strong>Send invitation</strong><small>They create their own password</small></div></div>
     </div>
@@ -343,14 +343,14 @@ async function renderAccounts(){
         <form id="portalAccountForm">
           <div class="accounts-form-section"><div class="accounts-form-section-title"><span>1</span><div><strong>Person and portal</strong><small>Who will sign in to DISCIPLINE?</small></div></div>
             <div class="form-grid accounts-form-grid">
-              <div class="field"><label for="portalRole">Account type</label><select id="portalRole" required><option value="parent">Parent / Guardian</option><option value="driver">Driver</option></select></div>
+              <div class="field"><label for="portalRole">Account type</label><select id="portalRole" required><option value="parent">Parent / Guardian</option><option value="student">Student (view only)</option><option value="driver">Driver</option></select></div>
               <div class="field"><label for="portalName">Full name</label><input id="portalName" required maxlength="100" placeholder="Full name"></div>
               <div class="field accounts-email-field"><label for="portalEmail">Email address</label><input id="portalEmail" type="email" required maxlength="254" placeholder="name@example.com"></div>
               <div class="field" id="driverRouteFields" hidden><label for="portalRouteName">Route name</label><input id="portalRouteName" maxlength="100" placeholder="e.g. North Route"></div>
               <div class="field" id="driverVehicleFields" hidden><label for="portalVehicleLabel">Vehicle label (optional)</label><input id="portalVehicleLabel" maxlength="80" placeholder="e.g. Van 1"></div>
             </div>
           </div>
-          <div class="accounts-form-section accounts-student-section"><div class="accounts-form-section-title"><span>2</span><div><strong>Student connection</strong><small>Choose the child or the students assigned to this driver.</small></div></div>
+          <div class="accounts-form-section accounts-student-section"><div class="accounts-form-section-title"><span>2</span><div><strong>Student connection</strong><small>Choose the linked child, student profile or route riders.</small></div></div>
             <div class="field"><label for="portalStudent" id="portalStudentLabel">Link to student</label><select id="portalStudent" required><option value="">Loading student profiles…</option></select><small class="registry-disclaimer" id="portalStudentHint">Choose the child linked to this parent.</small></div>
           </div>
           <div class="accounts-security-note"><span class="accounts-security-icon">✓</span><div><strong>Password safety is built in</strong><p>Users receive an invitation email and create their own password. Never enter or share their password here.</p></div></div>
@@ -375,6 +375,7 @@ async function renderAccounts(){
   const studentHint=document.getElementById("portalStudentHint");
   function updateAccountForm(){
     const isDriver=roleSelect.value==="driver";
+    const isStudent=roleSelect.value==="student";
     select.multiple=isDriver;
     select.size=isDriver?6:1;
     select.value="";
@@ -382,8 +383,8 @@ async function renderAccounts(){
     vehicleFields.hidden=!isDriver;
     routeNameInput.required=isDriver;
     studentLabel.textContent=isDriver?"Students assigned to this driver":"Link to student";
-    studentHint.textContent=isDriver?"Select every student who travels on this route (use Ctrl to select more than one).":"Choose the child linked to this parent.";
-    select.setAttribute("aria-label",isDriver?"Select students assigned to this driver":"Choose the linked student");
+    studentHint.textContent=isDriver?"Select every student who travels on this route (use Ctrl to select more than one).":isStudent?"Choose the student profile for this login. Student access is view-only.":"Choose the child linked to this parent.";
+    select.setAttribute("aria-label",isDriver?"Select students assigned to this driver":isStudent?"Choose the student profile for this login":"Choose the linked student");
   }
   roleSelect.addEventListener("change",updateAccountForm);
   updateAccountForm();
@@ -409,6 +410,7 @@ async function renderAccounts(){
         ?"Existing "+data.role+" account for "+data.email+" is linked. No new invitation was sent."
         :"Invitation sent to "+data.email+". The user must open the email and set a password.";
       e.target.reset();
+      updateAccountForm();
     }
     btn.disabled=false;btn.textContent="Create / link account";
   });

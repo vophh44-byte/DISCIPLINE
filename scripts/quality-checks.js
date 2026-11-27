@@ -336,11 +336,15 @@ check("Portal account directory safely escapes user-controlled profile and route
 });
 
 check("Portal account directory does not imply email delivery or invitation acceptance", () => {
-  const start=app.indexOf("async function loadPortalDirectory()");
-  const end=app.indexOf("const roleSelect=document.getElementById(\"portalRole\")",start);
+  const start=app.indexOf("async function renderAccounts()");
+  const end=app.indexOf("\nfunction disciplineToday()",start);
   const flow=app.slice(start,end);
+  assert.ok(start>=0&&end>start,"Portal Accounts view missing");
   assert.match(flow,/Profile status does not confirm invitation delivery or password setup/);
-  assert.doesNotMatch(flow,/inviteUserByEmail|email_confirmed_at|last_sign_in_at/);
+  const loaderStart=flow.indexOf("async function loadPortalDirectory()");
+  const loaderEnd=flow.indexOf("directorySearch.addEventListener",loaderStart);
+  const loader=flow.slice(loaderStart,loaderEnd);
+  assert.doesNotMatch(loader,/inviteUserByEmail|email_confirmed_at|last_sign_in_at/);
 });
 
 check("Portal account directory errors are visible and refresh controls recover", () => {

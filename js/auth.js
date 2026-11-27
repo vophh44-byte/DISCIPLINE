@@ -235,6 +235,13 @@
     actions.appendChild(signOut);
   }
   function portalShell(role, displayName) {
+    // Keep the complete application inert and hidden until the signed-in user's active role is verified.
+    const appShell = document.querySelector(".app-shell");
+    if (appShell) {
+      appShell.hidden = false;
+      appShell.removeAttribute("aria-hidden");
+      appShell.removeAttribute("inert");
+    }
     document.body.classList.add("is-authenticated");
     gate.remove();
     const sidebar = document.getElementById("sidebar");

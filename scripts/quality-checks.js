@@ -216,6 +216,46 @@ check("portal account creation requires an active administrator", () => {
   assert.match(accountFunction, /caller\.role !== "admin" \|\| caller\.is_active !== true/);
 });
 
+check("auth status listing is an administrator-only branch after bearer and active-role validation", () => {
+  const authCheck=accountFunction.indexOf("userClient.auth.getUser()");
+  const adminCheck=accountFunction.indexOf('caller.role !== "admin" || caller.is_active !== true');
+  const listBranch=accountFunction.indexOf('input.action === "list_auth_status"');
+  assert.ok(authCheck>=0&&adminCheck>authCheck&&listBranch>adminCheck,"auth status list must follow authentication and admin authorization");
+});
+
+check("auth status endpoint queries Supabase Auth metadata and returns only minimal setup timestamps", () => {
+  const start=accountFunction.indexOf('if (input.action === "list_auth_status")');
+  const end=accountFunction.indexOf('const email = (input.email || "")',start);
+  const branch=accountFunction.slice(start,end);
+  assert.match(branch,/auth\.admin\.listUsers\(\{ page: 1, perPage: 1000 \}\)/);
+  for(const field of ["user_id","invited_at","email_confirmed_at","last_sign_in_at"]) assert.ok(branch.includes(field),"auth status response missing "+field);
+  assert.doesNotMatch(branch,/password|recovery_token|confirmation_token|serviceKey/);
+});
+
+check("auth status endpoint filters results to parent, student and driver portal profiles", () => {
+  const start=accountFunction.indexOf('if (input.action === "list_auth_status")');
+  const end=accountFunction.indexOf('const email = (input.email || "")',start);
+  const branch=accountFunction.slice(start,end);
+  assert.match(branch,/\.in\("role", \["parent", "student", "driver"\]\)/);
+  assert.match(branch,/portalUserIds\.has\(user\.id\)/);
+  assert.match(branch,/filter\(user => portalUserIds\.has\(user\.id\)\)/);
+});
+
+check("Portal Accounts requests authentication timestamps without blocking profile directory on failure", () => {
+  const start=app.indexOf("async function loadPortalDirectory()");
+  const end=app.indexOf("directorySearch.addEventListener",start);
+  const flow=app.slice(start,end);
+  assert.match(flow,/functions\.invoke\("create-portal-account",\{body:\{action:"list_auth_status"\}\}\)/);
+  assert.match(flow,/authStatusAvailable=!authStatusResult\.error/);
+  assert.match(flow,/Authentication timestamps unavailable for this refresh/);
+});
+
+check("Portal account directory labels confirmation and invitation timestamps accurately", () => {
+  assert.match(app,/auth\.email_confirmed_at\?"Email confirmed":auth\.invited_at\?"Invitation issued · not confirmed":"No invitation timestamp"/);
+  assert.match(app,/An invitation timestamp does not prove inbox delivery/);
+  assert.match(app,/Last sign-in:/);
+});
+
 check("portal account function supports production and local development CORS safely", () => {
   assert.match(accountFunction, /function corsHeaders\(req: Request\)/);
   assert.match(accountFunction, /https:\/\/vophh44-byte\.github\.io/);

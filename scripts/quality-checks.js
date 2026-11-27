@@ -315,7 +315,7 @@ check("repeatable database audit checks the private temporary incident audio buc
 check("RLS role smoke test exercises parent and admin in rollback-only transactions", () => {
   assert.match(roleSmoke, /where role = 'parent' and is_active = true/);
   assert.match(roleSmoke, /where role = 'admin' and is_active = true/);
-  assert.equal((roleSmoke.match(/set local role authenticated;/g) || []).length, 3);
+  assert.equal((roleSmoke.match(/set local role authenticated;/g) || []).length, 4);
   assert.equal((roleSmoke.match(/rollback;/g) || []).length, 3);
 });
 
@@ -329,9 +329,12 @@ check("RLS role smoke test covers linked-parent route, run and check-in visibili
   for (const table of ["driver_routes", "driver_route_students", "driver_route_runs", "driver_journey_checkins"]) {
     assert.ok(roleSmoke.includes("insert into public." + table), "missing temporary parent journey fixture: " + table);
   }
-  for (const field of ["visible_linked_route", "visible_linked_assignment", "visible_linked_route_run", "visible_linked_driver_checkin"]) {
+  for (const field of ["visible_linked_route", "visible_linked_assignment", "visible_linked_route_run", "visible_linked_driver_checkin",
+    "visible_unlinked_route", "visible_unlinked_assignment", "visible_unlinked_route_run", "visible_unlinked_driver_checkin"]) {
     assert.ok(roleSmoke.includes(field), "missing parent journey RLS result: " + field);
   }
+  assert.match(roleSmoke, /delete from public\.parent_student_links/);
+  assert.match(roleSmoke, /parent_unlinked_journey_rls_result/);
   assert.match(roleSmoke, /set_config\('test\.parent_route_id'/);
   assert.match(roleSmoke, /parent_student as materialized/);
   assert.match(roleSmoke, /p\.role = 'parent'/);

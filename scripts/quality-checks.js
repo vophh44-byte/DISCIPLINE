@@ -558,7 +558,10 @@ check("student profile summarizes recent attendance and portal links", () => {
 check("student profile shows incident review and publication state without loading exact words", () => {
   assert.match(app, /transcript_verified,published_to_parent_at/);
   assert.match(app, /Exact words and temporary evidence are not included/);
-  assert.doesNotMatch(app, /select\([^\n]*exact_words[^\n]*\)/);
+  const profileStart=app.indexOf("async function viewStudentProfile");
+  const profileEnd=app.indexOf("function resetForm",profileStart);
+  assert.ok(profileStart>=0 && profileEnd>profileStart, "student profile function boundaries missing");
+  assert.doesNotMatch(app.slice(profileStart,profileEnd), /exact_words/);
 });
 
 check("student profile displays recent weekly results and certificates", () => {

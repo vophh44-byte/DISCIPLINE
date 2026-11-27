@@ -291,7 +291,7 @@ check("repeatable database audit checks the private temporary incident audio buc
   assert.match(securityAudit, /discipline-temp-audio/);
   assert.match(securityAudit, /file_size_limit/);
   assert.match(securityAudit, /allowed_mime_types/);
-  assert.match(securityAudit, /storage\\.objects/);
+  assert.ok(securityAudit.includes("storage.objects"));
   assert.match(securityAudit, /matching_storage_policy_count/);
 });
 

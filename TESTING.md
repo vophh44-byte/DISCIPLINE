@@ -20,6 +20,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] Weekly-results RLS exposes only published rows to linked portal accounts; rollback-only checks confirmed parent 0 / admin 1 while unpublished, then parent 1 after publication
 - [x] Incident deductions use a generic shared-ledger reason so factual narratives are not copied into parent/student mark history
 - [ ] Browser microphone test on HTTPS with an appropriately consenting adult
+- [x] Automated regression check confirms multipart recording uploads forward the explicit permission confirmation and retain admin-only, size/type and short-lived playback guards
 - [ ] Signed-in administrator → upload → review → verify → storage deletion end-to-end test
 - [ ] Separate parent account test after publication
 - [ ] Student portal read-only test with a student test account (portal selection, own published scores and mark history only; no incident narrative, exact words or evidence; no write actions)

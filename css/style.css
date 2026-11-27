@@ -1347,3 +1347,9 @@ table tbody tr:hover{background:#f7f9fc}
 .admin-notification-footer{padding:11px 16px;border-top:1px solid #edf1f5;background:#fbfcfe}
 .admin-notification-footer .text-button{padding:0;color:#87672f;font-size:10px;font-weight:800}
 @media(max-width:560px){.admin-notification-panel{right:-6px;top:calc(100% + 10px);max-height:calc(100vh - 84px)}}
+
+/* Weekly results export and print tools */
+.weekly-result-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.weekly-result-actions .weekly-register-label{margin-right:3px}
+@media(max-width:760px){.weekly-result-actions{justify-content:flex-start;width:100%}.weekly-section-heading{align-items:flex-start;flex-wrap:wrap}}
+@media(max-width:480px){.weekly-result-actions .button{flex:1}.weekly-result-actions .weekly-register-label{width:100%}}

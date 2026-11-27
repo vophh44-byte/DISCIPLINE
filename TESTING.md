@@ -89,6 +89,8 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 3. Confirm parent rows show linked-student counts, student rows show their linked student profile, and driver rows show active route names and current assignment counts.
 4. Open the management action on a parent, student and driver row and confirm it opens Parent Management, Student Registry or Drivers & Routes respectively.
 5. Confirm all user-provided names, emails and route names display as text and cannot inject markup.
+6. Confirm authentication setup shows only an invitation timestamp, email-confirmation timestamp and last sign-in time returned by Supabase Auth; an invitation timestamp is not shown as proof of delivery.
+7. Confirm the Auth timestamp lookup is administrator-only and, when unavailable, the directory still displays profile/link details with an explicit unavailable state.
 6. Confirm the directory describes active/inactive profile state only. Do not interpret it as email delivery, invitation acceptance or last sign-in status.
 7. Temporarily block one directory query in a local development copy. Confirm Account list unavailable appears, the page does not crash and Refresh list can retry.
 8. Confirm the directory is read-only and cannot activate/deactivate users, resend invitations or change account roles.

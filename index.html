@@ -23,7 +23,7 @@
       <nav class="nav-list" aria-label="Main navigation">
         <button class="nav-item active" data-page="dashboard"><span class="nav-icon">▦</span><span>Command Center</span></button>
         <button class="nav-item" data-page="students"><span class="nav-icon">♙</span><span>Student Registry</span></button>
-        <button class="nav-item" data-page="parents"><span class="nav-icon">♧</span><span>Parent Management</span></button>
+        <button class="nav-item" data-page="parents"><span class="nav-icon">♧</span><span>Parent Management</span><span class="nav-count" id="parentResponseNavCount" hidden></span></button>
         <button class="nav-item" data-page="accounts"><span class="nav-icon">◎</span><span>Portal Accounts</span></button>
         <button class="nav-item" data-page="driverroutes"><span class="nav-icon">▣</span><span>Drivers & Routes</span></button>
         <button class="nav-item" data-page="attendance"><span class="nav-icon">✓</span><span>Morning Attendance</span></button>
@@ -37,7 +37,7 @@
         <button class="nav-item" data-page="ledger"><span class="nav-icon">▤</span><span>Discipline Ledger</span></button>
         <div class="nav-divider"></div>
         <div class="workspace-label">BEHAVIOUR & REPORTS</div>
-        <button class="nav-item" data-page="incidents"><span class="nav-icon">!</span><span>Incident Center</span><span class="nav-count">3</span></button>
+        <button class="nav-item" data-page="incidents"><span class="nav-icon">!</span><span>Incident Center</span><span class="nav-count" id="incidentReviewNavCount" hidden></span></button>
         <button class="nav-item" data-page="analytics"><span class="nav-icon">⌁</span><span>Performance Analytics</span></button>
         <button class="nav-item" data-page="reports"><span class="nav-icon">▧</span><span>Weekly Results</span></button>
         <button class="nav-item" data-page="certificates"><span class="nav-icon">✦</span><span>Certificates</span></button>
@@ -66,7 +66,17 @@
         </div>
         <div class="topbar-actions">
           <div class="demo-pill"><span class="pulse-dot"></span> DEMO DATA</div>
-          <button class="icon-button notification-button" id="notificationButton" aria-label="Notifications">♧<i></i></button>
+          <div class="notification-center" id="notificationCenter">
+            <button class="icon-button notification-button" id="notificationButton" type="button" aria-label="Administrator inbox" aria-expanded="false" aria-controls="adminNotificationPanel">♧<span class="notification-count" id="adminNotificationCount" hidden></span><i id="adminNotificationDot" hidden></i></button>
+            <section class="admin-notification-panel" id="adminNotificationPanel" hidden aria-label="Administrator inbox">
+              <header class="admin-notification-header">
+                <div><strong>Administrator inbox</strong><p>Parent follow-ups and incident reviews</p></div>
+                <button class="icon-button" id="refreshAdminNotifications" type="button" aria-label="Refresh notifications">↻</button>
+              </header>
+              <div class="admin-notification-content" id="adminNotificationContent" aria-live="polite"><p class="admin-notification-empty">Open the inbox to load pending items.</p></div>
+              <footer class="admin-notification-footer"><button type="button" class="text-button" data-page="parents">Open Parent Management →</button></footer>
+            </section>
+          </div>
           <div class="top-admin"><div class="top-avatar">A</div><div><strong>Administrator</strong><span>System owner</span></div><span class="chevron">⌄</span></div>
         </div>
       </header>

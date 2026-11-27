@@ -18,6 +18,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [ ] Separate parent account test after publication
 - [ ] Student portal read-only test with a student test account
 - [ ] Verify GitHub Pages has finished publishing the latest main-branch commit
+- [x] Invite/recovery password setup form requires 12+ characters with uppercase, lowercase, a number and a symbol (application-side check only)
 
 ## Manual test procedure
 

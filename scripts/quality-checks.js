@@ -11,6 +11,7 @@ const auth = read("js/auth.js");
 const app = read("js/app.js");
 const html = read("index.html");
 const config = read("js/supabase-config.js");
+const audioFunction = read("supabase/functions/incident-audio/index.ts");
 
 let passed = 0;
 function check(name, callback) {
@@ -105,6 +106,28 @@ check("Supabase browser configuration loads before application scripts", () => {
   const authPosition = html.indexOf('src="js/auth.js');
   assert.ok(configPosition >= 0 && appPosition > configPosition);
   assert.ok(authPosition > appPosition);
+});
+
+check("multipart incident audio forwards the permission confirmation", () => {
+  assert.match(audioFunction, /consent_confirmed:\s*String\(form\.get\("consent_confirmed"\)\s*\|\|\s*""\)/);
+});
+
+check("audio upload still requires explicit permission confirmation", () => {
+  assert.match(audioFunction, /String\(input\.consent_confirmed\s*\|\|\s*""\)\s*!==\s*"true"/);
+});
+
+check("audio uploads remain type- and size-limited", () => {
+  assert.match(audioFunction, /audio\/webm/);
+  assert.match(audioFunction, /file\.size\s*>\s*8\s*\*\s*1024\s*\*\s*1024/);
+});
+
+check("audio listening links remain short-lived", () => {
+  assert.match(audioFunction, /createSignedUrl\(evidence\.storage_path,\s*60\)/);
+});
+
+check("audio function requires an active administrator", () => {
+  assert.match(audioFunction, /caller\.role !== "admin" \|\| caller\.is_active !== true/);
+  assert.match(audioFunction, /auth\.getUser\(\)/);
 });
 
 process.stdout.write("\n" + passed + " DISCIPLINE quality checks passed.\n");

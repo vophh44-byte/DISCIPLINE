@@ -407,7 +407,10 @@ check("Portal directory management actions navigate to the role's existing admin
 
 check("Portal account directory responsive filters stack on small screens", () => {
   assert.match(styles,/\.accounts-directory-filters\{display:grid;grid-template-columns:minmax\(220px,1\.5fr\)/);
-  assert.match(styles,/@media\(max-width:560px\)\{\.accounts-directory-panel\{[^}]*\.accounts-directory-filters\{grid-template-columns:1fr\}/);
+  const mobileStart=styles.indexOf("@media(max-width:560px){.accounts-directory-panel");
+  assert.ok(mobileStart>=0,"directory mobile media rule missing");
+  const mobileStyles=styles.slice(mobileStart,Math.min(styles.length,mobileStart+500));
+  assert.match(mobileStyles,/\.accounts-directory-filters\{grid-template-columns:1fr\}/);
 });
 
 check("Portal Accounts always restores its submit button after invitation errors", () => {

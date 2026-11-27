@@ -189,16 +189,36 @@ async function renderDashboard(){
     <section class="dash-note"><span class="dash-note-mark">i</span><div><strong>A simple daily routine</strong><p>Record attendance, update marks when needed, then review weekly results before publishing.</p></div></section>
    </aside>
   </div>
+  <section class="panel dash-panel dash-attention-panel" aria-labelledby="dashAttentionHeading">
+   <div class="dash-section-head"><div><h2 id="dashAttentionHeading">Needs your attention</h2><p>Follow-ups that need an administrator decision</p></div><span class="dash-attention-caption">LIVE QUEUE</span></div>
+   <div class="dash-attention-grid" id="dashAttention">
+    <button class="dash-attention-card" type="button" data-page="parents"><span class="dash-attention-icon parent">↩</span><span class="dash-attention-copy"><strong>Parent responses</strong><small>Loading pending follow-ups…</small></span><span class="dash-attention-count">—</span><span class="dash-attention-link">Review →</span></button>
+    <button class="dash-attention-card" type="button" data-page="incidents"><span class="dash-attention-icon incident">!</span><span class="dash-attention-copy"><strong>Incident verification</strong><small>Loading reports to review…</small></span><span class="dash-attention-count">—</span><span class="dash-attention-link">Review →</span></button>
+    <button class="dash-attention-card" type="button" data-page="incidents"><span class="dash-attention-icon publish">✓</span><span class="dash-attention-copy"><strong>Verified reports</strong><small>Loading publication queue…</small></span><span class="dash-attention-count">—</span><span class="dash-attention-link">Publish →</span></button>
+   </div>
+  </section>
   <footer class="page-footer"><span>DISCIPLINE · Administrator workspace</span><span>All figures are based on saved records.</span></footer>`;
  if(!db){pageContent.insertAdjacentHTML("beforeend",'<p class="registry-disclaimer">Database connection is not ready. Refresh after signing in.</p>');return;}
  try{
-  const [students,session,weeklyTx,recent]=await Promise.all([
+  const [students,session,weeklyTx,recent,parentPending,incidentReviewPending,incidentPublishPending]=await Promise.all([
    db.from("students").select("id",{count:"exact",head:true}).eq("is_active",true),
    db.from("journey_sessions").select("id").eq("session_type","morning").eq("session_date",today).maybeSingle(),
    db.from("mark_transactions").select("transaction_type,amount,balance_delta").gte("occurred_at",week+"T00:00:00+05:30").lt("occurred_at",weekEnd+"T00:00:00+05:30"),
-   db.from("mark_transactions").select("transaction_type,amount,balance_delta,reason,occurred_at,students(full_name,student_code)").order("occurred_at",{ascending:false}).limit(7)
+   db.from("mark_transactions").select("transaction_type,amount,balance_delta,reason,occurred_at,students(full_name,student_code)").order("occurred_at",{ascending:false}).limit(7),
+   db.from("parent_responses").select("id",{count:"exact",head:true}).is("reviewed_at",null),
+   db.from("incidents").select("id",{count:"exact",head:true}).eq("transcript_verified",false),
+   db.from("incidents").select("id",{count:"exact",head:true}).eq("transcript_verified",true).is("published_to_parent_at",null)
   ]);
   if(students.error)throw students.error;if(session.error)throw session.error;if(weeklyTx.error)throw weeklyTx.error;if(recent.error)throw recent.error;
+  if(parentPending.error)throw parentPending.error;if(incidentReviewPending.error)throw incidentReviewPending.error;if(incidentPublishPending.error)throw incidentPublishPending.error;
+  const attentionItems=[
+   {label:"Parent responses",count:parentPending.count||0,detail:"Awaiting administrator review",target:"parents",action:"Review",kind:"parent"},
+   {label:"Incident verification",count:incidentReviewPending.count||0,detail:"Reports awaiting transcript review",target:"incidents",action:"Review",kind:"incident"},
+   {label:"Verified reports",count:incidentPublishPending.count||0,detail:"Ready for parent publication",target:"incidents",action:"Publish",kind:"publish"}
+  ];
+  document.getElementById("dashAttention").innerHTML=attentionItems.map(item=>
+   '<button class="dash-attention-card" type="button" data-page="'+item.target+'"><span class="dash-attention-icon '+item.kind+'">'+(item.kind==="parent"?"↩":item.kind==="incident"?"!":"✓")+'</span><span class="dash-attention-copy"><strong>'+item.label+'</strong><small>'+item.detail+'</small></span><span class="dash-attention-count '+(item.count?"has-items":"")+'">'+item.count+'</span><span class="dash-attention-link">'+item.action+' →</span></button>'
+  ).join("");
   document.getElementById("dashStudents").textContent=students.count??0;
   if(session.data){
    const at=await db.from("attendance").select("status").eq("session_id",session.data.id);

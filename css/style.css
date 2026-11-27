@@ -1420,3 +1420,9 @@ table tbody tr:hover{background:#f7f9fc}
 .dash-attention-link{grid-column:2/4;grid-row:2;color:#c4a36f;font-size:9px;font-weight:800}
 @media(max-width:1000px){.dash-attention-grid{grid-template-columns:1fr}}
 @media(max-width:640px){.dash-attention-panel{padding:14px}.dash-attention-card{padding:12px}.dash-attention-caption{white-space:nowrap}}
+
+.dash-attention-tools{display:flex;align-items:center;gap:9px}
+.dash-attention-refresh{display:grid;place-items:center;width:29px;height:29px;border:1px solid rgba(161,179,201,.2);border-radius:8px;background:rgba(255,255,255,.035);color:#c7d3e2;font-size:16px;cursor:pointer;transition:background .16s,border-color .16s}
+.dash-attention-refresh:hover:not(:disabled){border-color:rgba(213,179,106,.45);background:rgba(213,179,106,.1);color:#e8c58e}
+.dash-attention-refresh:disabled{opacity:.55;cursor:wait}
+.dash-attention-refresh:focus-visible,.dash-attention-card:focus-visible{outline:2px solid #d5b36a;outline-offset:3px}

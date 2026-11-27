@@ -144,6 +144,16 @@ check("portal account creation requires an active administrator", () => {
   assert.match(accountFunction, /caller\.role !== "admin" \|\| caller\.is_active !== true/);
 });
 
+check("portal account function supports production and local development CORS safely", () => {
+  assert.match(accountFunction, /function corsHeaders\(req: Request\)/);
+  assert.match(accountFunction, /https:\/\/vophh44-byte\.github\.io/);
+  assert.match(accountFunction, /localhost/);
+  assert.match(accountFunction, /127\\.0\\.0\\.1/);
+  assert.match(accountFunction, /Vary.*Origin/);
+  assert.match(accountFunction, /x-retry-count, traceparent, tracestate, baggage/);
+  assert.match(accountFunction, /req\.method === "OPTIONS"/);
+});
+
 check("portal account function rejects unsupported account roles", () => {
   assert.match(accountFunction, /role !== "student" && role !== "parent" && role !== "driver"/);
 });

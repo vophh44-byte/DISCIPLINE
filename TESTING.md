@@ -6,11 +6,11 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 
 - [x] Frontend JavaScript parses: `js/app.js` and `js/auth.js`
 - [x] The workspace starts hidden/inert/aria-hidden; the authenticated portal shell releases it only after the signed-in profile is confirmed active and its role is supported
-- [x] Temporary Supabase/session lookup failures preserve the saved session, keep the workspace closed and offer an accessible retry; a fresh portal selection clears stale retry notices; automated regression tests passed in the 137-check CI run
+- [x] Temporary Supabase/session lookup failures preserve the saved session, keep the workspace closed and offer an accessible retry; a fresh portal selection clears stale retry notices; automated regression tests passed in the 155-check CI run
 - [ ] Manually simulate an offline/profile lookup failure in a browser, restore the connection and confirm Retry account check opens the same session
-- [x] Latest GitHub Actions quality run passed **142 DISCIPLINE checks** on commit `2500f17f03f2dc1582eec308062d2a1a3705ea43` ([run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/46015216964)); includes the count-only Portal Accounts readiness snapshot, active-role/current-route calculations and responsive layout checks
-- [x] GitHub Pages build and deployment completed successfully for the Portal Accounts readiness release on commit `2500f17f03f2dc1582eec308062d2a1a3705ea43` ([deployment run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/46015217454))
-- [x] Fail-closed startup, session recovery and Portal Accounts readiness improvements are green in CI and deployed; signed-in browser smoke tests for all four roles remain a separate manual release check
+- [x] Latest GitHub Actions quality run passed **155 DISCIPLINE checks** on commit `bb9fc85adffb78a7e4a68cbe06497245d5f5d9ee` ([run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/46017493458)); includes the searchable portal account directory, administrator-only Auth timestamps and non-blocking setup-status fallback
+- [x] GitHub Pages build and deployment completed successfully for the portal account directory and Auth timestamp release on commit `bb9fc85adffb78a7e4a68cbe06497245d5f5d9ee` ([deployment run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/46017493119))
+- [x] Fail-closed startup, session recovery, Portal Accounts readiness, searchable account directory and Auth timestamp indicators are green in CI and deployed; signed-in browser smoke tests for all four roles remain a separate manual release check
 - [x] All 24 previously unindexed foreign-key columns now have B-tree indexes; PostgreSQL catalog check confirms 42/42 public foreign-key constraints are indexed
 - [x] Row Level Security is enabled on all 19 public application tables; parent route/assignment/run/check-in visibility has also been exercised under the authenticated parent role with rollback-only fixture records
 - [x] Removed `anon` table privileges from all 19 public application tables; fresh live grant audit confirms zero anonymous SELECT/INSERT/UPDATE/DELETE privileges
@@ -21,8 +21,8 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] Rollback-only student RLS simulation confirmed one profile, one linked student, two mark-ledger rows and zero incident/evidence rows; temporary student link and role change were rolled back
 - [x] Rollback-only driver journey simulation loaded the assigned roster, started a route run, recorded a check-in and finished the run; completed status was confirmed and all temporary rows were rolled back
 - [x] Rollback-only parent journey RLS test inserted a temporary route, linked assignment, current-day run and boarding check-in, then confirmed the signed-in parent could see exactly the linked route, assignment, run and check-in (1 each); transaction rolled back; after temporarily removing the family link inside the same transaction, the parent saw 0 routes, assignments, runs and check-ins. A post-test query confirmed no temporary QA rows remained.
-- [x] Portal-account Edge Function CORS allow-list deployed as active version 7 with JWT verification enabled; production GitHub Pages and localhost development origins are supported
-- [x] Fresh GitHub Actions quality run passed for the Portal Accounts readiness snapshot and associated accessibility/privacy checks (142 checks)
+- [x] Portal-account Edge Function CORS allow-list and Auth status lookup are active at version 8 with JWT verification enabled; production GitHub Pages and localhost development origins are supported
+- [x] Fresh GitHub Actions quality run passed for the portal account directory and Auth timestamp updates (155 checks)
 - [x] Rollback-only incident lifecycle smoke test used the real incident creation and transcript-verification RPCs: parent visibility was 0 before publication and 1 after verification/publication, with reviewed exact words visible; transaction rolled back
 - [x] Rollback-only Monday publication smoke test published the week starting 2026-11-23, exposed the result to the linked parent and created one parent notification; transaction rolled back
 - [x] Repeatable script added at `scripts/rls-role-smoke.sql`; it simulates signed-in database claims and rolls back all three transactions, including temporary parent journey fixtures, without retaining test records
@@ -82,35 +82,31 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 
 ## Portal account onboarding readiness
 
-## Existing portal account directory
-
-- [x] `create-portal-account` Edge Function deployed as active version 8 with JWT verification still enabled; the `list_auth_status` action runs only after signed-in user and active-administrator checks and returns only user ID plus invitation, email-confirmation and last-sign-in timestamps for portal roles.
-
-1. Open Portal Accounts and confirm the directory lists only parent, student and driver profiles.
-2. Search by display name or email; filter separately by portal type and active/inactive profile state.
-3. Confirm the Authentication Setup column distinguishes Email confirmed, Invitation issued · not confirmed, No invitation timestamp and Unavailable; it may show the last sign-in timestamp when Auth provides it.
-4. Confirm the invitation timestamp is described as an invitation record only, not proof of actual inbox delivery.
-3. Confirm parent rows show linked-student counts, student rows show their linked student profile, and driver rows show active route names and current assignment counts.
-4. Open the management action on a parent, student and driver row and confirm it opens Parent Management, Student Registry or Drivers & Routes respectively.
-5. Confirm all user-provided names, emails and route names display as text and cannot inject markup.
-6. Confirm authentication setup shows only an invitation timestamp, email-confirmation timestamp and last sign-in time returned by Supabase Auth; an invitation timestamp is not shown as proof of delivery.
-7. Confirm the Auth timestamp lookup is administrator-only and, when unavailable, the directory still displays profile/link details with an explicit unavailable state.
-6. Confirm the directory describes active/inactive profile state only. Do not interpret it as email delivery, invitation acceptance or last sign-in status.
-7. Temporarily block one directory query in a local development copy. Confirm Account list unavailable appears, the page does not crash and Refresh list can retry.
-8. Confirm the directory is read-only and cannot activate/deactivate users, resend invitations or change account roles.
-
-
 - [x] Snapshot queries read active role profiles, student-account links, parent-student links, active driver routes and route assignments; a live read under the authenticated administrator role confirmed access to each summary source and returned aggregate totals only.
 - [x] Live aggregate baseline: 1 active student, 0 student logins, 1 active parent account, 0 active driver accounts, 0 active routes and 0 students assigned to active routes.
 
-
 1. Open Portal Accounts and confirm the five setup totals load from Supabase without exposing emails or user IDs.
-2. Compare active student and portal login totals with Student Registry and the account list.
+2. Compare active student and portal login totals with Student Registry and the account directory.
 3. Confirm parent totals count active parent profiles and driver totals exclude inactive driver profiles.
 4. Confirm route totals include only active routes attached to active driver accounts.
 5. Confirm route coverage counts unique active students with assignments valid for today's Asia/Kolkata date.
 6. Temporarily block one readiness query in a local development copy. Confirm the panel says Snapshot unavailable, does not show misleading zero totals, and leaves account creation usable.
 7. Confirm no invitation is sent simply by opening or refreshing the snapshot; invitations are only sent after submitting the account form.
+
+## Existing portal account directory
+
+- [x] `create-portal-account` Edge Function deployed as active version 8 with JWT verification enabled; the `list_auth_status` action runs only after signed-in user and active-administrator checks and returns only user ID plus invitation, email-confirmation and last-sign-in timestamps for portal roles.
+- [x] The Auth timestamp lookup is non-blocking: a lookup/network error leaves the profile and link directory visible and marks authentication setup as unavailable.
+
+1. Open Portal Accounts and confirm the directory lists only parent, student and driver profiles.
+2. Search by display name or email; filter separately by portal type and active/inactive profile state.
+3. Confirm parent rows show linked-student counts, student rows show their linked student profile, and driver rows show active route names and current assignment counts.
+4. Confirm the Authentication Setup column distinguishes Email confirmed, Invitation issued · not confirmed, No invitation timestamp and Unavailable; it may show the last sign-in timestamp when Auth provides it.
+5. Confirm the invitation timestamp is described as an invitation record only, not proof of actual inbox delivery.
+6. Open the management action on a parent, student and driver row and confirm it opens Parent Management, Student Registry or Drivers & Routes respectively.
+7. Confirm all user-provided names, emails and route names display as text and cannot inject markup.
+8. Temporarily block one directory query in a local development copy. Confirm Account list unavailable appears, the page does not crash and Refresh list can retry.
+9. Confirm the directory is read-only and cannot activate/deactivate users, resend invitations or change account roles.
 
 ## Administrator Command Center review queue
 

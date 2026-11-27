@@ -605,4 +605,69 @@ check("certificate print output escapes dynamic text and opens the browser print
   assert.match(app, /popup\.print\(\)/);
 });
 
+
+check("Incident Center offers pending/verified review-state filtering and report controls", () => {
+  assert.match(app, /id="incidentReviewFilter"/);
+  assert.match(app, /id="incidentPrintReport"/);
+  assert.match(app, /id="incidentExportCsv"/);
+  assert.match(app, /id="incidentAwaitingReview"/);
+});
+
+check("incident review filter combines parent visibility, verification state and search", () => {
+  const start=app.indexOf("function filteredIncidentRecords()");
+  const end=app.indexOf("function drawIncidentRows()",start);
+  assert.ok(start>=0 && end>start);
+  const filter=app.slice(start,end);
+  assert.match(filter, /reviewState==="verified"\?verified:!verified/);
+  assert.match(filter, /visibility==="published"\?published:!published/);
+  assert.match(filter, /x\.factual_description/);
+  assert.match(filter, /x\.students\?\.full_name/);
+});
+
+check("incident awaiting-review counter is based on unverified records", () => {
+  assert.match(app, /incidentAwaitingReview[^\n]*incidentRecords\.filter\(x=>!x\.transcript_verified\)/);
+});
+
+check("incident CSV export uses the same filtered rows and includes review/publication status", () => {
+  const start=app.indexOf("function exportIncidentReport()");
+  const end=app.indexOf("function printIncidentReport()",start);
+  assert.ok(start>=0 && end>start);
+  const csv=app.slice(start,end);
+  assert.match(csv, /filteredIncidentRecords\(\)/);
+  for (const field of ["Factual description","Administrator review","Parent visibility","Mark deduction recorded","Action taken"]) {
+    assert.ok(csv.includes('"' + field + '"'), "incident CSV missing column: " + field);
+  }
+});
+
+check("incident CSV export excludes exact words and transcript evidence", () => {
+  const start=app.indexOf("function exportIncidentReport()");
+  const end=app.indexOf("function printIncidentReport()",start);
+  const csv=app.slice(start,end);
+  assert.doesNotMatch(csv, /exact_words|transcript_text|audio_temp|storage_path/);
+  assert.match(csv, /text\/csv;charset=utf-8/);
+  assert.match(csv, /\^\[\\s\]\*\[=\+\\-@\]/);
+});
+
+check("incident print report explicitly excludes exact words, transcript and temporary audio", () => {
+  const start=app.indexOf("function printIncidentReport()");
+  const end=app.indexOf('document.getElementById("incidentExportCsv")',start);
+  assert.ok(start>=0 && end>start);
+  const report=app.slice(start,end);
+  assert.match(report, /excludes exact recorded words, transcript text and temporary audio evidence/);
+  assert.doesNotMatch(report, /x\.exact_words|transcript_text|audio_temp|storage_path/);
+  assert.match(report, /popup\.document\.write\(html\)/);
+});
+
+check("incident print report escapes student and factual descriptions", () => {
+  const start=app.indexOf("function printIncidentReport()");
+  const end=app.indexOf('document.getElementById("incidentExportCsv")',start);
+  const report=app.slice(start,end);
+  assert.match(report, /escapeHTML\(x\.students\?\.full_name\|\|\"Student\"\)/);
+  assert.match(report, /escapeHTML\(x\.factual_description\|\|\"—\"\)/);
+});
+
+check("incident review-state change redraws the register without changing saved records", () => {
+  assert.match(app, /incidentReviewFilter\"\)\.addEventListener\(\"change\",drawIncidentRows\)/);
+});
+
 process.stdout.write("\n" + passed + " DISCIPLINE quality checks passed.\n");

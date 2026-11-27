@@ -18,7 +18,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [ ] Browser microphone test on HTTPS with an appropriately consenting adult
 - [ ] Signed-in administrator → upload → review → verify → storage deletion end-to-end test
 - [ ] Separate parent account test after publication
-- [ ] Student portal read-only test with a student test account
+- [ ] Student portal read-only test with a student test account (portal selection, own published scores and mark history only; no incident narrative, exact words or evidence; no write actions)
 - [ ] Verify GitHub Pages has finished publishing the latest main-branch commit
 - [x] Invite/recovery password setup form requires 12+ characters with uppercase, lowercase, a number and a symbol (application-side check only)
 
@@ -49,11 +49,12 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 
 ### 3. Student access
 
-1. Sign in using a separate student test account linked to the test student.
-2. Confirm the student can view only their own student-facing score and mark history.
-3. Incident narratives, exact words and evidence remain outside the student view; linked parents see incident details only after administrator publication.
-4. Confirm the student cannot create or modify incidents, exact words, marks, parent publication, or evidence.
-5. Confirm the student cannot list or download temporary audio.
+1. From Portal Accounts, create a Student (view only) invitation for a fictional test student and an email inbox controlled by the tester. Complete password setup from the invitation.
+2. Choose Student on the welcome screen and sign in using that separate student test account linked to the test student.
+3. Confirm the student can view only their own published weekly score and mark history.
+4. Confirm the student cannot see incident narratives, exact words, parent-only responses, or evidence.
+5. Confirm the student cannot create or modify incidents, exact words, marks, parent publication, or evidence.
+6. Confirm the student cannot list or download temporary audio.
 
 ### 4. Negative tests
 

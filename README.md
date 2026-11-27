@@ -17,6 +17,7 @@ DISCIPLINE is connected to Supabase for authenticated, role-scoped records. The 
 - Attendance registers export to CSV and print with daily status totals, saved notes and unmarked students
 - Driver check-in reports filter by student, route, vehicle and status, then export to CSV or print the selected journey records
 - Mark transaction history can be searched and filtered by transaction type, then exported to CSV or printed with positive/negative/net summaries and before/after balances
+- Student Registry includes an administrator-only individual profile report combining lifetime marks, recent attendance, incident review/publication state, weekly results and certificates, with a print view
 
 Student portal accounts are read-only and can view only their own published weekly scores and mark history. They do not see incident narratives, exact words or evidence. Incident deductions appear in shared mark history only as a generic label; factual descriptions and reviewed exact words remain in the protected incident record. Parent accounts are created by an administrator and can access only linked student information allowed by the database policies; incident details are visible to a parent only after administrator verification and publication.
 

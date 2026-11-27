@@ -5,10 +5,13 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 ## Current automated / configuration checks
 
 - [x] Frontend JavaScript parses: `js/app.js` and `js/auth.js`
-- [x] GitHub Actions syntax, portal privacy, audio cleanup and invitation regression checks pass; 42 checks passed on commit `80a40e4` using Node.js 24 ( [workflow run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/45992535532) )
+- [x] GitHub Actions syntax, portal privacy, audio cleanup, invitation and anonymous-grant regression checks pass; 47 checks passed on the latest release-code commit using Node.js 24
 - [x] GitHub Pages build and deploy succeeded for commit `05e06f6` ( [deployment run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/45961730460) )
 - [x] All 24 previously unindexed foreign-key columns now have B-tree indexes; PostgreSQL catalog check confirms 42/42 public foreign-key constraints are indexed
 - [x] Row Level Security is enabled on all 19 public application tables; role-specific access still requires the separate manual portal tests
+- [x] Removed `anon` table privileges from all 19 public application tables; live grant query confirms zero anonymous SELECT/INSERT/UPDATE/DELETE privileges while authenticated SELECT remains available on all 19
+- [x] Removed anonymous execute privileges from all public functions; live query confirms zero anon-executable functions
+- [x] Revoked anonymous default privileges for future public tables, sequences and functions created by the `postgres` migration owner; platform-managed `supabase_admin` defaults were not changed
 - [x] Temporary audio bucket exists and is private
 - [x] Audio bucket accepts only the configured audio MIME types and is limited to 8 MB
 - [x] Storage object policies restrict read, upload and delete to active administrators

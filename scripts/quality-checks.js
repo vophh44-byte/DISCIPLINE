@@ -851,5 +851,17 @@ check("student portal notification controls mark one or all notifications read",
   assert.notEqual(panelStart, -1);
   assert.match(auth.slice(panelStart, start), /Mark all read/);
 });
+check("parent journey realtime events are debounced before refreshing the portal", () => {
+  assert.match(auth, /let parentJourneyRefreshTimer = null/);
+  const start = auth.indexOf("const refreshParentJourney = () =>");
+  const end = auth.indexOf("parentJourneyChannel = client.channel", start);
+  const handler = auth.slice(start, end);
+  assert.ok(start >= 0 && end > start, "parent realtime handler missing");
+  assert.match(handler, /window\.clearTimeout\(parentJourneyRefreshTimer\)/);
+  assert.match(handler, /window\.setTimeout\(/);
+  assert.match(handler, /}, 350\)/);
+  assert.match(handler, /renderReadOnlyPortal\("parent", profile, user\)/);
+  assert.match(handler, /console\.error\("Parent journey refresh failed:"/);
+});
 
 process.stdout.write("\n" + passed + " DISCIPLINE quality checks passed.\n");

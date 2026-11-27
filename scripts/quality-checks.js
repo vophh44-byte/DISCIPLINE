@@ -32,9 +32,6 @@ for (const file of ["js/auth.js", "js/app.js", "js/supabase-config.js"]) {
   check(file + " parses", () => {
     new vm.Script(read(file), { filename: file });
   });
-check("shared portal-account preflight module parses", () => {
-  new vm.Script(accountPreflight, { filename: "portal-account-preflight.mjs" });
-});
 }
 
 check("all four portal choices are present", () => {

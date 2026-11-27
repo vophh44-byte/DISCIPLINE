@@ -56,9 +56,34 @@ Deno.serve(async (req: Request) => {
     return respond({ error: "Administrator permission required." }, 403);
   }
 
-  let input: { email?: string; display_name?: string; role?: string; student_id?: string; route_name?: string; vehicle_label?: string; student_ids?: string[] };
+  let input: { action?: string; email?: string; display_name?: string; role?: string; student_id?: string; route_name?: string; vehicle_label?: string; student_ids?: string[] };
   try { input = await req.json(); }
   catch { return respond({ error: "Invalid request body." }, 400); }
+
+  // Expose only the small Auth timestamps needed by the administrator account directory.
+  // This branch is available only after the bearer token and active administrator role checks above.
+  if (input.action === "list_auth_status") {
+    const [{ data: authUsers, error: authUsersError }, { data: portalProfiles, error: portalProfilesError }] = await Promise.all([
+      adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+      adminClient.from("profiles").select("user_id").in("role", ["parent", "student", "driver"]),
+    ]);
+    if (authUsersError || !authUsers) {
+      return respond({ error: "Could not load authentication setup timestamps." }, 502);
+    }
+    if (portalProfilesError || !portalProfiles) {
+      return respond({ error: "Could not match portal account profiles." }, 502);
+    }
+    const portalUserIds = new Set(portalProfiles.map(profile => profile.user_id));
+    const accounts = authUsers.users
+      .filter(user => portalUserIds.has(user.id))
+      .map(user => ({
+        user_id: user.id,
+        invited_at: user.invited_at || null,
+        email_confirmed_at: user.email_confirmed_at || user.confirmed_at || null,
+        last_sign_in_at: user.last_sign_in_at || null,
+      }));
+    return respond({ success: true, accounts }, 200);
+  }
 
   const email = (input.email || "").trim().toLowerCase();
   const displayName = (input.display_name || "").trim();

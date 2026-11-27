@@ -57,6 +57,7 @@
   const forgotButton = document.getElementById("forgotPasswordButton");
   let selectedPortal = null;
   let parentJourneyChannel = null;
+  let parentJourneyRefreshTimer = null;
   let isPasswordRecovery = cameFromPasswordRecovery;
   const isInviteSetup = new URLSearchParams(window.location.search).get("setup") === "1";
 
@@ -492,9 +493,13 @@
 
     if (role === "parent") {
       const refreshParentJourney = () => {
-        renderReadOnlyPortal("parent", profile, user).catch(error => {
-          console.error("Parent journey refresh failed:", error);
-        });
+        if (parentJourneyRefreshTimer) window.clearTimeout(parentJourneyRefreshTimer);
+        parentJourneyRefreshTimer = window.setTimeout(() => {
+          parentJourneyRefreshTimer = null;
+          renderReadOnlyPortal("parent", profile, user).catch(error => {
+            console.error("Parent journey refresh failed:", error);
+          });
+        }, 350);
       };
       parentJourneyChannel = client.channel("parent-journey-status-" + user.id)
         .on("postgres_changes", { event: "*", schema: "public", table: "driver_route_runs" }, refreshParentJourney)

@@ -48,9 +48,10 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 ### 3. Student access
 
 1. Sign in using a separate student test account linked to the test student.
-2. Confirm the student can view only the permitted student-facing records.
-3. Confirm the student cannot create or modify incidents, exact words, marks, parent publication, or evidence.
-4. Confirm the student cannot list or download temporary audio.
+2. Confirm the student can view only their own student-facing score and mark history.
+3. Incident narratives, exact words and evidence remain outside the student view; linked parents see incident details only after administrator publication.
+4. Confirm the student cannot create or modify incidents, exact words, marks, parent publication, or evidence.
+5. Confirm the student cannot list or download temporary audio.
 
 ### 4. Negative tests
 

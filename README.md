@@ -14,6 +14,7 @@ DISCIPLINE is connected to Supabase for authenticated, role-scoped records. The 
 - Parent notifications, responses, certificates and reporting
 - Administrator inbox with live counts of parent responses awaiting review and incidents awaiting verification; the inbox is restricted to administrator accounts
 - Weekly results export to CSV and a print-ready report; both actions respect the selected student search and publication-status filters
+- First-time weekly result publication creates in-app notifications for active linked parents and student portal accounts; recalculations of already-published weeks do not send duplicate alerts
 - Attendance registers export to CSV and print with daily status totals, saved notes and unmarked students
 - Driver check-in reports filter by student, route, vehicle and status, then export to CSV or print the selected journey records
 - Mark transaction history can be searched and filtered by transaction type, then exported to CSV or printed with positive/negative/net summaries and before/after balances

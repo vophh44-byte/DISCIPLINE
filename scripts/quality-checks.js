@@ -287,7 +287,10 @@ check("Portal readiness errors are non-blocking and never pretend a failed query
 
 check("Portal readiness responsive layout includes a two-column mobile state", () => {
   assert.match(styles,/\.accounts-readiness-grid\{display:grid;grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
-  assert.match(styles,/@media\(max-width:560px\)\{[^}]*\.accounts-readiness-grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  const mobileStart=styles.indexOf("@media(max-width:560px){.accounts-readiness-panel");
+  assert.ok(mobileStart>=0,"readiness mobile media rule missing");
+  const mobileStyles=styles.slice(mobileStart,Math.min(styles.length,mobileStart+700));
+  assert.match(mobileStyles,/\.accounts-readiness-grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
 });
 
 check("Portal Accounts always restores its submit button after invitation errors", () => {

@@ -783,7 +783,9 @@ check("student portal notification controls mark one or all notifications read",
   const studentBranch=auth.slice(start,end);
   assert.match(studentBranch, /data-mark-notification-read/);
   assert.match(studentBranch, /data-mark-all-notifications-read/);
-  assert.match(studentBranch, /Mark all read/);
+  const panelStart = auth.indexOf("const studentNotificationPanelHtml");
+  assert.notEqual(panelStart, -1);
+  assert.match(auth.slice(panelStart, start), /Mark all read/);
 });
 
 process.stdout.write("\n" + passed + " DISCIPLINE quality checks passed.\n");

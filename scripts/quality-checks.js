@@ -293,6 +293,76 @@ check("Portal readiness responsive layout includes a two-column mobile state", (
   assert.match(mobileStyles,/\.accounts-readiness-grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
 });
 
+check("Portal account directory shows accessible search, role and profile-status filters", () => {
+  for (const id of ["portalDirectorySearch","portalDirectoryRole","portalDirectoryStatusFilter","refreshPortalDirectory","portalDirectoryStatus","portalDirectoryRows"]) {
+    assert.ok(app.includes('id="' + id + '"'), "missing directory control: " + id);
+  }
+  assert.match(app, /aria-labelledby="portalDirectoryTitle"/);
+  assert.match(app, /<th>ACCOUNT<\/th><th>PORTAL<\/th><th>PROFILE STATUS<\/th>/);
+});
+
+check("Portal account directory loads profiles and all linked record sources", () => {
+  const start=app.indexOf("async function loadPortalDirectory()");
+  const end=app.indexOf("directorySearch.addEventListener",start);
+  const flow=app.slice(start,end);
+  assert.ok(start>=0&&end>start,"directory loader missing");
+  for(const source of ['from("profiles")','from("parent_student_links")','from("student_accounts")','from("driver_routes")','from("driver_route_students")','from("students")']) {
+    assert.ok(flow.includes(source),"directory query missing "+source);
+  }
+  assert.match(flow,/await Promise\.all\(/);
+});
+
+check("Portal account directory filters by name, email, role and active profile state", () => {
+  const start=app.indexOf("function renderPortalDirectory()");
+  const end=app.indexOf("async function loadPortalDirectory()",start);
+  const flow=app.slice(start,end);
+  assert.match(flow,/display_name/);
+  assert.match(flow,/profile\.email/);
+  assert.match(flow,/profile\.role===roleFilter/);
+  assert.match(flow,/statusFilter==="active"\?profile\.is_active:!profile\.is_active/);
+});
+
+check("Portal account directory safely escapes user-controlled profile and route text", () => {
+  const start=app.indexOf("function renderPortalDirectory()");
+  const end=app.indexOf("async function loadPortalDirectory()",start);
+  const renderer=app.slice(start,end);
+  assert.match(renderer,/escapeHTML\(profile\.display_name/);
+  assert.match(renderer,/escapeHTML\(profile\.email/);
+  const loaderStart=app.indexOf("async function loadPortalDirectory()",start);
+  const loaderEnd=app.indexOf("directorySearch.addEventListener",loaderStart);
+  const loader=app.slice(loaderStart,loaderEnd);
+  assert.match(loader,/escapeHTML\(route\.route_name\)/);
+  assert.match(loader,/escapeHTML\(student\.full_name\)/);
+});
+
+check("Portal account directory does not imply email delivery or invitation acceptance", () => {
+  const start=app.indexOf("async function loadPortalDirectory()");
+  const end=app.indexOf("const roleSelect=document.getElementById(\"portalRole\")",start);
+  const flow=app.slice(start,end);
+  assert.match(flow,/Profile status does not confirm invitation delivery or password setup/);
+  assert.doesNotMatch(flow,/inviteUserByEmail|email_confirmed_at|last_sign_in_at/);
+});
+
+check("Portal account directory errors are visible and refresh controls recover", () => {
+  const start=app.indexOf("async function loadPortalDirectory()");
+  const end=app.indexOf("const roleSelect=document.getElementById(\"portalRole\")",start);
+  const flow=app.slice(start,end);
+  assert.match(flow,/catch\(error\)/);
+  assert.match(flow,/Account list unavailable/);
+  assert.match(flow,/directoryRefresh\.disabled=false/);
+  assert.match(flow,/directoryRefresh\.addEventListener\("click",loadPortalDirectory\)/);
+});
+
+check("Portal directory management actions navigate to the role's existing admin section", () => {
+  assert.match(app,/profile\.role==="parent"\?"parents":profile\.role==="student"\?"students":"driverroutes"/);
+  assert.match(app,/data-page=\'+target/);
+});
+
+check("Portal account directory responsive filters stack on small screens", () => {
+  assert.match(styles,/\.accounts-directory-filters\{display:grid;grid-template-columns:minmax\(220px,1\.5fr\)/);
+  assert.match(styles,/@media\(max-width:560px\)\{\.accounts-directory-panel\{[^}]*\.accounts-directory-filters\{grid-template-columns:1fr\}/);
+});
+
 check("Portal Accounts always restores its submit button after invitation errors", () => {
   const start = app.indexOf('document.getElementById("portalAccountForm").addEventListener("submit"');
   const end = app.indexOf("\n}", start);

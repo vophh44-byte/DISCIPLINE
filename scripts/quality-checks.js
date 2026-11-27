@@ -288,7 +288,7 @@ check("RLS smoke test inspects profile, student, mark, incident and evidence bou
   for (const field of ["visible_profiles", "visible_students", "visible_mark_transactions", "visible_parent_links", "visible_incidents", "visible_incident_evidence"]) {
     assert.ok(roleSmoke.includes(field), "missing RLS smoke result: " + field);
   }
-  assert.match(roleSmoke, /not a[\\s\\S]*substitute for signing into the website/);
+  assert.ok(roleSmoke.includes("not a") && roleSmoke.includes("substitute for signing into the website"));
 });
 
 process.stdout.write("\n" + passed + " DISCIPLINE quality checks passed.\n");

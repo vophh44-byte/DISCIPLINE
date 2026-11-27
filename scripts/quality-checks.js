@@ -12,6 +12,7 @@ const app = read("js/app.js");
 const html = read("index.html");
 const config = read("js/supabase-config.js");
 const audioFunction = read("supabase/functions/incident-audio/index.ts");
+const accountFunction = read("supabase/functions/create-portal-account/index.ts");
 
 let passed = 0;
 function check(name, callback) {
@@ -128,6 +129,34 @@ check("audio listening links remain short-lived", () => {
 check("audio function requires an active administrator", () => {
   assert.match(audioFunction, /caller\.role !== "admin" \|\| caller\.is_active !== true/);
   assert.match(audioFunction, /auth\.getUser\(\)/);
+});
+
+check("portal account function authenticates the caller with their bearer token", () => {
+  assert.match(accountFunction, /authHeader\.startsWith\("Bearer "\)/);
+  assert.match(accountFunction, /userClient\.auth\.getUser\(\)/);
+});
+
+check("portal account creation requires an active administrator", () => {
+  assert.match(accountFunction, /caller\.role !== "admin" \|\| caller\.is_active !== true/);
+});
+
+check("portal account function rejects unsupported account roles", () => {
+  assert.match(accountFunction, /role !== "student" && role !== "parent" && role !== "driver"/);
+});
+
+check("portal account function accepts only active student profiles", () => {
+  assert.match(accountFunction, /student\.is_active !== true/);
+  assert.match(accountFunction, /routeStudents\.some\(\(s: \{is_active:boolean\}\) => s\.is_active !== true\)/);
+});
+
+check("student account provisioning prevents conflicting user/profile links", () => {
+  assert.match(accountFunction, /\.from\("student_accounts"\)[\s\S]{0,180}\.eq\("student_id", studentId\)/);
+  assert.match(accountFunction, /\.eq\("user_id", userId\)/);
+});
+
+check("portal invitations return to the password setup screen", () => {
+  assert.match(accountFunction, /redirectTo:\s*"https:\/\/vophh44-byte\.github\.io\/DISCIPLINE\/\?setup=1"/);
+  assert.match(accountFunction, /inviteUserByEmail\(email/);
 });
 
 check("recording consent checkbox starts unchecked", () => {

@@ -904,6 +904,50 @@ async function renderWeeklyReports(){
  input.addEventListener("change",load);
  document.getElementById("weeklySearch").addEventListener("input",drawResults);
  document.getElementById("weeklyStatusFilter").addEventListener("change",drawResults);
+ function exportWeeklyResults(){
+  const rows=filteredWeeklyResults();
+  if(!rows.length){showToast("There are no weekly results matching the current filters.");return;}
+  const csvCell=(value,isText=false)=>{
+   const raw=String(value??"");
+   const safe=isText&&/^[=+\-@]/.test(raw)?"'"+raw:raw;
+   return '"'+safe.replace(/"/g,'""')+'"';
+  };
+  const headings=["Student name","Student ID","Awards","Deductions","Received","Transferred","Weekly net","Lifetime balance","Publication status"];
+  const csvRows=[headings.map(x=>csvCell(x,true)).join(","),...rows.map(x=>[
+   csvCell(x.students?.full_name||"Student",true),
+   csvCell(x.students?.student_code||"",true),
+   Number(x.total_awards||0),Number(x.total_deductions||0),Number(x.total_received||0),
+   Number(x.total_transferred||0),Number(x.weekly_net||0),Number(x.lifetime_balance||0),
+   csvCell(x.published_at?"Published":"Not published",true)
+  ].join(","))];
+  const blob=new Blob(["\uFEFF"+csvRows.join("\r\n")],{type:"text/csv;charset=utf-8;"});
+  const url=URL.createObjectURL(blob),link=document.createElement("a");
+  link.href=url;link.download="discipline-weekly-results-"+input.value+".csv";
+  document.body.appendChild(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1200);
+  showToast(rows.length+" weekly result(s) exported.");
+ }
+ function printWeeklyResults(){
+  const rows=filteredWeeklyResults();
+  if(!rows.length){showToast("There are no weekly results matching the current filters.");return;}
+  const endDate=new Date(input.value+"T12:00:00");endDate.setDate(endDate.getDate()+6);
+  const endText=endDate.getFullYear()+"-"+String(endDate.getMonth()+1).padStart(2,"0")+"-"+String(endDate.getDate()).padStart(2,"0");
+  const total=field=>rows.reduce((sum,row)=>sum+Number(row[field]||0),0);
+  const printRows=rows.map(x=>"<tr><td><strong>"+escapeHTML(x.students?.full_name||"Student")+"</strong><small>"+escapeHTML(x.students?.student_code||"")+"</small></td><td>"+Number(x.total_awards||0)+"</td><td>"+Number(x.total_deductions||0)+"</td><td>"+Number(x.total_received||0)+"</td><td>"+Number(x.total_transferred||0)+"</td><td><strong>"+(Number(x.weekly_net)>0?"+":"")+Number(x.weekly_net||0)+"</strong></td><td>"+Number(x.lifetime_balance||0)+"</td><td>"+(x.published_at?"Published":"Not published")+"</td></tr>").join("");
+  const popup=window.open("","_blank");
+  if(!popup){showToast("Allow pop-ups to print the weekly report.");return;}
+  popup.opener=null;
+  const printHtml="<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>DISCIPLINE Weekly Results</title>"+
+   "<style>body{font-family:Arial,sans-serif;color:#203047;margin:28px}header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #c7a56b;padding-bottom:14px;margin-bottom:18px}h1{font-size:23px;margin:0 0 6px}p{margin:4px 0;color:#65758a;font-size:11px}.meta{text-align:right;font-size:10px;color:#65758a}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:18px 0}.summary div{border:1px solid #dce3ec;border-radius:7px;padding:10px}.summary small{display:block;color:#718096;font-size:9px}.summary strong{display:block;font-size:17px;margin-top:4px}table{width:100%;border-collapse:collapse;font-size:10px}th{background:#edf2f7;text-align:left;color:#50637b;font-size:8px;letter-spacing:.5px}th,td{padding:8px 6px;border-bottom:1px solid #e5eaf0}td small{display:block;color:#718096;margin-top:3px}footer{margin-top:18px;padding-top:10px;border-top:1px solid #dce3ec;color:#718096;font-size:9px}@media print{body{margin:12mm}tr{break-inside:avoid}}@media(max-width:700px){body{margin:12px}.summary{grid-template-columns:repeat(2,1fr)}table{font-size:8px}th,td{padding:5px 3px}}</style></head><body>"+
+   "<header><div><h1>DISCIPLINE · Weekly Student Results</h1><p>Official Monday–Sunday scoring summary</p></div><div class=\"meta\"><strong>Scoring period</strong><br>"+escapeHTML(input.value)+" to "+escapeHTML(endText)+"<br><br>Generated "+escapeHTML(new Date().toLocaleString("en-IN"))+"</div></header>"+
+   "<section class=\"summary\"><div><small>Students shown</small><strong>"+rows.length+"</strong></div><div><small>Total awards</small><strong>"+total("total_awards")+"</strong></div><div><small>Total deductions</small><strong>"+total("total_deductions")+"</strong></div><div><small>Combined weekly net</small><strong>"+(total("weekly_net")>0?"+":"")+total("weekly_net")+"</strong></div></section>"+
+   "<table><thead><tr><th>STUDENT</th><th>AWARDS</th><th>DEDUCTIONS</th><th>RECEIVED</th><th>TRANSFERRED</th><th>WEEKLY NET</th><th>LIFETIME</th><th>PORTAL STATUS</th></tr></thead><tbody>"+printRows+"</tbody></table>"+
+   "<footer>DISCIPLINE · Administrator report · Exports include the currently filtered student results.</footer></body></html>";
+  popup.document.open();popup.document.write(printHtml);popup.document.close();popup.focus();
+  window.setTimeout(()=>popup.print(),350);
+ }
+ document.getElementById("weeklyExportButton").addEventListener("click",exportWeeklyResults);
+ document.getElementById("weeklyPrintButton").addEventListener("click",printWeeklyResults);
  publish.addEventListener("click",async()=>{
   if(disciplineMonday(input.value)!==input.value){showToast("Choose a Monday first.");return;}
   if(resultRecords.some(x=>x.published_at)&&!confirm("This week already has published results. Re-run the official publishing calculation for the selected week?"))return;

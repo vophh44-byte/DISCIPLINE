@@ -33,6 +33,97 @@ function showToast(message){
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=>toast.classList.remove("show"),2800);
 }
+
+function updateAdminNavBadges(parentCount, incidentCount){
+  const parentBadge=document.getElementById("parentResponseNavCount");
+  const incidentBadge=document.getElementById("incidentReviewNavCount");
+  const bellCount=document.getElementById("adminNotificationCount");
+  const dot=document.getElementById("adminNotificationDot");
+  const total=Math.max(0,Number(parentCount||0))+Math.max(0,Number(incidentCount||0));
+  if(parentBadge){parentBadge.textContent=parentCount>99?"99+":String(parentCount);parentBadge.hidden=!parentCount;}
+  if(incidentBadge){incidentBadge.textContent=incidentCount>99?"99+":String(incidentCount);incidentBadge.hidden=!incidentCount;}
+  if(bellCount){bellCount.textContent=total>99?"99+":String(total);bellCount.hidden=!total;}
+  if(dot)dot.hidden=true;
+  const button=document.getElementById("notificationButton");
+  if(button)button.setAttribute("aria-label",total?("Administrator inbox, "+total+" pending item(s)"):"Administrator inbox, no pending items");
+}
+async function refreshAdminNotificationBadge(){
+  const center=document.getElementById("notificationCenter");
+  const db=window.disciplineSupabase;
+  if(!center||center.hidden||!db||!document.body.classList.contains("is-authenticated"))return;
+  try{
+    const [responses,incidents]=await Promise.all([
+      db.from("parent_responses").select("id",{count:"exact",head:true}).is("reviewed_at",null),
+      db.from("incidents").select("id",{count:"exact",head:true}).eq("transcript_verified",false)
+    ]);
+    if(responses.error)throw responses.error;
+    if(incidents.error)throw incidents.error;
+    updateAdminNavBadges(responses.count||0,incidents.count||0);
+  }catch(error){
+    console.error("Could not refresh administrator inbox count:",error);
+  }
+}
+function closeAdminNotificationPanel(){
+  const panel=document.getElementById("adminNotificationPanel");
+  const button=document.getElementById("notificationButton");
+  if(panel)panel.hidden=true;
+  if(button)button.setAttribute("aria-expanded","false");
+}
+async function loadAdminNotifications(){
+  const db=window.disciplineSupabase;
+  const content=document.getElementById("adminNotificationContent");
+  const refresh=document.getElementById("refreshAdminNotifications");
+  if(!db||!content)return;
+  if(refresh){refresh.disabled=true;refresh.textContent="…";}
+  content.innerHTML='<p class="admin-notification-empty">Loading your pending items…</p>';
+  try{
+    const [responses,incidents]=await Promise.all([
+      db.from("parent_responses")
+        .select("id,response_type,message,created_at,profiles(display_name),students(full_name,student_code)",{count:"exact"})
+        .is("reviewed_at",null).order("created_at",{ascending:false}).limit(5),
+      db.from("incidents")
+        .select("id,category,severity,occurred_at,students(full_name,student_code)",{count:"exact"})
+        .eq("transcript_verified",false).order("occurred_at",{ascending:false}).limit(5)
+    ]);
+    if(responses.error)throw responses.error;
+    if(incidents.error)throw incidents.error;
+    const parentRows=responses.data||[],incidentRows=incidents.data||[];
+    updateAdminNavBadges(responses.count||0,incidents.count||0);
+    const parentHtml=parentRows.map(row=>{
+      const parent=row.profiles?.display_name||"Parent";
+      const student=row.students?.full_name||"Student";
+      const kind=String(row.response_type||"response").replaceAll("_"," ");
+      const message=String(row.message||"No additional message").slice(0,150);
+      return '<button type="button" class="admin-notification-item" data-page="parents"><span class="admin-notification-kind">Parent response · '+escapeHTML(kind)+'</span><strong>'+escapeHTML(parent)+' · '+escapeHTML(student)+'</strong><p>'+escapeHTML(message)+'</p><small>'+escapeHTML(new Date(row.created_at).toLocaleString("en-IN"))+'</small></button>';
+    }).join("");
+    const incidentHtml=incidentRows.map(row=>{
+      const student=row.students?.full_name||"Student";
+      const category=String(row.category||"incident").replaceAll("_"," ");
+      return '<button type="button" class="admin-notification-item" data-page="incidents"><span class="admin-notification-kind">Incident · review required</span><strong>'+escapeHTML(student)+' · '+escapeHTML(category)+'</strong><p>Severity: '+escapeHTML(row.severity||"Not specified")+' · The incident has not yet been verified.</p><small>'+escapeHTML(new Date(row.occurred_at).toLocaleString("en-IN"))+'</small></button>';
+    }).join("");
+    const parentCount=responses.count||0,incidentCount=incidents.count||0;
+    content.innerHTML=
+      '<section class="admin-notification-group"><h3 class="admin-notification-group-title">Parent responses <span>'+parentCount+' pending</span></h3>'+
+      (parentHtml||'<p class="admin-notification-empty">No parent responses awaiting review.</p>')+
+      (parentCount>5?'<button type="button" class="text-button" data-page="parents">View all '+parentCount+' parent responses →</button>':'')+'</section>'+
+      '<section class="admin-notification-group"><h3 class="admin-notification-group-title">Incident reviews <span>'+incidentCount+' pending</span></h3>'+
+      (incidentHtml||'<p class="admin-notification-empty">No incidents awaiting verification.</p>')+
+      (incidentCount>5?'<button type="button" class="text-button" data-page="incidents">Review all '+incidentCount+' incidents →</button>':'')+'</section>';
+  }catch(error){
+    content.innerHTML='<p class="admin-notification-error">The administrator inbox could not be loaded. '+escapeHTML(error.message||"Please refresh and try again.")+'</p>';
+  }finally{
+    if(refresh){refresh.disabled=false;refresh.textContent="↻";}
+  }
+}
+function toggleAdminNotificationPanel(){
+  const panel=document.getElementById("adminNotificationPanel");
+  const button=document.getElementById("notificationButton");
+  if(!panel||!button)return;
+  if(!panel.hidden){closeAdminNotificationPanel();return;}
+  panel.hidden=false;
+  button.setAttribute("aria-expanded","true");
+  loadAdminNotifications();
+}
 function setActivePage(page){
   if(!pageMeta[page]) page="dashboard";
   document.querySelectorAll(".nav-item").forEach(btn=>btn.classList.toggle("active",btn.dataset.page===page));
@@ -48,6 +139,8 @@ function setActivePage(page){
     const task=(renderers[page]||(()=>renderPlaceholder(page)))();
     if(task&&typeof task.catch==="function") task.catch(error=>showPageError(error));
   }catch(error){showPageError(error);}
+  if(document.getElementById("notificationCenter")&&!document.getElementById("notificationCenter").hidden)refreshAdminNotificationBadge();
+  closeAdminNotificationPanel();
   closeSidebar();
 }
 function showPageError(error){
@@ -1494,13 +1587,17 @@ function openModal(type){
 }
 function closeModal(){modalBackdrop.classList.remove("open");}
 document.addEventListener("click",e=>{
+  const notificationBtn=e.target.closest("#notificationButton");
+  const refreshBtn=e.target.closest("#refreshAdminNotifications");
+  if(notificationBtn){e.preventDefault();toggleAdminNotificationPanel();return;}
+  if(refreshBtn){e.preventDefault();loadAdminNotifications();return;}
   const pageBtn=e.target.closest("[data-page]");
   const actionBtn=e.target.closest("[data-action]");
-  if(pageBtn)setActivePage(pageBtn.dataset.page);
+  if(pageBtn){setActivePage(pageBtn.dataset.page);closeAdminNotificationPanel();}
   if(actionBtn&&actionBtn.dataset.action==="add-student")setActivePage("students");
   if(e.target.closest(".notice-dismiss"))e.target.closest(".notice-banner").remove();
   if(e.target.closest("#dateButton"))showToast("Weekly period: Monday to Sunday · Asia/Kolkata");
-  if(e.target.closest("#notificationButton"))showToast("No live notifications in local preview.");
+  if(!e.target.closest("#notificationCenter"))closeAdminNotificationPanel();
 });
 // Navigation is handled once by the delegated document click listener above.
 document.getElementById("menuToggle").addEventListener("click",()=>{document.getElementById("sidebar").classList.add("open");document.getElementById("sidebarBackdrop").classList.add("show");});
@@ -1508,5 +1605,5 @@ document.getElementById("closeSidebar").addEventListener("click",closeSidebar);
 document.getElementById("sidebarBackdrop").addEventListener("click",closeSidebar);
 document.getElementById("modalClose").addEventListener("click",closeModal);
 modalBackdrop.addEventListener("click",e=>{if(e.target===modalBackdrop)closeModal();});
-document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeModal();closeSidebar();}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeModal();closeSidebar();closeAdminNotificationPanel();}});
 // The authenticated role controller opens the requested hash route after sign-in.

@@ -692,7 +692,7 @@ async function renderAccounts(){
     directoryStatus.textContent="Loading portal accounts and linked records…";
     directoryRows.innerHTML='<tr><td colspan="7">Loading accounts…</td></tr>';
     try{
-      const [profilesResult,parentLinksResult,studentLinksResult,routesResult,assignmentsResult,studentsResult]=await Promise.all([
+      const [profilesResult,parentLinksResult,studentLinksResult,routesResult,assignmentsResult,studentsResult,authStatusResult]=await Promise.all([
         window.disciplineSupabase.from("profiles").select("user_id,role,display_name,email,is_active,created_at").in("role",["parent","student","driver"]),
         window.disciplineSupabase.from("parent_student_links").select("parent_user_id,student_id,relationship_label"),
         window.disciplineSupabase.from("student_accounts").select("user_id,student_id"),

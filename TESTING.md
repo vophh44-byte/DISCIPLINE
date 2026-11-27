@@ -6,6 +6,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 
 - [x] Frontend JavaScript parses: `js/app.js` and `js/auth.js`
 - [x] The workspace starts hidden/inert/aria-hidden; the authenticated portal shell releases it only after the signed-in profile is confirmed active and its role is supported
+- [ ] Temporary Supabase/session lookup failures preserve the saved session, keep the workspace closed and offer an accessible retry; automated regression tests added and awaiting the next CI run
 - [x] Latest GitHub Actions quality run passed **132 DISCIPLINE checks** on commit `8c19f026e3c086000f311a0b1a562675abd958f4` ([run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/46011958421)); the run includes the fail-closed startup regression tests
 - [x] GitHub Pages build and deployment completed successfully for the fail-closed startup release commit `8c19f026e3c086000f311a0b1a562675abd958f4` ([deployment run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/46011958167))
 - [x] Fail-closed startup hardening is green in CI and deployed; signed-in browser smoke tests for all four roles remain a separate manual release check
@@ -182,6 +183,10 @@ Run [`scripts/security-audit.sql`](scripts/security-audit.sql) in the Supabase S
 ## Manual test procedure
 
 ### 0. Fail-closed authentication startup
+
+6. In a local development copy, simulate a temporary `profiles` query failure or block the Supabase API after sign-in. Confirm DISCIPLINE does not sign the user out, keeps the application hidden and displays a Retry account check control.
+7. Restore the connection and select Retry account check. Confirm the same saved session opens the correct portal without entering the password again.
+8. Simulate a temporary portal-data loading error after role verification. Confirm partial portal content is hidden and a retry is offered.
 
 1. Open DISCIPLINE in a fresh private/incognito browser session. Confirm only the portal picker is visible; the local-preview workspace and its sample figures must remain hidden.
 2. Use keyboard Tab navigation and a screen reader to confirm the hidden workspace is not focusable or exposed before sign-in.

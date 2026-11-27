@@ -85,6 +85,13 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 6. At a narrow mobile width, confirm the cards stack in one column and all labels/counts remain readable.
 7. Confirm the dashboard shows counts and category labels only; do not display parent messages, student incident narratives, exact words, transcript text, or temporary audio evidence in this summary.
 
+### Portal invitation retry behaviour
+
+1. Open Portal Accounts as an administrator and complete a test invitation form using a controlled test inbox and a fictional test student.
+2. In browser developer tools, simulate an offline/network failure before submitting. Confirm the page displays a service-connection error and the submit button becomes available again.
+3. Restore the connection and retry. Confirm a successful response gives a clear invitation or existing-account result.
+4. Confirm the form never asks the administrator to enter or share the invited user's password.
+
 ## Repeatable database audit
 
 Run [`scripts/security-audit.sql`](scripts/security-audit.sql) in the Supabase SQL Editor while connected to the DISCIPLINE project. It is read-only and returns function execute grants, RLS table coverage, the temporary-audio uniqueness index, verification-RPC privileges and aggregate integrity counts. It does not return student names, parent emails or incident narratives. Review each authenticated-executable SECURITY DEFINER routine's definition to confirm it binds authorization to `auth.uid()` and the intended role.

@@ -43,6 +43,7 @@ Use audio only when the institution has a lawful, appropriate basis and has foll
 
 - Frontend: HTML, CSS and JavaScript; no frontend build step.
 - The full workspace starts hidden, inert and excluded from assistive technology. Only a signed-in account with an active, supported portal role can reveal it; missing Supabase configuration, inactive accounts and role mismatches keep it closed.
+- Temporary Supabase profile/session lookup failures do not automatically sign users out: the workspace stays hidden, the saved session is retained, and an accessible retry control lets the user re-check the account when connectivity returns.
 - Backend: Supabase Auth, PostgreSQL with Row Level Security, Supabase Storage and Edge Functions.
 - The browser uses only the Supabase publishable client key. Never place a Supabase secret or service-role key in frontend files or commit history.
 - Unauthenticated `anon` database privileges are revoked for application tables, sequences and functions. The `postgres` migration owner's default privileges are also restricted so new public objects do not automatically grant anonymous access; authenticated portal roles retain the existing RLS-governed access.

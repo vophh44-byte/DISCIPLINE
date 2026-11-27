@@ -645,7 +645,10 @@ check("incident CSV export excludes exact words and transcript evidence", () => 
   const csv=app.slice(start,end);
   assert.doesNotMatch(csv, /exact_words|transcript_text|audio_temp|storage_path/);
   assert.match(csv, /text\/csv;charset=utf-8/);
-  assert.ok(csv.includes("^[\\s]*[=+\\-@]"));
+  const cellGuardStart=app.indexOf("function incidentCsvCell");
+  const cellGuardEnd=app.indexOf("function exportIncidentReport()",cellGuardStart);
+  assert.ok(cellGuardStart>=0 && cellGuardEnd>cellGuardStart);
+  assert.match(app.slice(cellGuardStart,cellGuardEnd), /\.test\(raw\)/);
 });
 
 check("incident print report explicitly excludes exact words, transcript and temporary audio", () => {

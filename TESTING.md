@@ -51,6 +51,9 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] Student profile print report escapes student and guardian data and omits temporary audio and exact-word content
 - [x] Certificate register has a print action for private and published certificates; print output uses saved title, student name, description and issue date
 - [x] Certificate print page is formatted for A4 landscape and escapes dynamic certificate/student text before writing the print document
+- [x] Incident Center can filter by awaiting verification/verified state as well as parent visibility and search terms
+- [x] Incident CSV and print reports share the active filters and include factual descriptions, review state, publication state and deduction linkage
+- [x] Incident reports exclude exact words, transcript text and temporary audio evidence and escape dynamic student/description content
 - [x] Both deployed Edge Functions are tracked in `supabase/functions`; account provisioning tests administrator authorization, supported roles, active-student validation and student-link conflicts
 - [ ] Signed-in administrator → upload → review → verify → storage deletion end-to-end test
 - [ ] Separate parent account test after publication
@@ -70,6 +73,14 @@ Run [`scripts/security-audit.sql`](scripts/security-audit.sql) in the Supabase S
 4. Review recent attendance, incident review/publication state, weekly results and certificates.
 5. Confirm exact recorded words and temporary audio are not shown in the general profile summary.
 6. Open Print record and check the student/guardian details and saved report sections.
+
+### Confidential incident report export and print
+
+1. Open Incident Center and select the required parent-visibility filter.
+2. Choose Awaiting verification or Verified, and enter a student/category/description search if needed.
+3. Export CSV and confirm the report includes factual description, category, severity, review state, parent visibility, deduction linkage and action taken.
+4. Print the report and confirm the same filtered records and summary counts are shown.
+5. Confirm neither export contains exact recorded words, transcript text or temporary audio evidence.
 
 ### Achievement certificate print
 

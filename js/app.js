@@ -1430,14 +1430,18 @@ async function renderIncidents(){
   document.getElementById("incidentTotal").textContent=incidentRecords.length;
   document.getElementById("incidentPrivate").textContent=incidentRecords.filter(x=>!x.published_to_parent_at).length;
   document.getElementById("incidentPublished").textContent=incidentRecords.filter(x=>!!x.published_to_parent_at).length;
+   document.getElementById("incidentAwaitingReview").textContent=incidentRecords.filter(x=>!x.transcript_verified).length;
   drawIncidentRows();
  }
+  function filteredIncidentRecords(){
+   const q=document.getElementById("incidentSearch").value.trim().toLowerCase(),visibility=document.getElementById("incidentVisibility").value,reviewState=document.getElementById("incidentReviewFilter").value;
+   return incidentRecords.filter(x=>{
+    const published=!!x.published_to_parent_at,verified=x.transcript_verified===true;
+    return (!visibility||(visibility==="published"?published:!published))&&(!reviewState||(reviewState==="verified"?verified:!verified))&&[x.students?.full_name,x.students?.student_code,x.category,x.severity,x.factual_description,x.exact_words,x.action_taken].join(" ").toLowerCase().includes(q);
+   });
+  }
  function drawIncidentRows(){
-  const q=document.getElementById("incidentSearch").value.trim().toLowerCase(),visibility=document.getElementById("incidentVisibility").value;
-  const filtered=incidentRecords.filter(x=>{
-   const published=!!x.published_to_parent_at;
-   return (!visibility||(visibility==="published"?published:!published))&&[x.students?.full_name,x.students?.student_code,x.category,x.severity,x.factual_description,x.exact_words,x.action_taken].join(" ").toLowerCase().includes(q);
-  });
+   const filtered=filteredIncidentRecords();
   body.innerHTML=filtered.map(x=>{
    const audio=incidentEvidence.find(e=>e.incident_id===x.id&&e.evidence_type==="audio_temp");
    const hasAudio=!!(audio?.storage_path&&!audio.audio_deleted_at);
@@ -1450,6 +1454,43 @@ async function renderIncidents(){
  }
  document.getElementById("incidentSearch").addEventListener("input",drawIncidentRows);
  document.getElementById("incidentVisibility").addEventListener("change",drawIncidentRows);
+  document.getElementById("incidentReviewFilter").addEventListener("change",drawIncidentRows);
+  function incidentCsvCell(value){
+   const raw=String(value??"");
+   const safe=/^[\s]*[=+\-@]/.test(raw)?"'"+raw:raw;
+   return '"'+safe.replace(/"/g,'""')+'"';
+  }
+  function exportIncidentReport(){
+   const visible=filteredIncidentRecords();
+   if(!visible.length){showToast("There are no incident records matching the current filters.");return;}
+   const csv=[
+    ["Date and time","Student","Student ID","Category","Severity","Factual description","Administrator review","Parent visibility","Mark deduction recorded","Action taken"].map(incidentCsvCell).join(","),
+    ...visible.map(x=>[
+     new Date(x.occurred_at).toLocaleString("en-IN"),x.students?.full_name||"Student",x.students?.student_code||"",
+     x.category.replaceAll("_"," "),x.severity,x.factual_description||"",
+     x.transcript_verified?"Verified":"Awaiting verification",x.published_to_parent_at?"Published":"Private",
+     x.mark_transaction_id?"Yes":"No",x.action_taken||""
+    ].map(incidentCsvCell).join(","))
+   ];
+   const blob=new Blob(["\uFEFF"+csv.join("\r\n")],{type:"text/csv;charset=utf-8;"}),url=URL.createObjectURL(blob),link=document.createElement("a");
+   link.href=url;link.download="discipline-incident-register-"+disciplineToday()+".csv";
+   document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1200);
+   showToast(visible.length+" incident record(s) exported.");
+  }
+  function printIncidentReport(){
+   const visible=filteredIncidentRecords();
+   if(!visible.length){showToast("There are no incident records matching the current filters.");return;}
+   const pending=visible.filter(x=>!x.transcript_verified).length,published=visible.filter(x=>!!x.published_to_parent_at).length,privateCount=visible.length-published;
+   const rows=visible.map(x=>"<tr><td>"+escapeHTML(new Date(x.occurred_at).toLocaleString("en-IN"))+"</td><td>"+escapeHTML(x.students?.full_name||"Student")+"<small>"+escapeHTML(x.students?.student_code||"")+"</small></td><td>"+escapeHTML(x.category.replaceAll("_"," "))+"</td><td>"+escapeHTML(x.severity)+"</td><td>"+escapeHTML(x.factual_description||"—")+"</td><td>"+(x.transcript_verified?"Verified":"Awaiting verification")+"</td><td>"+(x.published_to_parent_at?"Published":"Private")+"</td><td>"+(x.mark_transaction_id?"Yes":"No")+"</td></tr>").join("");
+   const popup=window.open("","_blank");
+   if(!popup){showToast("Allow pop-ups to print the incident report.");return;}
+   popup.opener=null;
+   const html="<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>DISCIPLINE Incident Register</title><style>body{font-family:Arial,sans-serif;color:#24364d;margin:24px}header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;border-bottom:2px solid #c7a56b;padding-bottom:12px;margin-bottom:15px}h1{font-size:21px;margin:0 0 6px}p{margin:4px 0;color:#697a90;font-size:10px}.meta{text-align:right;color:#697a90;font-size:9px}.summary{display:flex;gap:9px;flex-wrap:wrap;margin:14px 0}.summary span{border:1px solid #dce3ec;border-radius:6px;padding:7px 9px;font-size:9px}.summary strong{font-size:13px;margin-left:4px}table{width:100%;border-collapse:collapse;font-size:8px}th{background:#edf2f7;text-align:left;color:#50637b;font-size:7px;letter-spacing:.3px}td,th{padding:6px 4px;border-bottom:1px solid #e5eaf0;vertical-align:top}td small{display:block;color:#718096;margin-top:2px}footer{margin-top:14px;padding-top:9px;border-top:1px solid #dce3ec;color:#718096;font-size:8px}.privacy-note{margin:8px 0;padding:8px;background:#f7f9fc;color:#64758a;font-size:9px}@media print{body{margin:10mm}tr{break-inside:avoid}}</style></head><body><header><div><h1>DISCIPLINE · Incident Register</h1><p>Administrator safeguarding review · Factual record summaries</p></div><div class=\"meta\">Generated "+escapeHTML(new Date().toLocaleString("en-IN"))+"<br>Current report filters applied</div></header><div class=\"privacy-note\">This report excludes exact recorded words, transcript text and temporary audio evidence. Use the private Incident Center review screen for restricted evidence.</div><div class=\"summary\"><span>Records <strong>"+visible.length+"</strong></span><span>Awaiting review <strong>"+pending+"</strong></span><span>Published <strong>"+published+"</strong></span><span>Private <strong>"+privateCount+"</strong></span></div><table><thead><tr><th>DATE</th><th>STUDENT</th><th>CATEGORY</th><th>SEVERITY</th><th>FACTUAL DESCRIPTION</th><th>REVIEW</th><th>PARENT ACCESS</th><th>DEDUCTION</th></tr></thead><tbody>"+rows+"</tbody></table><footer>DISCIPLINE · Confidential administrator report · Only filtered incident records are included.</footer></body></html>";
+   popup.document.open();popup.document.write(html);popup.document.close();popup.focus();setTimeout(()=>popup.print(),350);
+  }
+  document.getElementById("incidentExportCsv").addEventListener("click",exportIncidentReport);
+  document.getElementById("incidentPrintReport").addEventListener("click",printIncidentReport);
+
  const reviewDialog=document.getElementById("incidentReviewDialog");
  let reviewIncidentId=null;
  body.addEventListener("click",async event=>{

@@ -42,6 +42,7 @@ Use audio only when the institution has a lawful, appropriate basis and has foll
 ## Technical notes
 
 - Frontend: HTML, CSS and JavaScript; no frontend build step.
+- The full workspace starts hidden, inert and excluded from assistive technology. Only a signed-in account with an active, supported portal role can reveal it; missing Supabase configuration, inactive accounts and role mismatches keep it closed.
 - Backend: Supabase Auth, PostgreSQL with Row Level Security, Supabase Storage and Edge Functions.
 - The browser uses only the Supabase publishable client key. Never place a Supabase secret or service-role key in frontend files or commit history.
 - Unauthenticated `anon` database privileges are revoked for application tables, sequences and functions. The `postgres` migration owner's default privileges are also restricted so new public objects do not automatically grant anonymous access; authenticated portal roles retain the existing RLS-governed access.
@@ -51,7 +52,7 @@ Use audio only when the institution has a lawful, appropriate basis and has foll
 
 ## Automated quality checks
 
-The repository runs lightweight, dependency-free checks on pushes and pull requests to `main`. The checks parse the browser JavaScript and verify key portal boundaries: supported roles, student-to-profile linking, published-only weekly results, student-scoped mark history, parent-only incident/report handling, browser configuration secret hygiene, portal-account administrator authorization and link-conflict protections, incident-audio consent, file-limit, short-lived playback and administrator-only safeguards, administrator inbox role visibility and pending-item queries, filtered weekly CSV/print report exports, attendance-register exports, and filtered driver check-in exports, and filtered mark-ledger exports with before/after balance checks.
+The repository runs lightweight, dependency-free checks on pushes and pull requests to `main`. The checks parse the browser JavaScript and verify the fail-closed authentication startup, portal-role boundaries, supported roles, student-to-profile linking, published-only weekly results, student-scoped mark history, parent-only incident/report handling, browser configuration secret hygiene, portal-account administrator authorization and link-conflict protections, incident-audio consent, file-limit, short-lived playback and administrator-only safeguards, administrator inbox role visibility and pending-item queries, filtered weekly CSV/print report exports, attendance-register exports, and filtered driver check-in exports, and filtered mark-ledger exports with before/after balance checks.
 
 Run the same checks locally with Node.js 24 or newer:
 

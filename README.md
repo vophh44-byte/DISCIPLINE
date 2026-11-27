@@ -45,6 +45,7 @@ Use audio only when the institution has a lawful, appropriate basis and has foll
 - The browser uses only the Supabase publishable client key. Never place a Supabase secret or service-role key in frontend files or commit history.
 - Unauthenticated `anon` database privileges are revoked for application tables, sequences and functions. The `postgres` migration owner's default privileges are also restricted so new public objects do not automatically grant anonymous access; authenticated portal roles retain the existing RLS-governed access.
 - Incident audio is handled by the `incident-audio` Edge Function. It validates the signed-in administrator and performs private upload, short-lived playback URL creation, deletion and verification. Signed-in administrators have read-only access to evidence metadata; writes to evidence metadata are handled by the server-side function.
+- The `create-portal-account` Edge Function permits the production GitHub Pages origin and local `localhost` / `127.0.0.1` development origins only; it responds to preflight requests with the headers required by the Supabase browser client.
 - Database migrations already exist in the connected project. Apply further schema changes as migrations and retain the existing RLS policies.
 
 ## Automated quality checks

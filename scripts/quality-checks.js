@@ -244,6 +244,52 @@ check("portal invitations return to the password setup screen", () => {
   assert.match(accountFunction, /redirectTo:\s*"https:\/\/vophh44-byte\.github\.io\/DISCIPLINE\/\?setup=1"/);
   assert.match(accountFunction, /inviteUserByEmail\(email/);
 });
+check("Portal Accounts shows a live count-only setup readiness snapshot", () => {
+  for (const id of ["accountsReadinessStatus","accountsReadyStudents","accountsReadyStudentLogins","accountsReadyParents","accountsReadyDrivers","accountsReadyRoutes","accountsReadinessNote"]) {
+    assert.ok(app.includes('id="' + id + '"'), "missing readiness field: " + id);
+  }
+  assert.match(app, /student_accounts"\)\.select\("student_id,user_id"\)/);
+  assert.match(app, /parent_student_links"\)\.select\("student_id,parent_user_id"\)/);
+  assert.match(app, /driver_routes"\)\.select\("id,driver_user_id"\)\.eq\("is_active",true\)/);
+  assert.match(app, /driver_route_students"\)\.select\("route_id,student_id,valid_from,valid_to"\)/);
+});
+
+check("Portal readiness counts only active role profiles and current active route assignments", () => {
+  assert.match(app, /profiles"\)\.select\("user_id,role,is_active"\)\.in\("role",\["parent","student","driver"\]\)/);
+  assert.match(app, /profile\.is_active===true/);
+  assert.match(app, /assignment\.valid_from<=today&&\(!assignment\.valid_to\|\|assignment\.valid_to>=today\)/);
+  assert.match(app, /activeRouteIds\.has\(assignment\.route_id\)/);
+  assert.match(app, /activeStudentIds\.has\(assignment\.student_id\)/);
+});
+
+check("Portal readiness displays aggregate totals and does not display emails or raw account identifiers", () => {
+  const start=app.indexOf("// Show only aggregate counts;");
+  const end=app.indexOf('const roleSelect=document.getElementById("portalRole")',start);
+  const block=app.slice(start,end);
+  assert.ok(start>=0&&end>start,"readiness loader missing");
+  assert.match(block,/textContent=activeStudentIds\.size/);
+  assert.match(block,/textContent=studentLoginCount/);
+  assert.match(block,/textContent=activeParentIds\.size/);
+  assert.match(block,/textContent=activeDriverIds\.size/);
+  assert.match(block,/textContent=activeRoutes\.length/);
+  assert.doesNotMatch(block,/innerHTML|\.email|display_name/);
+});
+
+check("Portal readiness errors are non-blocking and never pretend a failed query is zero", () => {
+  const start=app.indexOf("// Show only aggregate counts;");
+  const end=app.indexOf('const roleSelect=document.getElementById("portalRole")',start);
+  const block=app.slice(start,end);
+  assert.match(block,/if\(failedReadiness\)/);
+  assert.match(block,/Snapshot unavailable/);
+  assert.match(block,/You can still use the form/);
+  assert.match(block,/catch\(readinessError\)/);
+});
+
+check("Portal readiness responsive layout includes a two-column mobile state", () => {
+  assert.match(styles,/\.accounts-readiness-grid\{display:grid;grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
+  assert.match(styles,/@media\(max-width:560px\)\{[^}]*\.accounts-readiness-grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+});
+
 check("Portal Accounts always restores its submit button after invitation errors", () => {
   const start = app.indexOf('document.getElementById("portalAccountForm").addEventListener("submit"');
   const end = app.indexOf("\n}", start);

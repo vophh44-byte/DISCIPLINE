@@ -94,6 +94,14 @@ check("saved-session startup catches auth errors and offers an accessible retry"
   assert.match(auth, /restoreSavedSession\(\);/);
 });
 
+check("choosing a fresh portal sign-in clears stale session retry notices", () => {
+  const start = auth.indexOf("function showLogin(role)");
+  const end = auth.indexOf('document.querySelectorAll("[data-portal]")', start);
+  const handler = auth.slice(start, end);
+  assert.match(handler, /getElementById\("authSessionAlert"\)/);
+  assert.match(handler, /staleSessionAlert\.remove\(\)/);
+});
+
 check("portal render failures hide partial content and leave a safe retry path", () => {
   const start = auth.indexOf("async function openForSession(");
   const end = auth.indexOf("async function restoreSavedSession()", start);

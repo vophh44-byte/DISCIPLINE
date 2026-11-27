@@ -811,6 +811,17 @@ async function renderMarks(){
  const sr=await db.from("students").select("id,student_code,full_name,class_group,starting_marks").eq("is_active",true).order("full_name");
  if(sr.error){showToast("Could not load students: "+sr.error.message);return;}
  const students=sr.data||[];
+  let transactionRecords=[];
+  function filteredMarkTransactions(){
+   const q=document.getElementById("markHistorySearch").value.trim().toLowerCase();
+   const type=document.getElementById("markHistoryType").value;
+   return transactionRecords.filter(t=>(!type||t.transaction_type===type)&&[t.students?.full_name,t.students?.student_code,t.reason,t.transaction_type].join(" ").toLowerCase().includes(q));
+  }
+  function drawMarkHistory(){
+   const visible=filteredMarkTransactions();
+   historyRows.innerHTML=visible.map(t=>'<tr><td>'+escapeHTML(new Date(t.occurred_at).toLocaleString("en-IN"))+'</td><td>'+escapeHTML(t.students?.full_name||"Student")+'<small class="registry-email">'+escapeHTML(t.students?.student_code||"")+'</small></td><td>'+escapeHTML(t.transaction_type.replaceAll("_"," "))+'</td><td>'+escapeHTML(t.reason||"—")+'</td><td class="'+(t.balance_delta>0?"positive-text":"negative-text")+'">'+(t.balance_delta>0?"+":"")+Number(t.balance_delta)+'</td><td>'+Number(t.balance_before)+'</td><td>'+Number(t.balance_after)+'</td></tr>').join("")||'<tr><td colspan="7">No transactions match the current filters.</td></tr>';
+   document.getElementById("markHistoryCaption").textContent="Showing "+visible.length+" of "+transactionRecords.length+" latest transaction(s)";
+  }
  studentSelect.innerHTML='<option value="">Choose a student</option>'+students.map(x=>'<option value="'+x.id+'">'+escapeHTML(x.student_code)+' — '+escapeHTML(x.full_name)+'</option>').join("");
  const today=disciplineToday(),jr=await db.from("journey_sessions").select("id,session_type,session_date").eq("session_date",today).order("session_type");
  if(!jr.error)(jr.data||[]).forEach(x=>{const o=document.createElement("option");o.value=x.id;o.textContent=(x.session_type==="morning"?"Morning":"Evening")+" · "+x.session_date;sessionSelect.appendChild(o);});
@@ -823,7 +834,7 @@ async function renderMarks(){
   const sums={};(allTx.data||[]).forEach(t=>sums[t.student_id]=(sums[t.student_id]||0)+t.balance_delta);
   const q=document.getElementById("markStudentSearch").value.trim().toLowerCase();
   balanceRows.innerHTML=students.filter(x=>(x.full_name+" "+x.student_code).toLowerCase().includes(q)).map(x=>'<tr><td><strong>'+escapeHTML(x.full_name)+'</strong></td><td>'+escapeHTML(x.student_code)+'</td><td>'+x.starting_marks+'</td><td><strong>'+((x.starting_marks||0)+(sums[x.id]||0))+'</strong></td></tr>').join("")||'<tr><td colspan="4">No matching active students.</td></tr>';
-  historyRows.innerHTML=(tr.data||[]).map(t=>'<tr><td>'+escapeHTML(new Date(t.occurred_at).toLocaleString("en-IN"))+'</td><td>'+escapeHTML(t.students?.full_name||"Student")+'<small class="registry-email">'+escapeHTML(t.students?.student_code||"")+'</small></td><td>'+escapeHTML(t.transaction_type)+'</td><td>'+escapeHTML(t.reason)+'</td><td class="'+(t.balance_delta>0?"positive-text":"negative-text")+'">'+(t.balance_delta>0?"+":"")+t.balance_delta+'</td><td>'+t.balance_after+'</td></tr>').join("")||'<tr><td colspan="6">No mark records yet.</td></tr>';
+  transactionRecords=tr.data||[];drawMarkHistory();
  }
  document.getElementById("markStudentSearch").addEventListener("input",loadMarkData);
  document.getElementById("markEntryForm").addEventListener("submit",async e=>{

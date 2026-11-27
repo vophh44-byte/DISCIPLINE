@@ -9,6 +9,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] Audio bucket accepts only the configured audio MIME types and is limited to 8 MB
 - [x] Storage object policies restrict read, upload and delete to active administrators
 - [x] Incident verification RPC is executable only by the server-side service role
+- [x] Signed-in administrators can read evidence metadata; evidence metadata writes are restricted to the server-side Edge Function
 - [x] Database blocks verification or parent publication while temporary audio remains pending
 - [x] Database blocks attaching new temporary audio to an already verified or published incident
 - [x] Edge Function validates signed-in administrator role, requires permission confirmation for upload, and creates only a 60-second listening URL
@@ -61,6 +62,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - Request a recording as a non-administrator: must be rejected.
 - Attempt to verify while the audio object is still present: must not mark the incident verified.
 - Attempt to publish an unverified incident: must be rejected by the database.
+- Attempt to insert, update or delete incident-evidence metadata directly as a signed-in administrator: must be rejected; use the secured Edge Function.
 - Attempt to attach audio to an already verified or published incident: must be rejected.
 - Attempt to access another student's records: must return no rows or an authorization error under RLS.
 

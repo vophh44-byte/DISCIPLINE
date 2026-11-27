@@ -246,6 +246,9 @@ check("Portal Accounts requests authentication timestamps without blocking profi
   const end=app.indexOf("directorySearch.addEventListener",start);
   const flow=app.slice(start,end);
   assert.match(flow,/functions\.invoke\("create-portal-account",\{body:\{action:"list_auth_status"\}\}\)/);
+  assert.match(flow,/let authStatusResult=\{data:null,error:/);
+  assert.match(flow,/catch\(authStatusError\)/);
+  assert.ok(flow.indexOf("if(failed)throw failed.error")<flow.indexOf("let authStatusResult="));
   assert.match(flow,/authStatusAvailable=!authStatusResult\.error/);
   assert.match(flow,/Authentication timestamps unavailable for this refresh/);
 });

@@ -414,7 +414,7 @@ check("Portal account directory responsive filters stack on small screens", () =
 });
 
 check("Portal Accounts always restores its submit button after invitation errors", () => {
-  const start = app.indexOf('document.getElementById("portalAccountForm").addEventListener("submit"');
+  const start = app.indexOf('portalAccountForm.addEventListener("submit"');
   const end = app.indexOf("\n}", start);
   const handler = app.slice(start, end);
   assert.ok(start >= 0 && end > start, "portal account form handler missing");
@@ -441,7 +441,7 @@ check("Portal account preflight is protected by the active administrator check",
 check("Portal preview and final submission share the same read-only validator before invitation", () => {
   const validator=accountFunction.indexOf("async function validatePortalAccountReadiness()");
   const preflight=accountFunction.indexOf('if (input.action === "preflight")');
-  const createValidation=accountFunction.indexOf("const readiness = await validatePortalAccountReadiness()");
+  const createValidation=accountFunction.lastIndexOf("const readiness = await validatePortalAccountReadiness()");
   const invitation=accountFunction.indexOf("inviteUserByEmail(email");
   assert.ok(validator>=0&&preflight>validator&&createValidation>preflight&&invitation>createValidation);
   assert.match(accountFunction, /status: "ok" \| "blocked"/);

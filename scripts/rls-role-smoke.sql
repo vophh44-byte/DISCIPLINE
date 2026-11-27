@@ -108,7 +108,33 @@ select jsonb_build_object(
     where route_id = current_setting('test.parent_route_id')::uuid
       and student_id = current_setting('test.parent_student_id')::uuid
   )
-) as parent_journey_rls_result;
+ ) as parent_journey_rls_result;
+reset role;
+delete from public.parent_student_links
+ where parent_user_id = current_setting('request.jwt.claim.sub')::uuid
+   and student_id = current_setting('test.parent_student_id')::uuid;
+set local role authenticated;
+select jsonb_build_object(
+  'portal_role', private.current_app_role()::text,
+  'visible_unlinked_route', (
+    select count(*) from public.driver_routes
+    where id = current_setting('test.parent_route_id')::uuid
+  ),
+  'visible_unlinked_assignment', (
+    select count(*) from public.driver_route_students
+    where route_id = current_setting('test.parent_route_id')::uuid
+      and student_id = current_setting('test.parent_student_id')::uuid
+  ),
+  'visible_unlinked_route_run', (
+    select count(*) from public.driver_route_runs
+    where route_id = current_setting('test.parent_route_id')::uuid
+  ),
+  'visible_unlinked_driver_checkin', (
+    select count(*) from public.driver_journey_checkins
+    where route_id = current_setting('test.parent_route_id')::uuid
+      and student_id = current_setting('test.parent_student_id')::uuid
+  )
+) as parent_unlinked_journey_rls_result;
 rollback;
 
 -- Administrator portal: the active administrator should see all existing

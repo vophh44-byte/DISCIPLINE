@@ -80,6 +80,16 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] GitHub Pages build and deploy jobs succeeded for the fail-closed app-code release commit; authenticated browser smoke tests remain outstanding
 - [x] Invite/recovery password setup form requires 12+ characters with uppercase, lowercase, a number and a symbol (application-side check only)
 
+## Portal account onboarding readiness
+
+1. Open Portal Accounts and confirm the five setup totals load from Supabase without exposing emails or user IDs.
+2. Compare active student and portal login totals with Student Registry and the account list.
+3. Confirm parent totals count active parent profiles and driver totals exclude inactive driver profiles.
+4. Confirm route totals include only active routes attached to active driver accounts.
+5. Confirm route coverage counts unique active students with assignments valid for today's Asia/Kolkata date.
+6. Temporarily block one readiness query in a local development copy. Confirm the panel says Snapshot unavailable, does not show misleading zero totals, and leaves account creation usable.
+7. Confirm no invitation is sent simply by opening or refreshing the snapshot; invitations are only sent after submitting the account form.
+
 ## Administrator Command Center review queue
 
 1. Sign in through the Administrator portal and open Command Center.

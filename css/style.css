@@ -1449,3 +1449,26 @@ table tbody tr:hover{background:#f7f9fc}
 .accounts-readiness-note{margin:13px 0 0;padding-top:11px;border-top:1px solid #edf0f4;color:#758396;font-size:9px;line-height:1.6}
 @media(max-width:900px){.accounts-readiness-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:560px){.accounts-readiness-panel{padding:16px 14px}.accounts-readiness-head{flex-direction:column}.accounts-readiness-status{align-self:flex-start}.accounts-readiness-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.accounts-readiness-grid article{padding:10px}.accounts-readiness-grid strong{font-size:19px}}
+
+
+/* Portal Accounts — searchable account directory */
+.accounts-directory-panel{padding:20px 22px;margin:0 0 17px;border:1px solid #e4eaf2;background:#fff;box-shadow:0 5px 18px rgba(25,45,72,.035)}
+.accounts-directory-head{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;margin-bottom:15px}
+.accounts-directory-head h2{margin:5px 0 3px;color:#263b55;font:800 17px Manrope,sans-serif;letter-spacing:-.3px}
+.accounts-directory-head p{margin:0;max-width:650px;color:#8793a3;font-size:9px;line-height:1.6}
+.accounts-directory-head .button{white-space:nowrap}
+.accounts-directory-filters{display:grid;grid-template-columns:minmax(220px,1.5fr) minmax(145px,.7fr) minmax(160px,.8fr);gap:11px;margin:15px 0 10px}
+.accounts-directory-filters .field{display:grid;gap:5px}
+.accounts-directory-filters label{font-size:9px;font-weight:700;color:#52647b}
+.accounts-directory-filters input,.accounts-directory-filters select{min-height:39px;border:1px solid #dfe6ef;border-radius:8px;background:#fbfcfd;color:#263b55;font-size:10px;padding:8px 10px}
+.accounts-directory-filters input:focus,.accounts-directory-filters select:focus{outline:0;border-color:#c49a50;box-shadow:0 0 0 3px rgba(196,154,80,.1)}
+.accounts-directory-status{margin:0 0 9px;color:#78879a;font-size:9px;line-height:1.55}
+.accounts-directory-table{min-width:850px}
+.accounts-directory-table td{vertical-align:middle}
+.accounts-directory-table td:first-child{min-width:180px}
+.accounts-directory-table .registry-email{overflow-wrap:anywhere}
+.accounts-role-label{display:inline-flex;align-items:center;padding:4px 8px;border:1px solid #e6ebf1;border-radius:18px;background:#f8fafc;color:#53667e;font-size:9px;font-weight:700}
+.accounts-directory-linked{max-width:250px;white-space:normal;overflow-wrap:anywhere;color:#68798e;font-size:9px;line-height:1.55}
+.accounts-directory-manage{font-size:9px;padding:6px 9px;min-height:30px}
+@media(max-width:760px){.accounts-directory-filters{grid-template-columns:1fr 1fr}.accounts-directory-filters .field:first-child{grid-column:1/-1}}
+@media(max-width:560px){.accounts-directory-panel{padding:16px 14px}.accounts-directory-head{flex-direction:column}.accounts-directory-head .button{width:100%}.accounts-directory-filters{grid-template-columns:1fr}.accounts-directory-filters .field:first-child{grid-column:auto}}

@@ -291,4 +291,43 @@ check("RLS smoke test inspects profile, student, mark, incident and evidence bou
   assert.ok(roleSmoke.includes("not a") && roleSmoke.includes("substitute for signing into the website"));
 });
 
+
+check("administrator inbox panel is present and labelled for assistive technology", () => {
+  assert.match(html, /id="notificationCenter"/);
+  assert.match(html, /id="adminNotificationPanel"[^>]*aria-label="Administrator inbox"/);
+  assert.match(html, /aria-controls="adminNotificationPanel"/);
+});
+
+check("administrator inbox opens and closes accessibly from the notification button", () => {
+  assert.match(app, /function toggleAdminNotificationPanel\(\)/);
+  assert.match(app, /button\.setAttribute\("aria-expanded","true"\)/);
+  assert.match(app, /function closeAdminNotificationPanel\(\)/);
+  assert.match(app, /button\.setAttribute\("aria-expanded","false"\)/);
+});
+
+check("administrator inbox loads unreviewed parent responses only", () => {
+  assert.match(app, /from\("parent_responses"\)[\s\S]{0,350}\.is\("reviewed_at",null\)/);
+});
+
+check("administrator inbox surfaces incidents awaiting transcript verification", () => {
+  assert.match(app, /from\("incidents"\)[\s\S]{0,300}\.eq\("transcript_verified",false\)/);
+});
+
+check("administrator inbox updates parent and incident navigation counts", () => {
+  assert.match(app, /id="parentResponseNavCount"/);
+  assert.match(app, /id="incidentReviewNavCount"/);
+  assert.match(app, /function updateAdminNavBadges\(parentCount, incidentCount\)/);
+});
+
+check("parent and student portals do not display the administrator inbox", () => {
+  assert.match(auth, /notificationCenter\.hidden = role !== "admin"/);
+});
+
+check("administrator inbox safely escapes parent messages and student names", () => {
+  assert.match(app, /escapeHTML\(message\)/);
+  assert.match(app, /escapeHTML\(parent\)/);
+  assert.match(app, /escapeHTML\(student\)/);
+  assert.match(app, /escapeHTML\(row\.severity/);
+});
+
 process.stdout.write("\n" + passed + " DISCIPLINE quality checks passed.\n");

@@ -82,6 +82,18 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 
 ## Portal account onboarding readiness
 
+## Existing portal account directory
+
+1. Open Portal Accounts and confirm the directory lists only parent, student and driver profiles.
+2. Search by display name or email; filter separately by portal type and active/inactive profile state.
+3. Confirm parent rows show linked-student counts, student rows show their linked student profile, and driver rows show active route names and current assignment counts.
+4. Open the management action on a parent, student and driver row and confirm it opens Parent Management, Student Registry or Drivers & Routes respectively.
+5. Confirm all user-provided names, emails and route names display as text and cannot inject markup.
+6. Confirm the directory describes active/inactive profile state only. Do not interpret it as email delivery, invitation acceptance or last sign-in status.
+7. Temporarily block one directory query in a local development copy. Confirm Account list unavailable appears, the page does not crash and Refresh list can retry.
+8. Confirm the directory is read-only and cannot activate/deactivate users, resend invitations or change account roles.
+
+
 - [x] Snapshot queries read active role profiles, student-account links, parent-student links, active driver routes and route assignments; a live read under the authenticated administrator role confirmed access to each summary source and returned aggregate totals only.
 - [x] Live aggregate baseline: 1 active student, 0 student logins, 1 active parent account, 0 active driver accounts, 0 active routes and 0 students assigned to active routes.
 

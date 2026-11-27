@@ -755,4 +755,35 @@ check("parent response review changes refresh the administrator inbox badge", ()
   assert.match(app.slice(start,end), /await refreshAdminNotificationBadge\(\)/);
 });
 
+
+check("student portal queries notifications for the signed-in student account and current linked student", () => {
+  assert.match(auth, /role === "student" \? client\.from\("notifications"\)/);
+  assert.match(auth, /\.eq\("recipient_user_id", user\.id\)\.eq\("related_student_id", student\.id\)/);
+});
+
+check("student portal displays notification titles, messages, timestamps and unread counts", () => {
+  assert.match(auth, /studentNotificationPanelHtml/);
+  assert.match(auth, /studentNotifications\.map/);
+  assert.match(auth, /studentUnreadNotifications/);
+  assert.match(auth, /Updates for this student only/);
+});
+
+check("student portal mark-read actions are restricted to the signed-in recipient", () => {
+  const start=auth.indexOf('if (role !== "parent")');
+  const end=auth.indexOf('const [incidentResult, responseResult',start);
+  const studentBranch=auth.slice(start,end);
+  assert.match(studentBranch, /\.eq\("recipient_user_id", user\.id\)/);
+  assert.match(studentBranch, /\.eq\("id", button\.dataset\.markNotificationRead\)/);
+  assert.match(studentBranch, /\.eq\("related_student_id", studentId\)/);
+});
+
+check("student portal notification controls mark one or all notifications read", () => {
+  const start=auth.indexOf('if (role !== "parent")');
+  const end=auth.indexOf('const [incidentResult, responseResult',start);
+  const studentBranch=auth.slice(start,end);
+  assert.match(studentBranch, /data-mark-notification-read/);
+  assert.match(studentBranch, /data-mark-all-notifications-read/);
+  assert.match(studentBranch, /Mark all read/);
+});
+
 process.stdout.write("\n" + passed + " DISCIPLINE quality checks passed.\n");

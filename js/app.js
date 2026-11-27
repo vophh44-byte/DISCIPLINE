@@ -1348,6 +1348,7 @@ async function renderIncidents(){
    <article class="incidents-stat"><span>Recent incidents</span><strong id="incidentTotal">—</strong><small>Latest 100 records</small></article>
    <article class="incidents-stat"><span>Private records</span><strong id="incidentPrivate">—</strong><small>Not currently visible to parents</small></article>
    <article class="incidents-stat"><span>Published reports</span><strong id="incidentPublished">—</strong><small>Visible to linked parent accounts</small></article>
+    <article class="incidents-stat"><span>Awaiting review</span><strong id="incidentAwaitingReview">—</strong><small>Not yet transcript-verified</small></article>
   </section>
   <section class="incidents-form-panel">
    <div class="incidents-section-heading"><div><span class="incidents-step">STEP 01 · DOCUMENT</span><h2>Record an incident</h2><p>Complete the details below. Any optional deduction is recorded with the incident.</p></div><span class="incidents-form-mark">NEW RECORD</span></div>
@@ -1402,7 +1403,7 @@ async function renderIncidents(){
    <div class="incidents-filter-bar">
     <div class="field"><label for="incidentSearch">Search records</label><input id="incidentSearch" class="registry-search" type="search" placeholder="Student, ID, category or description…"></div>
     <div class="field"><label for="incidentVisibility">Parent visibility</label><select id="incidentVisibility"><option value="">All records</option><option value="private">Private only</option><option value="published">Published only</option></select></div>
-   </div>
+     <div class="field"><label for="incidentReviewFilter">Administrator review</label><select id="incidentReviewFilter"><option value="">All review states</option><option value="pending">Awaiting verification</option><option value="verified">Verified</option></select></div><div class="incidents-report-actions"><button class="button button-outline" id="incidentPrintReport" type="button">Print report</button><button class="button button-quiet" id="incidentExportCsv" type="button">Export CSV</button></div></div>
    <div class="incidents-results-line" id="incidentResultCount">Loading records…</div>
    <div class="table-scroll"><table class="registry-table incidents-table"><thead><tr><th>DATE</th><th>STUDENT</th><th>CATEGORY / SEVERITY</th><th>OBSERVATION</th><th>DEDUCTION</th><th>PARENT ACCESS</th></tr></thead><tbody id="incidentRows"><tr><td colspan="6">Loading…</td></tr></tbody></table></div>
   </section>

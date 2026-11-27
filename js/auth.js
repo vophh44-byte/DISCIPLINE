@@ -140,10 +140,11 @@
     loginPanel.hidden = false;
     const card = gate.querySelector(".auth-card");
     card.querySelector("#loginHeading").textContent = isInviteSetup ? "Create your password" : "Choose a new password";
-    card.querySelector("#loginDescription").textContent = "Use at least 8 characters for your password.";
+    card.querySelector("#loginDescription").textContent = "Choose 12+ characters with uppercase, lowercase, a number and a symbol.";
     form.innerHTML = `
-      <label>New password<input id="newPassword" type="password" minlength="8" autocomplete="new-password" required placeholder="At least 8 characters"></label>
-      <label>Confirm password<input id="confirmPassword" type="password" minlength="8" autocomplete="new-password" required placeholder="Enter it again"></label>
+      <label>New password<input id="newPassword" type="password" minlength="12" autocomplete="new-password" required placeholder="At least 12 characters"></label>
+      <label>Confirm password<input id="confirmPassword" type="password" minlength="12" autocomplete="new-password" required placeholder="Enter it again"></label>
+      <small class="auth-password-hint">Required: 12+ characters · uppercase · lowercase · number · symbol. This is an additional DISCIPLINE setup check.</small>
       <button class="button button-primary" id="saveNewPassword" type="submit">Save password</button>
       <div class="auth-message" id="authMessage" role="status"></div>`;
     const recoveryMessage = document.getElementById("authMessage");
@@ -151,7 +152,15 @@
       event.preventDefault();
       const password = document.getElementById("newPassword").value;
       const confirm = document.getElementById("confirmPassword").value;
-      if (password.length < 8) { recoveryMessage.textContent = "Use at least 8 characters."; return; }
+      const meetsAppPasswordPolicy = password.length >= 12
+        && /[a-z]/.test(password)
+        && /[A-Z]/.test(password)
+        && /[0-9]/.test(password)
+        && /[^A-Za-z0-9]/.test(password);
+      if (!meetsAppPasswordPolicy) {
+        recoveryMessage.textContent = "Use 12 or more characters and include uppercase, lowercase, a number and a symbol.";
+        return;
+      }
       if (password !== confirm) { recoveryMessage.textContent = "The passwords do not match."; return; }
       const save = document.getElementById("saveNewPassword");
       save.disabled = true;

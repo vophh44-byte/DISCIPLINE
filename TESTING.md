@@ -33,6 +33,10 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [ ] Verify GitHub Pages has finished publishing the latest main-branch commit
 - [x] Invite/recovery password setup form requires 12+ characters with uppercase, lowercase, a number and a symbol (application-side check only)
 
+## Repeatable database audit
+
+Run [`scripts/security-audit.sql`](scripts/security-audit.sql) in the Supabase SQL Editor while connected to the DISCIPLINE project. It is read-only and returns function execute grants, RLS table coverage, the temporary-audio uniqueness index, verification-RPC privileges and aggregate integrity counts. It does not return student names, parent emails or incident narratives. Review each authenticated-executable SECURITY DEFINER routine's definition to confirm it binds authorization to `auth.uid()` and the intended role.
+
 ## Manual test procedure
 
 ### 1. Administrator incident workflow

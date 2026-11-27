@@ -155,6 +155,9 @@ body:not(.is-authenticated) .app-shell{display:none}
 .auth-form input:focus{border-color:var(--gold)}
 .auth-form button{width:100%;margin-top:5px}
 .auth-message{min-height:18px;color:#e8a0a0;font-size:11px;line-height:1.5}
+.auth-session-alert{margin-top:16px;padding:13px 14px;border:1px solid rgba(213,179,106,.25);border-radius:10px;background:rgba(213,179,106,.07);color:#d8c69e;font-size:11px;line-height:1.6}
+.auth-session-alert p{margin:0 0 9px}
+.auth-session-alert .button{width:100%;margin-top:2px}
 .auth-note{border-top:1px solid var(--border);margin-top:20px;padding-top:16px;color:var(--muted);font-size:10px;line-height:1.6}
 #signOutButton{margin-left:10px}
 @media(max-width:560px){.auth-card{padding:25px 20px}}

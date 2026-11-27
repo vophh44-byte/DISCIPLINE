@@ -578,4 +578,31 @@ check("student profile print report escapes student and guardian data", () => {
   assert.match(app, /popup\.document\.write\([\s\S]*report\.innerHTML/);
 });
 
+
+check("certificate register offers a print action for every saved record", () => {
+  assert.match(app, /data-print-certificate=/);
+  assert.match(app, /function printCertificate\(record\)/);
+  assert.match(app, /records\.find\(x=>x\.id===print\.dataset\.printCertificate\)/);
+});
+
+check("certificate print output is designed for A4 landscape", () => {
+  assert.match(app, /@page\{size:A4 landscape;margin:0\}/);
+  assert.match(app, /class=\\"certificate\\"/);
+  assert.match(app, /Certificate of Achievement/);
+});
+
+check("certificate print output uses the saved institute, student and certificate details", () => {
+  for (const value of ["Usmania Institute Of Excellence","record.title","student.full_name","record.description","record.issued_at"]) {
+    assert.ok(app.includes(value), "certificate print missing: " + value);
+  }
+});
+
+check("certificate print output escapes dynamic text and opens the browser print view", () => {
+  assert.match(app, /escapeHTML\(record\.title\)/);
+  assert.match(app, /escapeHTML\(student\.full_name\|\|\"Student\"\)/);
+  assert.match(app, /escapeHTML\(record\.description\|\|/);
+  assert.match(app, /popup\.document\.write\(html\)/);
+  assert.match(app, /popup\.print\(\)/);
+});
+
 process.stdout.write("\n" + passed + " DISCIPLINE quality checks passed.\n");

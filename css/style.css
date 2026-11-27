@@ -1476,3 +1476,21 @@ table tbody tr:hover{background:#f7f9fc}
 .accounts-directory-auth{min-width:175px;color:#344a63;font-size:9px;line-height:1.5}
 .accounts-directory-auth>strong{display:block;font-size:9px;font-weight:800;color:#4c627b}
 .accounts-directory-auth .registry-email{font-size:8px;line-height:1.5}
+
+
+/* Portal Accounts — non-mutating account and route preflight */
+.accounts-preflight-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:13px 0 9px;padding:11px 12px;border:1px solid #e4eaf2;border-radius:9px;background:#f8fafc}
+.accounts-preflight-actions p{margin:0;color:#697a8f;font-size:9px;line-height:1.55}
+.accounts-preflight-actions .button{flex:0 0 auto;white-space:nowrap}
+.accounts-preflight-result{margin:0 0 13px;padding:12px 14px;border:1px solid #dfe6ef;border-radius:9px;background:#f8fafc;color:#344a63;font-size:10px;line-height:1.55}
+.accounts-preflight-result[hidden]{display:none}
+.accounts-preflight-result.is-ready{border-color:#b9dfcd;background:#f3faf6}
+.accounts-preflight-result.is-blocked{border-color:#ebc9c9;background:#fff7f7}
+.accounts-preflight-result>strong{display:block;margin-bottom:6px;font-size:11px}
+.accounts-preflight-result ul{display:grid;gap:5px;margin:0;padding:0;list-style:none}
+.accounts-preflight-result li{display:grid;grid-template-columns:14px minmax(0,1fr);gap:7px}
+.accounts-preflight-result li.check-ok>span:first-child{color:#16845c;font-weight:800}
+.accounts-preflight-result li.check-blocked>span:first-child{color:#b64f4f;font-weight:800}
+.accounts-preflight-result li b{color:#344a63}
+.accounts-preflight-result small{display:block;margin-top:8px;color:#78879a;font-size:8px}
+@media(max-width:560px){.accounts-preflight-actions{align-items:stretch;flex-direction:column}.accounts-preflight-actions .button{width:100%}}

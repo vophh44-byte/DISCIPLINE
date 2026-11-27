@@ -4,11 +4,14 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 
 ## Current automated / configuration checks
 
+- [x] Portal Accounts preflight preview is read-only: it does not create Auth users, change profile links or send email; final submit reruns the same server-side checks before provisioning
+- [ ] Manually verify parent, student and driver preview outcomes with fictional test records, including a student already assigned to another active driver; do not send real invitations as part of this check
+
 - [x] Frontend JavaScript parses: `js/app.js` and `js/auth.js`
 - [x] The workspace starts hidden/inert/aria-hidden; the authenticated portal shell releases it only after the signed-in profile is confirmed active and its role is supported
-- [x] Temporary Supabase/session lookup failures preserve the saved session, keep the workspace closed and offer an accessible retry; a fresh portal selection clears stale retry notices; automated regression tests passed in the 155-check CI run
+- [x] Temporary Supabase/session lookup failures preserve the saved session, keep the workspace closed and offer an accessible retry; a fresh portal selection clears stale retry notices; automated regression tests passed in the 162-check CI run
 - [ ] Manually simulate an offline/profile lookup failure in a browser, restore the connection and confirm Retry account check opens the same session
-- [x] Latest GitHub Actions quality run passed **155 DISCIPLINE checks** on commit `bb9fc85adffb78a7e4a68cbe06497245d5f5d9ee` ([run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/46017493458)); includes the searchable portal account directory, administrator-only Auth timestamps and non-blocking setup-status fallback
+- [x] Latest GitHub Actions quality run passed **162 DISCIPLINE checks** on the current main branch (see the [Actions runs](https://github.com/vophh44-byte/DISCIPLINE/actions) page); includes the searchable portal account directory, administrator-only Auth timestamps and non-blocking setup-status fallback
 - [x] GitHub Pages build and deployment completed successfully for the portal account directory and Auth timestamp release on commit `bb9fc85adffb78a7e4a68cbe06497245d5f5d9ee` ([deployment run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/46017493119))
 - [x] Fail-closed startup, session recovery, Portal Accounts readiness, searchable account directory and Auth timestamp indicators are green in CI and deployed; signed-in browser smoke tests for all four roles remain a separate manual release check
 - [x] All 24 previously unindexed foreign-key columns now have B-tree indexes; PostgreSQL catalog check confirms 42/42 public foreign-key constraints are indexed
@@ -21,8 +24,8 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] Rollback-only student RLS simulation confirmed one profile, one linked student, two mark-ledger rows and zero incident/evidence rows; temporary student link and role change were rolled back
 - [x] Rollback-only driver journey simulation loaded the assigned roster, started a route run, recorded a check-in and finished the run; completed status was confirmed and all temporary rows were rolled back
 - [x] Rollback-only parent journey RLS test inserted a temporary route, linked assignment, current-day run and boarding check-in, then confirmed the signed-in parent could see exactly the linked route, assignment, run and check-in (1 each); transaction rolled back; after temporarily removing the family link inside the same transaction, the parent saw 0 routes, assignments, runs and check-ins. A post-test query confirmed no temporary QA rows remained.
-- [x] Portal-account Edge Function CORS allow-list and Auth status lookup are active at version 8 with JWT verification enabled; production GitHub Pages and localhost development origins are supported
-- [x] Fresh GitHub Actions quality run passed for the portal account directory and Auth timestamp updates (155 checks)
+- [x] Portal-account Edge Function CORS allow-list, Auth status lookup and administrator-only non-mutating preflight are deployed with JWT verification enabled; preflight checks account, student-link and active-driver-route conflicts before the invitation path
+- [x] Fresh GitHub Actions quality run passed for the portal account directory and Auth timestamp updates (162 checks)
 - [x] Rollback-only incident lifecycle smoke test used the real incident creation and transcript-verification RPCs: parent visibility was 0 before publication and 1 after verification/publication, with reviewed exact words visible; transaction rolled back
 - [x] Rollback-only Monday publication smoke test published the week starting 2026-11-23, exposed the result to the linked parent and created one parent notification; transaction rolled back
 - [x] Repeatable script added at `scripts/rls-role-smoke.sql`; it simulates signed-in database claims and rolls back all three transactions, including temporary parent journey fixtures, without retaining test records

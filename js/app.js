@@ -581,6 +581,8 @@ async function renderAccounts(){
             <div class="field"><label for="portalStudent" id="portalStudentLabel">Link to student</label><select id="portalStudent" required><option value="">Loading student profiles…</option></select><small class="registry-disclaimer" id="portalStudentHint">Choose the child linked to this parent.</small></div>
           </div>
           <div class="accounts-security-note"><span class="accounts-security-icon">✓</span><div><strong>Password safety is built in</strong><p>Users receive an invitation email and create their own password. Never enter or share their password here.</p></div></div>
+          <div class="accounts-preflight-actions"><p>Preview checks the account and student/route conflicts. It does not create an account or send an email.</p><button class="button button-outline" id="checkPortalReadiness" type="button">Check readiness</button></div>
+          <div class="accounts-preflight-result" id="portalPreflightResult" role="status" aria-live="polite" hidden></div>
           <div class="accounts-submit-row"><p id="portalAccountMessage" class="auth-message" role="status"></p><button class="button button-primary" id="createPortalAccount" type="submit">Create / link account <span>→</span></button></div>
         </form>
       </section>
@@ -776,21 +778,85 @@ async function renderAccounts(){
   }
   roleSelect.addEventListener("change",updateAccountForm);
   updateAccountForm();
-  document.getElementById("portalAccountForm").addEventListener("submit",async e=>{
-    e.preventDefault();
-    const btn=document.getElementById("createPortalAccount"),msg=document.getElementById("portalAccountMessage");
-    btn.disabled=true;btn.textContent="Sending invitation…";msg.textContent="";
+  const portalAccountForm=document.getElementById("portalAccountForm");
+  const preflightButton=document.getElementById("checkPortalReadiness");
+  const preflightResult=document.getElementById("portalPreflightResult");
+  const accountMessage=document.getElementById("portalAccountMessage");
+  function collectPortalAccountPayload(){
     const role=roleSelect.value;
-    const payload={role,display_name:document.getElementById("portalName").value.trim(),email:document.getElementById("portalEmail").value.trim()};
+    const payload={
+      role,
+      display_name:document.getElementById("portalName").value.trim(),
+      email:document.getElementById("portalEmail").value.trim()
+    };
     if(role==="driver"){
       payload.route_name=routeNameInput.value.trim();
       payload.vehicle_label=document.getElementById("portalVehicleLabel").value.trim();
       payload.student_ids=Array.from(select.selectedOptions).map(option=>option.value).filter(Boolean);
-      if(!payload.student_ids.length){msg.textContent="Select at least one student for this route.";btn.disabled=false;btn.textContent="Create / link account";return;}
     }else{
       payload.student_id=select.value;
     }
+    return payload;
+  }
+  async function runPortalPreflight(payload){
+    preflightResult.hidden=false;
+    preflightResult.className="accounts-preflight-result";
+    preflightResult.textContent="Checking account details and current assignments…";
     try{
+      const {data,error}=await window.disciplineSupabase.functions.invoke("create-portal-account",{body:{...payload,action:"preflight"}});
+      if(error||!data||!data.success){
+        const message=data?.error||error?.message||"The readiness check could not be completed. Try again.";
+        preflightResult.classList.add("is-blocked");
+        preflightResult.textContent=message;
+        return {ready:false,message};
+      }
+      const checks=Array.isArray(data.checks)?data.checks:[];
+      const ready=data.ready===true;
+      const firstBlocked=checks.find(check=>check.status!=="ok");
+      preflightResult.classList.add(ready?"is-ready":"is-blocked");
+      preflightResult.innerHTML=
+        '<strong>'+(ready?"Ready for account setup":"Resolve these checks before continuing")+'</strong>'+
+        '<ul>'+checks.map(check=>{
+          const passed=check.status==="ok";
+          return '<li class="'+(passed?"check-ok":"check-blocked")+'"><span aria-hidden="true">'+(passed?"✓":"!")+'</span><span><b>'+escapeHTML(check.label||"Check")+'</b> '+escapeHTML(check.detail||"")+'</span></li>';
+        }).join("")+'</ul>'+
+        '<small>No account was created and no invitation email was sent by this preview. The final submit repeats server-side validation.</small>';
+      return {ready,message:firstBlocked?.detail||""};
+    }catch(error){
+      const message=error?.message||"The readiness check could not be completed. Check your connection and try again.";
+      preflightResult.classList.add("is-blocked");
+      preflightResult.textContent=message;
+      return {ready:false,message};
+    }
+  }
+  preflightButton.addEventListener("click",async()=>{
+    preflightButton.disabled=true;
+    preflightButton.textContent="Checking…";
+    accountMessage.textContent="";
+    try{
+      const result=await runPortalPreflight(collectPortalAccountPayload());
+      if(!result.ready)accountMessage.textContent=result.message;
+    }finally{
+      preflightButton.disabled=false;
+      preflightButton.textContent="Check readiness";
+    }
+  });
+  portalAccountForm.addEventListener("input",()=>{preflightResult.hidden=true;});
+  portalAccountForm.addEventListener("change",()=>{preflightResult.hidden=true;});
+  portalAccountForm.addEventListener("submit",async e=>{
+    e.preventDefault();
+    const btn=document.getElementById("createPortalAccount"),msg=accountMessage;
+    btn.disabled=true;btn.textContent="Checking account…";msg.textContent="";
+    const payload=collectPortalAccountPayload();
+    const role=payload.role;
+    try{
+      const readiness=await runPortalPreflight(payload);
+      if(!readiness.ready){
+        msg.style.color="";
+        msg.textContent=readiness.message||"Resolve the readiness checks before creating or linking this account.";
+        return;
+      }
+      btn.textContent="Sending invitation…";
       const {data,error}=await window.disciplineSupabase.functions.invoke("create-portal-account",{body:payload});
       if(error||!data||!data.success){
         msg.style.color="";
@@ -802,6 +868,7 @@ async function renderAccounts(){
           :"Invitation sent to "+data.email+". The user must open the email and set a password.";
         e.target.reset();
         updateAccountForm();
+        preflightResult.hidden=true;
       }
     }catch(error){
       console.error("Portal account request failed:",error);

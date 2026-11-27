@@ -424,6 +424,63 @@ check("Portal Accounts always restores its submit button after invitation errors
   assert.match(handler, /Could not contact the invitation service/);
 });
 
+
+check("Portal Accounts exposes a manual non-mutating preflight control", () => {
+  assert.match(app, /id="checkPortalReadiness" type="button">Check readiness/);
+  assert.match(app, /id="portalPreflightResult" role="status" aria-live="polite"/);
+  assert.match(app, /No account was created and no invitation email was sent by this preview/);
+});
+
+check("Portal account preflight is protected by the active administrator check", () => {
+  const adminGate=accountFunction.indexOf('caller.role !== "admin"');
+  const preflight=accountFunction.indexOf('if (input.action === "preflight")');
+  assert.ok(adminGate>=0&&preflight>adminGate,"preflight must run after the administrator authorization gate");
+  assert.match(accountFunction, /if \(input\.action === "preflight"\)[\s\S]*validatePortalAccountReadiness/);
+});
+
+check("Portal preview and final submission share the same read-only validator before invitation", () => {
+  const validator=accountFunction.indexOf("async function validatePortalAccountReadiness()");
+  const preflight=accountFunction.indexOf('if (input.action === "preflight")');
+  const createValidation=accountFunction.indexOf("const readiness = await validatePortalAccountReadiness()");
+  const invitation=accountFunction.indexOf("inviteUserByEmail(email");
+  assert.ok(validator>=0&&preflight>validator&&createValidation>preflight&&invitation>createValidation);
+  assert.match(accountFunction, /status: "ok" \| "blocked"/);
+});
+
+check("Student portal preflight catches an existing student or user link", () => {
+  assert.match(accountFunction, /from\("student_accounts"\)\.select\("student_id,user_id"\)\.eq\("student_id", studentId\)/);
+  assert.match(accountFunction, /eq\("user_id", existingUserId\)/);
+  assert.match(accountFunction, /Student portal link/);
+});
+
+check("Driver preflight blocks students assigned to another active route before invitation", () => {
+  assert.match(accountFunction, /from\("driver_route_students"\)\.select\("student_id,route_id"\)/);
+  assert.match(accountFunction, /from\("driver_routes"\)[\s\S]{0,180}\.eq\("is_active", true\)/);
+  assert.match(accountFunction, /already have an active assignment with another driver/);
+});
+
+check("Portal Account form automatically repeats preflight before account creation", () => {
+  const start=app.indexOf("portalAccountForm.addEventListener(\\"submit\\",async e=>{");
+  const end=app.indexOf("\\n  });",start);
+  const handler=app.slice(start,end);
+  assert.ok(start>=0&&end>start,"portal account submit handler missing");
+  assert.match(handler, /await runPortalPreflight\(payload\)/);
+  assert.ok(handler.indexOf("await runPortalPreflight(payload)")<handler.indexOf('functions.invoke("create-portal-account",{body:payload})'));
+  assert.match(handler, /finally\{[\\s\\S]*btn\.disabled=false/);
+});
+
+check("Portal preflight displays returned details as escaped text and clears stale previews on edits", () => {
+  assert.match(app, /escapeHTML\(check\.label/);
+  assert.match(app, /escapeHTML\(check\.detail/);
+  assert.match(app, /portalAccountForm\.addEventListener\("input",\(\)=>\{preflightResult\.hidden=true;\}\)/);
+  assert.match(app, /portalAccountForm\.addEventListener\("change",\(\)=>\{preflightResult\.hidden=true;\}\)/);
+});
+
+check("Portal preflight controls remain usable on narrow screens", () => {
+  assert.match(styles, /\.accounts-preflight-actions\{display:flex/);
+  assert.match(styles, /@media\(max-width:560px\)\{\.accounts-preflight-actions\{align-items:stretch;flex-direction:column\}/);
+});
+
 check("Driver multi-select instructions cover Windows and Mac keyboards", () => {
   assert.match(app, /Ctrl on Windows or Command on Mac/);
 });

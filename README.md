@@ -6,7 +6,7 @@ A responsive student conduct, attendance, journey and parent-communication appli
 
 DISCIPLINE is connected to Supabase for authenticated, role-scoped records. The administrator interface includes:
 
-- Student registry and portal account management, including a live count-only Portal Accounts readiness snapshot and a searchable administrator directory of parent, student and driver profiles with active/inactive status, linked student/route summaries, Supabase invitation timestamps, email-confirmation timestamps and last sign-in time; auth timestamps are returned only through an active-administrator Edge Function, and an invitation timestamp is not proof of inbox delivery. The directory is read-only.
+- Student registry and portal account management, including a live count-only Portal Accounts readiness snapshot and a searchable administrator directory of parent, student and driver profiles with active/inactive status, linked student/route summaries, Supabase invitation timestamps, email-confirmation timestamps and last sign-in time; auth timestamps are returned only through an active-administrator Edge Function, and an invitation timestamp is not proof of inbox delivery. The directory is read-only. Portal account setup also includes an administrator-only, non-mutating preflight that checks email/profile conflicts, active student links and current driver-route assignments before any invitation; final submission repeats the checks server-side.
 - Attendance, journeys, driver routes and check-ins
 - Mark awards, deductions and Monday-based weekly results
 - Private incident records, factual descriptions and exact-word review

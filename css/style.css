@@ -1353,3 +1353,9 @@ table tbody tr:hover{background:#f7f9fc}
 .weekly-result-actions .weekly-register-label{margin-right:3px}
 @media(max-width:760px){.weekly-result-actions{justify-content:flex-start;width:100%}.weekly-section-heading{align-items:flex-start;flex-wrap:wrap}}
 @media(max-width:480px){.weekly-result-actions .button{flex:1}.weekly-result-actions .weekly-register-label{width:100%}}
+
+/* Attendance register export and print tools */
+.attendance-register-tools{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.attendance-register-tools input{min-width:180px;max-width:240px}
+@media(max-width:760px){.attendance-register-tools{width:100%;justify-content:flex-start}.attendance-register-tools input{flex:1;min-width:150px;max-width:none}}
+@media(max-width:480px){.attendance-register-tools .button{flex:1}}

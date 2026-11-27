@@ -12,6 +12,8 @@ DISCIPLINE is connected to Supabase for authenticated, role-scoped records. The 
 - Private incident records, factual descriptions and exact-word review
 - Controlled publication of verified behaviour reports to linked parent accounts
 - Parent notifications, responses, certificates and reporting
+- Administrator inbox with live counts of parent responses awaiting review and incidents awaiting verification; the inbox is restricted to administrator accounts
+- Weekly results export to CSV and a print-ready report; both actions respect the selected student search and publication-status filters
 
 Student portal accounts are read-only and can view only their own published weekly scores and mark history. They do not see incident narratives, exact words or evidence. Incident deductions appear in shared mark history only as a generic label; factual descriptions and reviewed exact words remain in the protected incident record. Parent accounts are created by an administrator and can access only linked student information allowed by the database policies; incident details are visible to a parent only after administrator verification and publication.
 
@@ -39,7 +41,7 @@ Use audio only when the institution has a lawful, appropriate basis and has foll
 
 ## Automated quality checks
 
-The repository runs lightweight, dependency-free checks on pushes and pull requests to `main`. The checks parse the browser JavaScript and verify key portal boundaries: supported roles, student-to-profile linking, published-only weekly results, student-scoped mark history, parent-only incident/report handling, browser configuration secret hygiene, portal-account administrator authorization and link-conflict protections, and incident-audio consent, file-limit, short-lived playback and administrator-only safeguards.
+The repository runs lightweight, dependency-free checks on pushes and pull requests to `main`. The checks parse the browser JavaScript and verify key portal boundaries: supported roles, student-to-profile linking, published-only weekly results, student-scoped mark history, parent-only incident/report handling, browser configuration secret hygiene, portal-account administrator authorization and link-conflict protections, incident-audio consent, file-limit, short-lived playback and administrator-only safeguards, administrator inbox role visibility and pending-item queries, and filtered weekly CSV/print report exports.
 
 Run the same checks locally with Node.js 24 or newer:
 

@@ -21,6 +21,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] Incident deductions use a generic shared-ledger reason so factual narratives are not copied into parent/student mark history
 - [ ] Browser microphone test on HTTPS with an appropriately consenting adult
 - [x] Automated regression checks confirm multipart recording uploads forward explicit permission confirmation, the browser blocks recording without consent, consent is reconfirmed before upload, the 60-second stop and 8 MB limit remain in place, and server-side admin, MIME-type and short-lived playback guards remain
+- [x] Both deployed Edge Functions are tracked in `supabase/functions`; account provisioning tests administrator authorization, supported roles, active-student validation and student-link conflicts
 - [ ] Signed-in administrator → upload → review → verify → storage deletion end-to-end test
 - [ ] Separate parent account test after publication
 - [ ] Student portal read-only test with a student test account (portal selection, own published scores and mark history only; no incident narrative, exact words or evidence; no write actions)

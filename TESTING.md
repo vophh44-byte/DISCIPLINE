@@ -5,7 +5,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 ## Current automated / configuration checks
 
 - [x] Frontend JavaScript parses: `js/app.js` and `js/auth.js`
-- [x] GitHub Actions syntax and portal privacy regression checks pass; 33 checks passed on commit `05e06f6` using Node.js 24 ( [workflow run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/45961730706) )
+- [x] GitHub Actions syntax, portal privacy, audio cleanup and invitation regression checks pass; 42 checks passed on commit `80a40e4` using Node.js 24 ( [workflow run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/45992535532) )
 - [x] GitHub Pages build and deploy succeeded for commit `05e06f6` ( [deployment run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/45961730460) )
 - [x] All 24 previously unindexed foreign-key columns now have B-tree indexes; PostgreSQL catalog check confirms 42/42 public foreign-key constraints are indexed
 - [x] Row Level Security is enabled on all 19 public application tables; role-specific access still requires the separate manual portal tests
@@ -13,6 +13,10 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] Audio bucket accepts only the configured audio MIME types and is limited to 8 MB
 - [x] Storage object policies restrict read, upload and delete to active administrators
 - [x] Incident verification RPC is executable only by the server-side service role
+- [x] Live PostgreSQL privilege review: all 11 security-definer functions executable by `authenticated` bind checks to `auth.uid()` and the appropriate administrator/driver role; the leaderboard is limited to admin/student roles and published rows
+- [x] Transcript-verification RPC is not executable by `anon` or `authenticated`; only `service_role` has execute permission
+- [x] A partial unique index enforces one `audio_temp` evidence row per incident
+- [x] Expanded static checks cover verified/published upload blocks, duplicate audio prevention, orphan cleanup on evidence insert failure, transcript requirement, fail-closed storage checks, deletion-before-verification ordering, deleted-audio playback blocking and no duplicate invitations
 - [x] Signed-in administrators can read evidence metadata; evidence metadata writes are restricted to the server-side Edge Function
 - [x] Database blocks verification or parent publication while temporary audio remains pending
 - [x] Database blocks attaching new temporary audio to an already verified or published incident

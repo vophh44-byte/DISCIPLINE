@@ -294,9 +294,10 @@
       const commonQueries = [
         client.from("weekly_results").select("id,weekly_net,lifetime_balance,week_start,week_end,published_at,total_awards,total_deductions,total_received,total_transferred").eq("student_id", student.id).not("published_at", "is", null).order("week_start", { ascending: false }).limit(8),
         client.from("mark_transactions").select("transaction_type,amount,balance_delta,balance_after,reason,occurred_at").eq("student_id", student.id).order("occurred_at", { ascending: false }).limit(8)
+        role === "student" ? client.from("notifications").select("id,title,message,read_at,created_at").eq("recipient_user_id", user.id).eq("related_student_id", student.id).order("created_at", { ascending: false }).limit(20) : Promise.resolve({ data: [], error: null })
       ];
-      const [weeklyResult, txResult] = await Promise.all(commonQueries);
-      if (weeklyResult.error || txResult.error) {
+      const [weeklyResult, txResult, notificationResult] = await Promise.all(commonQueries);
+      if (weeklyResult.error || txResult.error || notificationResult.error) {
         container.insertAdjacentHTML("beforeend", '<section class="panel registry-panel"><h3>'+esc(student.full_name)+'</h3><p>Unable to load this profile’s results. Please contact the administrator.</p></section>');
         continue;
       }
@@ -305,10 +306,37 @@
       const latestWeekly = weeklyRows[0] || null;
       const lifetimeBalance = tx.length ? tx[0].balance_after : (student.starting_marks || 0);
       const history = tx.map(t => '<tr><td>'+esc(new Date(t.occurred_at).toLocaleDateString("en-IN"))+'</td><td>'+esc(t.reason || t.transaction_type)+'</td><td>'+esc(t.balance_delta > 0 ? "+" : "")+esc(t.balance_delta)+'</td></tr>').join("");
+      const notifications = notificationResult.data || [];
+      const unreadNotifications = notifications.filter(x => !x.read_at).length;
+      const notificationHtml = notifications.map(x => '<li><strong>'+esc(x.title)+'</strong><p>'+esc(x.message)+'</p><small>'+esc(new Date(x.created_at).toLocaleString("en-IN"))+'</small>'+(x.read_at ? '<span class="session-status completed">Read</span>' : '<button class="button button-quiet" type="button" data-mark-notification-read="'+esc(x.id)+'">Mark read</button>')+'</li>').join("");
+      const notificationPanelHtml = '<div class="panel-heading parent-notification-heading"><div><h3>Notifications</h3><p><span data-unread-count="'+esc(student.id)+'" data-count="'+unreadNotifications+'">'+unreadNotifications+' unread</span> · Updates for this student only</p></div>'+(unreadNotifications ? '<button class="button button-quiet" type="button" data-mark-all-notifications-read="'+esc(student.id)+'">Mark all read</button>' : '')+'</div><ul class="simple-list">'+(notificationHtml || '<li>No notifications yet.</li>')+'</ul>';
 
       if (role !== "parent") {
         container.insertAdjacentHTML("beforeend",
-          '<section class="panel registry-panel"><div class="panel-heading"><div><h3>'+esc(student.full_name)+'</h3><p>'+esc(student.student_code)+' · '+esc(student.class_group || "Student")+'</p></div></div><div class="registry-stats"><article class="stat-card"><div class="stat-label">Latest published weekly score</div><div class="stat-value">'+(latestWeekly ? esc(latestWeekly.weekly_net) : "—")+'</div></article><article class="stat-card"><div class="stat-label">Lifetime balance</div><div class="stat-value">'+esc(lifetimeBalance)+'</div></article></div><h3>Recent mark history</h3><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>ACTIVITY</th><th>CHANGE</th></tr></thead><tbody>'+(history || '<tr><td colspan="3">No mark records yet.</td></tr>')+'</tbody></table></div></section>');
+          '<section class="panel registry-panel"><div class="panel-heading"><div><h3>'+esc(student.full_name)+'</h3><p>'+esc(student.student_code)+' · '+esc(student.class_group || "Student")+'</p></div></div><div class="registry-stats"><article class="stat-card"><div class="stat-label">Latest published weekly score</div><div class="stat-value">'+(latestWeekly ? esc(latestWeekly.weekly_net) : "—")+'</div></article><article class="stat-card"><div class="stat-label">Lifetime balance</div><div class="stat-value">'+esc(lifetimeBalance)+'</div></article></div><h3>Recent mark history</h3><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>ACTIVITY</th><th>CHANGE</th></tr></thead><tbody>'+(history || '<tr><td colspan="3">No mark records yet.</td></tr>')+'</tbody></table></div>'+notificationPanelHtml+'</section>');
+        container.addEventListener("click", async event => {
+          const markAll = event.target.closest("[data-mark-all-notifications-read]");
+          if (markAll) {
+            markAll.disabled = true;
+            const studentId = markAll.dataset.markAllNotificationsRead;
+            const { error } = await client.from("notifications").update({ read_at: new Date().toISOString() }).eq("recipient_user_id", user.id).eq("related_student_id", studentId).is("read_at", null);
+            if (error) { markAll.disabled = false; markAll.textContent = "Could not mark all read"; return; }
+            const panel = markAll.closest("section.panel");
+            panel.querySelectorAll("[data-mark-notification-read]").forEach(button => button.replaceWith(Object.assign(document.createElement("span"), { className: "session-status completed", textContent: "Read" })));
+            const count = panel.querySelector("[data-unread-count]");
+            if (count) { count.dataset.count = "0"; count.textContent = "0 unread"; }
+            markAll.remove(); return;
+          }
+          const button = event.target.closest("[data-mark-notification-read]");
+          if (!button) return;
+          button.disabled = true;
+          const { error } = await client.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", button.dataset.markNotificationRead).eq("recipient_user_id", user.id);
+          if (error) { button.disabled = false; button.textContent = "Could not mark read"; return; }
+          const panel = button.closest("section.panel");
+          button.replaceWith(Object.assign(document.createElement("span"), { className: "session-status completed", textContent: "Read" }));
+          const count = panel.querySelector("[data-unread-count]");
+          if (count) { const remaining = Math.max(0, Number(count.dataset.count || 0) - 1); count.dataset.count = String(remaining); count.textContent = remaining + " unread"; if (remaining === 0) panel.querySelector("[data-mark-all-notifications-read]")?.remove(); }
+        });
         continue;
       }
 

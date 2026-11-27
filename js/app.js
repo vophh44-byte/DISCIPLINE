@@ -548,7 +548,7 @@ async function renderAccounts(){
     </section>
     <section class="panel accounts-directory-panel" aria-labelledby="portalDirectoryTitle">
       <div class="accounts-directory-head">
-        <div><span class="accounts-readiness-kicker">ACCESS MANAGEMENT</span><h2 id="portalDirectoryTitle">Existing portal accounts</h2><p>Review account profile status and connected records. This list does not claim whether an invitation email was delivered or accepted.</p></div>
+        <div><span class="accounts-readiness-kicker">ACCESS MANAGEMENT</span><h2 id="portalDirectoryTitle">Existing portal accounts</h2><p>Review profile status, available authentication timestamps and connected records. An invitation timestamp does not prove inbox delivery.</p></div>
         <button class="button button-outline" type="button" id="refreshPortalDirectory">↻ Refresh list</button>
       </div>
       <div class="accounts-directory-filters">
@@ -559,8 +559,8 @@ async function renderAccounts(){
       <p class="accounts-directory-status" id="portalDirectoryStatus" role="status">Loading existing portal accounts…</p>
       <div class="table-scroll">
         <table class="registry-table accounts-directory-table">
-          <thead><tr><th>ACCOUNT</th><th>PORTAL</th><th>PROFILE STATUS</th><th>CONNECTED RECORDS</th><th>CREATED</th><th>MANAGE</th></tr></thead>
-          <tbody id="portalDirectoryRows"><tr><td colspan="6">Loading accounts…</td></tr></tbody>
+          <thead><tr><th>ACCOUNT</th><th>PORTAL</th><th>PROFILE STATUS</th><th>AUTHENTICATION SETUP</th><th>CONNECTED RECORDS</th><th>CREATED</th><th>MANAGE</th></tr></thead>
+          <tbody id="portalDirectoryRows"><tr><td colspan="7">Loading accounts…</td></tr></tbody>
         </table>
       </div>
     </section>
@@ -662,7 +662,7 @@ async function renderAccounts(){
     }).sort((a,b)=>(a.display_name||"").localeCompare(b.display_name||""));
     directoryStatus.textContent=filtered.length+" of "+directoryData.length+" portal account(s) shown. Profile status does not confirm invitation delivery or password setup.";
     if(!filtered.length){
-      directoryRows.innerHTML='<tr><td colspan="6" class="registry-empty">No portal accounts match these filters.</td></tr>';
+      directoryRows.innerHTML='<tr><td colspan="7" class="registry-empty">No portal accounts match these filters.</td></tr>';
       return;
     }
     directoryRows.innerHTML=filtered.map(profile=>{
@@ -672,10 +672,16 @@ async function renderAccounts(){
       const statusClass=profile.is_active?"completed":"pending";
       const statusLabel=profile.is_active?"Active":"Inactive";
       const created=profile.created_at?new Date(profile.created_at).toLocaleDateString("en-IN"):"—";
+      const auth=profile.auth_status||{};
+      const setupLabel=!profile.auth_status_available?"Unavailable":auth.email_confirmed_at?"Email confirmed":auth.invited_at?"Invitation issued · not confirmed":"No invitation timestamp";
+      const setupDate=auth.email_confirmed_at||auth.invited_at;
+      const setupDateLabel=setupDate?'<small class="registry-email">'+escapeHTML(new Date(setupDate).toLocaleString("en-IN",{dateStyle:"medium",timeStyle:"short"}))+'</small>':"";
+      const lastSignIn=auth.last_sign_in_at?'<small class="registry-email">Last sign-in: '+escapeHTML(new Date(auth.last_sign_in_at).toLocaleDateString("en-IN"))+'</small>':"";
       const target=profile.role==="parent"?"parents":profile.role==="student"?"students":"driverroutes";
       return '<tr><td><strong>'+name+'</strong><small class="registry-email">'+email+'</small></td>'+
         '<td><span class="accounts-role-label">'+escapeHTML(profile.role.charAt(0).toUpperCase()+profile.role.slice(1))+'</span></td>'+
         '<td><span class="session-status '+statusClass+'">'+statusLabel+'</span></td>'+
+        '<td class="accounts-directory-auth"><strong>'+escapeHTML(setupLabel)+'</strong>'+setupDateLabel+lastSignIn+'</td>'+
         '<td class="accounts-directory-linked">'+linked+'</td><td>'+escapeHTML(created)+'</td>'+
         '<td><button type="button" class="button button-quiet accounts-directory-manage" data-page="'+target+'">Open</button></td></tr>';
     }).join("");
@@ -684,7 +690,7 @@ async function renderAccounts(){
     directoryRefresh.disabled=true;
     directoryRefresh.textContent="Loading…";
     directoryStatus.textContent="Loading portal accounts and linked records…";
-    directoryRows.innerHTML='<tr><td colspan="6">Loading accounts…</td></tr>';
+    directoryRows.innerHTML='<tr><td colspan="7">Loading accounts…</td></tr>';
     try{
       const [profilesResult,parentLinksResult,studentLinksResult,routesResult,assignmentsResult,studentsResult]=await Promise.all([
         window.disciplineSupabase.from("profiles").select("user_id,role,display_name,email,is_active,created_at").in("role",["parent","student","driver"]),
@@ -692,7 +698,8 @@ async function renderAccounts(){
         window.disciplineSupabase.from("student_accounts").select("user_id,student_id"),
         window.disciplineSupabase.from("driver_routes").select("id,driver_user_id,route_name,vehicle_label,is_active"),
         window.disciplineSupabase.from("driver_route_students").select("route_id,student_id,valid_from,valid_to"),
-        window.disciplineSupabase.from("students").select("id,student_code,full_name,is_active")
+        window.disciplineSupabase.from("students").select("id,student_code,full_name,is_active"),
+        window.disciplineSupabase.functions.invoke("create-portal-account",{body:{action:"list_auth_status"}})
       ]);
       const failed=[profilesResult,parentLinksResult,studentLinksResult,routesResult,assignmentsResult,studentsResult].find(x=>x.error);
       if(failed)throw failed.error;
@@ -702,6 +709,9 @@ async function renderAccounts(){
       const studentLinks=studentLinksResult.data||[];
       const routes=routesResult.data||[];
       const assignments=assignmentsResult.data||[];
+      const authStatusAvailable=!authStatusResult.error&&authStatusResult.data?.success===true&&Array.isArray(authStatusResult.data.accounts);
+      const authStatusMap=new Map(authStatusAvailable?authStatusResult.data.accounts.map(account=>[account.user_id,account]):[]);
+      const activeStudentIds=new Set((studentsResult.data||[]).filter(student=>student.is_active===true).map(student=>student.id));
       const today=disciplineToday();
       directoryData=profiles.map(profile=>{
         let summary="No linked records";
@@ -715,20 +725,20 @@ async function renderAccounts(){
         }else{
           const driverRoutes=routes.filter(route=>route.driver_user_id===profile.user_id);
           const current=driverRoutes.filter(route=>route.is_active).map(route=>{
-            const count=new Set(assignments.filter(a=>a.route_id===route.id&&a.valid_from<=today&&(!a.valid_to||a.valid_to>=today)).map(a=>a.student_id)).size;
+            const count=new Set(assignments.filter(a=>a.route_id===route.id&&activeStudentIds.has(a.student_id)&&a.valid_from<=today&&(!a.valid_to||a.valid_to>=today)).map(a=>a.student_id)).size;
             return escapeHTML(route.route_name)+" · "+count+" student(s)";
           });
           summary=driverRoutes.length?current.join(" | ")||"No active route":"No route linked";
         }
-        return {...profile,directory_summary:summary};
+        return {...profile,directory_summary:summary,auth_status:authStatusMap.get(profile.user_id)||null,auth_status_available:authStatusAvailable};
       });
       renderPortalDirectory();
-      directoryStatus.textContent=directoryStatus.textContent+" Updated just now.";
+      directoryStatus.textContent=directoryStatus.textContent+(authStatusAvailable?" Authentication timestamps loaded.":" Authentication timestamps unavailable for this refresh.")+" Updated just now.";
     }catch(error){
       console.error("Portal account directory failed:",error);
       directoryData=[];
       directoryStatus.textContent="Could not load the portal account directory. Check your administrator connection and try again.";
-      directoryRows.innerHTML='<tr><td colspan="6" class="registry-empty">Account list unavailable.</td></tr>';
+      directoryRows.innerHTML='<tr><td colspan="7" class="registry-empty">Account list unavailable.</td></tr>';
     }finally{
       directoryRefresh.disabled=false;
       directoryRefresh.textContent="↻ Refresh list";

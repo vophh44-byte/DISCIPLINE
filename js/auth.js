@@ -248,6 +248,8 @@
     if (topAdmin) topAdmin.innerHTML = '<div class="top-avatar">' + esc((displayName || "U").slice(0,1).toUpperCase()) + '</div><div><strong>' + esc(displayName || "User") + '</strong><span>' + esc(role.charAt(0).toUpperCase()+role.slice(1)) + '</span></div>';
     const demo = document.querySelector(".demo-pill");
     if (demo) demo.innerHTML = '<span class="pulse-dot"></span> ' + esc(role.toUpperCase()) + ' SESSION';
+    const notificationCenter = document.getElementById("notificationCenter");
+    if (notificationCenter) notificationCenter.hidden = role !== "admin";
     addSignOut();
   }
 

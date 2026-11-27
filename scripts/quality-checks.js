@@ -130,4 +130,32 @@ check("audio function requires an active administrator", () => {
   assert.match(audioFunction, /auth\.getUser\(\)/);
 });
 
+check("recording consent checkbox starts unchecked", () => {
+  assert.match(app, /<input id="incidentAudioConsent" type="checkbox">/);
+});
+
+check("microphone access is blocked until consent is checked", () => {
+  const guard = app.indexOf("if(!audioConsent.checked){");
+  const microphone = app.indexOf("navigator.mediaDevices.getUserMedia", guard);
+  assert.ok(guard >= 0 && microphone > guard, "consent guard must precede microphone access");
+});
+
+check("incident save requires consent to be reconfirmed before upload", () => {
+  const formGuard = app.indexOf("if(recordedAudioBlob&&!audioConsent.checked){");
+  const uploadCall = app.indexOf('db.functions.invoke("incident-audio",{body:formData})');
+  assert.ok(formGuard >= 0 && uploadCall > formGuard, "save-time consent guard must precede upload");
+});
+
+check("browser recording automatically stops after 60 seconds", () => {
+  assert.match(app, /setTimeout\(\(\)=>\{if\(activeRecorder\?\.state==="recording"\)activeRecorder\.stop\(\);\},60000\)/);
+});
+
+check("microphone tracks are stopped when recording ends", () => {
+  assert.match(app, /activeStream\?\.getTracks\(\)\.forEach\(track=>track\.stop\(\)\)/);
+});
+
+check("browser rejects audio clips larger than 8 MB", () => {
+  assert.match(app, /blob\.size>8\*1024\*1024/);
+});
+
 process.stdout.write("\n" + passed + " DISCIPLINE quality checks passed.\n");

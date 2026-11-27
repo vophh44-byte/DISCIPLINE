@@ -36,6 +36,18 @@ Use audio only when the institution has a lawful, appropriate basis and has foll
 - Incident audio is handled by the `incident-audio` Edge Function. It validates the signed-in administrator and performs private upload, short-lived playback URL creation, deletion and verification. Signed-in administrators have read-only access to evidence metadata; writes to evidence metadata are handled by the server-side function.
 - Database migrations already exist in the connected project. Apply further schema changes as migrations and retain the existing RLS policies.
 
+## Automated quality checks
+
+The repository runs lightweight, dependency-free checks on pushes and pull requests to `main`. The checks parse the browser JavaScript and verify key portal boundaries: supported roles, student-to-profile linking, published-only weekly results, student-scoped mark history, parent-only incident/report handling, and that browser configuration does not contain a server secret.
+
+Run the same checks locally with Node.js 20 or newer:
+
+```sh
+node scripts/quality-checks.js
+```
+
+These are static regression checks, not a substitute for separate live administrator, parent, student and driver sign-in tests.
+
 ## Run locally
 
 1. Clone or download this repository.

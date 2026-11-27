@@ -311,6 +311,54 @@ async function renderStudents(){
     drawRows();
   }
 
+  async function viewStudentProfile(student){
+    const panel=document.getElementById("studentProfilePanel"),body=document.getElementById("studentProfileContent"),guardian=guardianOf(student);
+    panel.hidden=false;body.innerHTML='<p class="registry-disclaimer">Loading the saved student record…</p>';panel.scrollIntoView({behavior:"smooth",block:"start"});
+    try{
+      const [marks,allMarks,attendance,incidents,weekly,certificates,studentAccount,parentLinks]=await Promise.all([
+        db.from("mark_transactions").select("transaction_type,amount,balance_delta,reason,balance_before,balance_after,occurred_at").eq("student_id",student.id).order("occurred_at",{ascending:false}).limit(15),
+        db.from("mark_transactions").select("balance_delta").eq("student_id",student.id),
+        db.from("attendance").select("status,notes,recorded_at,journey_sessions(session_type,session_date)").eq("student_id",student.id).order("recorded_at",{ascending:false}).limit(20),
+        db.from("incidents").select("category,severity,factual_description,occurred_at,transcript_verified,published_to_parent_at").eq("student_id",student.id).order("occurred_at",{ascending:false}).limit(8),
+        db.from("weekly_results").select("week_start,week_end,total_awards,total_deductions,weekly_net,lifetime_balance,published_at").eq("student_id",student.id).order("week_start",{ascending:false}).limit(8),
+        db.from("certificates").select("title,description,issued_at,published_at").eq("student_id",student.id).order("issued_at",{ascending:false}).limit(8),
+        db.from("student_accounts").select("user_id").eq("student_id",student.id).maybeSingle(),
+        db.from("parent_student_links").select("id").eq("student_id",student.id)
+      ]);
+      const failed=[marks,allMarks,attendance,incidents,weekly,certificates,studentAccount,parentLinks].find(x=>x.error);
+      if(failed)throw failed.error;
+      const lifetime=Number(student.starting_marks||0)+(allMarks.data||[]).reduce((sum,row)=>sum+Number(row.balance_delta||0),0);
+      const present=(attendance.data||[]).filter(x=>x.status==="present").length;
+      const absent=(attendance.data||[]).filter(x=>x.status==="absent").length;
+      const late=(attendance.data||[]).filter(x=>x.status==="late").length;
+      const label=value=>String(value||"").replaceAll("_"," ").replace(/\b\w/g,x=>x.toUpperCase());
+      const transactionRows=(marks.data||[]).map(x=>'<tr><td>'+escapeHTML(new Date(x.occurred_at).toLocaleString("en-IN"))+'</td><td>'+escapeHTML(label(x.transaction_type))+'</td><td>'+escapeHTML(x.reason||"—")+'</td><td>'+((Number(x.balance_delta)>0?"+":"")+Number(x.balance_delta))+'</td><td>'+Number(x.balance_before)+'</td><td>'+Number(x.balance_after)+'</td></tr>').join("")||'<tr><td colspan="6">No mark transactions recorded.</td></tr>';
+      const attendanceRows=(attendance.data||[]).map(x=>'<tr><td>'+escapeHTML(x.journey_sessions?.session_date||new Date(x.recorded_at).toLocaleDateString("en-IN"))+'</td><td>'+escapeHTML(label(x.journey_sessions?.session_type||"Attendance"))+'</td><td>'+escapeHTML(label(x.status))+'</td><td>'+escapeHTML(x.notes||"—")+'</td></tr>').join("")||'<tr><td colspan="4">No attendance entries recorded.</td></tr>';
+      const incidentRows=(incidents.data||[]).map(x=>'<tr><td>'+escapeHTML(new Date(x.occurred_at).toLocaleString("en-IN"))+'</td><td>'+escapeHTML(label(x.category))+'</td><td>'+escapeHTML(label(x.severity))+'</td><td>'+escapeHTML(x.factual_description||"—")+'</td><td>'+(x.transcript_verified?"Verified":"Awaiting review")+'</td><td>'+(x.published_to_parent_at?"Published":"Private")+'</td></tr>').join("")||'<tr><td colspan="6">No incident records.</td></tr>';
+      const weeklyRows=(weekly.data||[]).map(x=>'<tr><td>'+escapeHTML(x.week_start)+' – '+escapeHTML(x.week_end)+'</td><td>+'+Number(x.total_awards||0)+'</td><td>−'+Number(x.total_deductions||0)+'</td><td>'+(Number(x.weekly_net)>0?"+":"")+Number(x.weekly_net||0)+'</td><td>'+Number(x.lifetime_balance||0)+'</td><td>'+(x.published_at?"Published":"Private")+'</td></tr>').join("")||'<tr><td colspan="6">No weekly results saved.</td></tr>';
+      const certificateRows=(certificates.data||[]).map(x=>'<tr><td>'+escapeHTML(x.title)+'</td><td>'+escapeHTML(x.description||"—")+'</td><td>'+escapeHTML(new Date(x.issued_at).toLocaleDateString("en-IN"))+'</td><td>'+(x.published_at?"Published":"Private")+'</td></tr>').join("")||'<tr><td colspan="4">No certificates issued.</td></tr>';
+      body.innerHTML='<div class="student-profile-head"><div><span class="student-step">STUDENT RECORD / PROFILE SUMMARY</span><h2>'+escapeHTML(student.full_name)+'</h2><p>'+escapeHTML(student.student_code)+' · '+escapeHTML(student.class_group||"Class not set")+'</p></div><div class="student-profile-actions"><button class="button button-outline" type="button" id="printStudentProfile">Print record</button><button class="button button-quiet" type="button" id="closeStudentProfile">Close</button></div></div>'+
+       '<div class="student-profile-report"><div class="student-profile-summary"><article><small>LIFETIME MARK BALANCE</small><strong>'+lifetime+'</strong></article><article><small>RECENT ATTENDANCE · LAST 20</small><strong>'+present+' present · '+absent+' absent</strong><span>'+late+' late</span></article><article><small>PORTAL CONNECTIONS</small><strong>'+(studentAccount.data?"Student linked":"No student login")+'</strong><span>'+(parentLinks.data||[]).length+' parent link(s)</span></article></div>'+
+       '<section class="student-profile-section"><h3>Personal and guardian details</h3><div class="student-profile-details"><p><small>Student ID</small><strong>'+escapeHTML(student.student_code)+'</strong></p><p><small>Class / group</small><strong>'+escapeHTML(student.class_group||"—")+'</strong></p><p><small>Guardian</small><strong>'+escapeHTML(guardian.guardian_name||"—")+'</strong></p><p><small>Guardian phone</small><strong>'+escapeHTML(guardian.phone||"—")+'</strong></p><p><small>Guardian email</small><strong>'+escapeHTML(guardian.email||"—")+'</strong></p><p><small>Profile status</small><strong>'+(student.is_active?"Active":"Archived")+'</strong></p></div></section>'+
+       '<section class="student-profile-section"><h3>Recent mark history</h3><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>TYPE</th><th>REASON</th><th>CHANGE</th><th>BEFORE</th><th>AFTER</th></tr></thead><tbody>'+transactionRows+'</tbody></table></div></section>'+
+       '<section class="student-profile-section"><h3>Recent attendance · latest 20 entries</h3><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>JOURNEY</th><th>STATUS</th><th>NOTE</th></tr></thead><tbody>'+attendanceRows+'</tbody></table></div></section>'+
+       '<section class="student-profile-section"><h3>Incident summaries · administrator record</h3><p class="registry-disclaimer">Exact words and temporary evidence are not included in this general profile summary.</p><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>CATEGORY</th><th>SEVERITY</th><th>FACTUAL SUMMARY</th><th>REVIEW</th><th>PORTAL</th></tr></thead><tbody>'+incidentRows+'</tbody></table></div></section>'+
+       '<section class="student-profile-section"><h3>Weekly results · latest 8</h3><div class="table-scroll"><table class="registry-table"><thead><tr><th>SCORING WEEK</th><th>AWARDS</th><th>DEDUCTIONS</th><th>NET</th><th>LIFETIME</th><th>STATUS</th></tr></thead><tbody>'+weeklyRows+'</tbody></table></div></section>'+
+       '<section class="student-profile-section"><h3>Certificates · latest 8</h3><div class="table-scroll"><table class="registry-table"><thead><tr><th>CERTIFICATE</th><th>DESCRIPTION</th><th>ISSUED</th><th>PORTAL STATUS</th></tr></thead><tbody>'+certificateRows+'</tbody></table></div></section>'+
+       '<p class="student-profile-generated">Generated '+escapeHTML(new Date().toLocaleString("en-IN"))+' · DISCIPLINE administrator record</p></div>';
+      document.getElementById("closeStudentProfile").addEventListener("click",()=>{panel.hidden=true;});
+      document.getElementById("printStudentProfile").addEventListener("click",()=>{
+        const report=panel.querySelector(".student-profile-report"),popup=window.open("","_blank");
+        if(!popup){showToast("Allow pop-ups to print this student record.");return;}
+        popup.opener=null;popup.document.open();
+        popup.document.write('<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Student record · '+escapeHTML(student.student_code)+'</title><style>body{font:11px Arial,sans-serif;color:#24364d;margin:24px}h2{font-size:23px;margin:4px 0}h3{font-size:14px;margin:0 0 10px}p{margin:4px 0}.student-profile-summary{display:flex;gap:9px;margin:16px 0}.student-profile-summary article,.student-profile-section{border:1px solid #dce3ec;border-radius:7px;padding:12px;margin:0 0 13px}.student-profile-summary article{flex:1}.student-profile-summary small,.student-profile-details small{display:block;color:#687a90;font-size:9px}.student-profile-summary strong{display:block;font-size:17px;margin-top:5px}.student-profile-details{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.student-profile-details p{padding:7px;background:#f7f9fb}.student-profile-details strong{display:block;margin-top:4px}table{width:100%;border-collapse:collapse;font-size:9px;margin-top:5px}th{text-align:left;background:#edf2f7;color:#51647c}td,th{padding:6px 5px;border-bottom:1px solid #e4eaf0;vertical-align:top}tr{break-inside:avoid}.student-profile-generated{color:#738298;font-size:9px}@media print{body{margin:10mm}.student-profile-section{break-inside:avoid}}</style></head><body><h2>'+escapeHTML(student.full_name)+'</h2><p>'+escapeHTML(student.student_code)+' · '+escapeHTML(student.class_group||"")+'</p>'+report.innerHTML+'</body></html>');
+        popup.document.close();popup.focus();setTimeout(()=>popup.print(),350);
+      });
+    }catch(error){
+      body.innerHTML='<p class="registry-error">Could not load the student record: '+escapeHTML(error.message||"Unknown error")+'</p><button type="button" class="button button-quiet" id="closeStudentProfile">Close</button>';
+      document.getElementById("closeStudentProfile").addEventListener("click",()=>{panel.hidden=true;});
+    }
+  }
   function resetForm(){
     form.reset();
     document.getElementById("editingStudentId").value="";
@@ -391,6 +439,8 @@ async function renderStudents(){
     showToast(exportRows.length+" active student record(s) exported.");
   });
   rows.addEventListener("click",async e=>{
+     const view=e.target.closest("[data-view-student]");
+     if(view){const student=records.find(x=>x.id===view.dataset.viewStudent);if(student)await viewStudentProfile(student);return;}
     const edit=e.target.closest("[data-edit-student]");
     const archive=e.target.closest("[data-archive-student]");
     if(edit){

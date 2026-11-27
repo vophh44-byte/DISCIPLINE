@@ -63,3 +63,39 @@ select
       and audio_deleted_at is not null and storage_path is not null) as audio_deletion_metadata_conflicts,
   (select count(*) from public.weekly_results
     where extract(isodow from week_start) <> 1) as non_monday_week_starts;
+
+-- 6) Anonymous roles should have no direct table privileges; signed-in
+--    portal accounts retain SELECT permission on all application tables.
+select
+  count(*) as public_tables,
+  count(*) filter (where
+    has_table_privilege('anon', c.oid, 'SELECT') or
+    has_table_privilege('anon', c.oid, 'INSERT') or
+    has_table_privilege('anon', c.oid, 'UPDATE') or
+    has_table_privilege('anon', c.oid, 'DELETE') or
+    has_table_privilege('anon', c.oid, 'TRUNCATE')
+  ) as tables_with_anonymous_access,
+  count(*) filter (where has_table_privilege('authenticated', c.oid, 'SELECT')) as authenticated_select_tables
+from pg_class c
+join pg_namespace n on n.oid = c.relnamespace
+where n.nspname = 'public' and c.relkind in ('r', 'p');
+
+-- 7) Confirm no anonymous execution remains on public functions.
+select
+  count(*) as public_functions,
+  count(*) filter (where has_function_privilege('anon', p.oid, 'EXECUTE')) as anon_executable_functions
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public';
+
+-- 8) Check default privileges owned by postgres for future public objects.
+--    Supabase-managed supabase_admin defaults are intentionally not changed.
+select
+  count(*) filter (where d.defaclobjtype = 'r') as anon_table_defaults,
+  count(*) filter (where d.defaclobjtype = 'S') as anon_sequence_defaults,
+  count(*) filter (where d.defaclobjtype = 'f') as anon_function_defaults
+from pg_default_acl d
+cross join lateral aclexplode(d.defaclacl) a
+where d.defaclrole = 'postgres'::regrole
+  and d.defaclnamespace = 'public'::regnamespace
+  and a.grantee = 'anon'::regrole;

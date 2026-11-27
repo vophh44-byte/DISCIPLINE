@@ -400,4 +400,41 @@ check("weekly print report includes scoring period, totals and print-specific la
   assert.match(app, /@media print/);
 });
 
+
+check("attendance page provides print and CSV export controls", () => {
+  assert.match(app, /id="attendancePrintRegister"/);
+  assert.match(app, /id="attendanceExportCsv"/);
+});
+
+check("attendance export uses the same student search filter as the visible register", () => {
+  assert.match(app, /function filteredAttendanceStudents\(\)/);
+  assert.match(app, /const visible=filteredAttendanceStudents\(\)/);
+  assert.match(app, /rows\.innerHTML=filteredAttendanceStudents\(\)\.map/);
+});
+
+check("attendance CSV includes saved status and notes and guards formula-like values", () => {
+  assert.match(app, /const safe=\/\^\[\\s\]\*\[=\+\\-@\]\/\.test\(raw\)/);
+  assert.match(app, /entry\.status\|\|"Not marked"/);
+  assert.match(app, /entry\.notes\|\|""/);
+  assert.match(app, /discipline-attendance-\"\+date\.value\+\"\.csv/);
+});
+
+check("attendance CSV is UTF-8 and opens as a spreadsheet", () => {
+  assert.match(app, /new Blob\(\[\"\\uFEFF\"\+csvRows\.join\(\"\\r\\n\"\)\]/);
+  assert.match(app, /text\/csv;charset=utf-8/);
+});
+
+check("attendance print sheet includes marked, present, absent, late and unmarked totals", () => {
+  for (const value of ["count(\"present\")", "count(\"absent\")", "count(\"late\")", "count(\"excused\")", "count(\"not_marked\")"]) {
+    assert.ok(app.includes(value), "missing attendance total: " + value);
+  }
+});
+
+check("attendance print sheet escapes student and note content before opening print view", () => {
+  assert.match(app, /escapeHTML\(student\.full_name\)/);
+  assert.match(app, /escapeHTML\(student\.student_code\)/);
+  assert.match(app, /escapeHTML\(entry\.notes\|\|""\)/);
+  assert.match(app, /popup\.document\.write\(html\)/);
+});
+
 process.stdout.write("\n" + passed + " DISCIPLINE quality checks passed.\n");

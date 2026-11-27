@@ -445,7 +445,7 @@ check("Portal preview and final submission share the same read-only validator be
   assert.match(accountFunction, /const readiness = await validatePortalAccountReadiness\(\)/);
   assert.match(accountFunction, /inviteUserByEmail\(email/);
   assert.match(accountPreflight, /export async function validatePortalAccountPreflight/);
-  assert.match(accountPreflight, /return \{ ready: blockers\.length === 0, checks, blockers \}/);
+  assert.match(accountPreflight, /return \{ ready: blockers\.length === 0, checks, blockers, resumeAuthUserId \}/);
 });
 
 check("Invitation recovery is limited to Auth users with a prior invitation timestamp", () => {

@@ -70,6 +70,42 @@ check("inactive, unsupported or mismatched accounts cannot release the applicati
   assert.ok(openSession.indexOf("expectedPortal && profile.role") < openSession.indexOf('if (profile.role === "admin")'));
 });
 
+check("temporary profile lookup failures preserve sessions and keep the application hidden", () => {
+  const start = auth.indexOf("async function openForSession(");
+  const end = auth.indexOf("async function restoreSavedSession()", start);
+  const flow = auth.slice(start, end);
+  assert.match(flow, /if \(profileResult\.error\)[\s\S]*?throw new Error\("Account verification is temporarily unavailable/);
+  assert.doesNotMatch(flow, /if \(profileResult\.error\)[\s\S]{0,220}client\.auth\.signOut/);
+  assert.match(flow, /hideApplicationShell\(\)/);
+  assert.match(auth, /Check your internet connection and retry; your sign-in has not been cleared/);
+});
+
+check("saved-session startup catches auth errors and offers an accessible retry", () => {
+  assert.match(auth, /async function restoreSavedSession\(\)/);
+  const start = auth.indexOf("async function restoreSavedSession()");
+  const end = auth.indexOf('form.addEventListener("submit"', start);
+  const flow = auth.slice(start, end);
+  assert.match(flow, /client\.auth\.getSession\(\)/);
+  assert.match(flow, /catch \(_\)/);
+  assert.match(flow, /showSessionAlert\(/);
+  assert.match(auth, /id = "authSessionAlert"/);
+  assert.match(auth, /setAttribute\("role", "alert"\)/);
+  assert.match(auth, /Retry account check/);
+  assert.match(auth, /restoreSavedSession\(\);/);
+});
+
+check("portal render failures hide partial content and leave a safe retry path", () => {
+  const start = auth.indexOf("async function openForSession(");
+  const end = auth.indexOf("async function restoreSavedSession()", start);
+  const flow = auth.slice(start, end);
+  assert.match(flow, /catch \(error\)[\s\S]*hideApplicationShell\(\)[\s\S]*showPicker\(\)[\s\S]*throw new Error\("Your account was verified/);
+});
+
+check("session retry notices have responsive accessible visual styling", () => {
+  assert.match(styles, /\.auth-session-alert\{[^}]*border:[^}]*background:/);
+  assert.match(styles, /\.auth-session-alert \.button\{width:100%/);
+});
+
 check("selected portal must match the signed-in account role", () => {
   assert.match(auth, /if \(expectedPortal && profile\.role !== expectedPortal\)/);
 });

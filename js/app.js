@@ -1151,6 +1151,7 @@ async function renderParents(){
   <section class="panel registry-panel parent-responses-panel">
    <div class="parent-section-heading parent-response-heading"><div><span class="student-step">INBOX & FOLLOW-UP</span><h2>Parent responses</h2><p>Review acknowledgements, clarification requests and requests for review. Private notes are visible only to administrators.</p></div><div class="parent-response-tools"><label class="parent-filter-label"><span>Show</span><select id="parentResponseFilter"><option value="pending">Pending review</option><option value="all">All responses</option><option value="reviewed">Reviewed</option></select></label><label class="parent-search"><span>⌕</span><input id="parentResponseSearch" class="registry-search" placeholder="Search responses…" aria-label="Search parent responses"></label></div></div>
    <div class="parent-response-counts"><span><strong id="totalParentResponseCount">—</strong> total responses</span><span>Private administrator follow-up</span></div>
+    <div class="parent-response-export-actions"><button class="button button-outline" id="parentResponsePrint" type="button">Print history</button><button class="button button-quiet" id="parentResponseExport" type="button">Export CSV</button></div>
    <div class="table-scroll"><table class="registry-table parent-response-table"><thead><tr><th>DATE</th><th>PARENT</th><th>STUDENT</th><th>ABOUT</th><th>RESPONSE</th><th>PARENT MESSAGE</th><th>PRIVATE ADMIN NOTE</th><th>STATUS / ACTION</th></tr></thead><tbody id="parentResponseRows"><tr><td colspan="8">Loading parent responses…</td></tr></tbody></table></div>
    <p id="parentResponseInfo" class="registry-disclaimer">Pending responses appear first. Mark a response reviewed only after the administrator has followed up as needed.</p>
   </section>
@@ -1178,14 +1179,17 @@ async function renderParents(){
  document.getElementById("totalParentResponseCount").textContent=responseRows.length;
  document.getElementById("pendingParentResponseCount").textContent=responseRows.filter(x=>!x.reviewed_at).length;
     await refreshAdminNotificationBadge();
+  function filteredParentResponses(){
+   const filter=document.getElementById("parentResponseFilter").value;
+   const q=document.getElementById("parentResponseSearch").value.trim().toLowerCase();
+   return responseRows.filter(x=>{
+    const status=!x.reviewed_at?"pending":"reviewed";
+    const search=[x.profiles?.display_name,x.profiles?.email,x.students?.full_name,x.students?.student_code,x.response_type,x.message,x.admin_note,x.incident_id?"incident report":"weekly result"].join(" ").toLowerCase();
+    return (filter==="all"||filter===status)&&search.includes(q);
+   });
+  }
  function drawResponses(){
-  const filter=document.getElementById("parentResponseFilter").value;
-  const q=document.getElementById("parentResponseSearch").value.trim().toLowerCase();
-  const filtered=responseRows.filter(x=>{
-   const status=!x.reviewed_at?"pending":"reviewed";
-   const search=[x.profiles?.display_name,x.profiles?.email,x.students?.full_name,x.students?.student_code,x.response_type,x.message,x.admin_note,x.incident_id?"incident report":"weekly result"].join(" ").toLowerCase();
-   return (filter==="all"||filter===status)&&search.includes(q);
-  });
+   const filtered=filteredParentResponses();
   responseBody.innerHTML=filtered.map(x=>{
    const reviewed=!!x.reviewed_at;
    const about=x.incident_id?"Behaviour report":x.weekly_result_id?"Weekly result":"General parent response";
@@ -1194,6 +1198,43 @@ async function renderParents(){
  }
  document.getElementById("parentResponseFilter").addEventListener("change",drawResponses);
  document.getElementById("parentResponseSearch").addEventListener("input",drawResponses);
+  function parentResponseCsvCell(value){
+   const raw=String(value??"");
+   const safe=/^[\s]*[=+\-@]/.test(raw)?"'"+raw:raw;
+   return '"'+safe.replace(/"/g,'""')+'"';
+  }
+  function exportParentResponses(){
+   const visible=filteredParentResponses();
+   if(!visible.length){showToast("There are no parent responses matching the current filters.");return;}
+   const csv=[
+    ["Date and time","Parent","Parent email","Student","Student ID","About","Response type","Parent message","Review status","Reviewed at"].map(parentResponseCsvCell).join(","),
+    ...visible.map(x=>[
+     new Date(x.created_at).toLocaleString("en-IN"),x.profiles?.display_name||"Parent",x.profiles?.email||"",
+     x.students?.full_name||"Student",x.students?.student_code||"",
+     x.incident_id?"Behaviour report":x.weekly_result_id?"Weekly result":"General parent response",
+     x.response_type.replaceAll("_"," "),x.message||"",x.reviewed_at?"Reviewed":"Pending",
+     x.reviewed_at?new Date(x.reviewed_at).toLocaleString("en-IN"):""
+    ].map(parentResponseCsvCell).join(","))
+   ];
+   const blob=new Blob(["\uFEFF"+csv.join("\r\n")],{type:"text/csv;charset=utf-8;"}),url=URL.createObjectURL(blob),link=document.createElement("a");
+   link.href=url;link.download="discipline-parent-responses-"+disciplineToday()+".csv";
+   document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1200);
+   showToast(visible.length+" parent response(s) exported.");
+  }
+  function printParentResponses(){
+   const visible=filteredParentResponses();
+   if(!visible.length){showToast("There are no parent responses matching the current filters.");return;}
+   const pending=visible.filter(x=>!x.reviewed_at).length,reviewed=visible.length-pending;
+   const rows=visible.map(x=>"<tr><td>"+escapeHTML(new Date(x.created_at).toLocaleString("en-IN"))+"</td><td>"+escapeHTML(x.profiles?.display_name||"Parent")+"<small>"+escapeHTML(x.profiles?.email||"")+"</small></td><td>"+escapeHTML(x.students?.full_name||"Student")+"<small>"+escapeHTML(x.students?.student_code||"")+"</small></td><td>"+(x.incident_id?"Behaviour report":x.weekly_result_id?"Weekly result":"General response")+"</td><td>"+escapeHTML(x.response_type.replaceAll("_"," "))+"</td><td>"+escapeHTML(x.message||"—")+"</td><td>"+(x.reviewed_at?"Reviewed":"Pending")+"</td></tr>").join("");
+   const popup=window.open("","_blank");
+   if(!popup){showToast("Allow pop-ups to print parent responses.");return;}
+   popup.opener=null;
+   const html="<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>DISCIPLINE Parent Communication History</title><style>body{font-family:Arial,sans-serif;color:#24364d;margin:24px}header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;border-bottom:2px solid #c7a56b;padding-bottom:12px;margin-bottom:15px}h1{font-size:21px;margin:0 0 6px}p{margin:4px 0;color:#697a90;font-size:10px}.meta{text-align:right;color:#697a90;font-size:9px}.summary{display:flex;gap:9px;flex-wrap:wrap;margin:14px 0}.summary span{border:1px solid #dce3ec;border-radius:6px;padding:7px 9px;font-size:9px}.summary strong{font-size:13px;margin-left:4px}table{width:100%;border-collapse:collapse;font-size:8px}th{background:#edf2f7;text-align:left;color:#50637b;font-size:7px;letter-spacing:.3px}td,th{padding:6px 4px;border-bottom:1px solid #e5eaf0;vertical-align:top}td small{display:block;color:#718096;margin-top:2px}footer{margin-top:14px;padding-top:9px;border-top:1px solid #dce3ec;color:#718096;font-size:8px}@media print{body{margin:10mm}tr{break-inside:avoid}}</style></head><body><header><div><h1>DISCIPLINE · Parent Communication History</h1><p>Administrator follow-up report · Parent messages only</p></div><div class=\"meta\">Generated "+escapeHTML(new Date().toLocaleString("en-IN"))+"<br>Current filters applied</div></header><div class=\"summary\"><span>Responses <strong>"+visible.length+"</strong></span><span>Pending <strong>"+pending+"</strong></span><span>Reviewed <strong>"+reviewed+"</strong></span></div><table><thead><tr><th>DATE</th><th>PARENT</th><th>STUDENT</th><th>ABOUT</th><th>RESPONSE</th><th>PARENT MESSAGE</th><th>STATUS</th></tr></thead><tbody>"+rows+"</tbody></table><footer>DISCIPLINE · Confidential administrator communication report. Private administrator notes are intentionally omitted.</footer></body></html>";
+   popup.document.open();popup.document.write(html);popup.document.close();popup.focus();setTimeout(()=>popup.print(),350);
+  }
+  document.getElementById("parentResponseExport").addEventListener("click",exportParentResponses);
+  document.getElementById("parentResponsePrint").addEventListener("click",printParentResponses);
+
  responseBody.addEventListener("click",async event=>{
   const save=event.target.closest("[data-save-response-note]");
   const toggle=event.target.closest("[data-toggle-response-review]");

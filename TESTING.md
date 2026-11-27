@@ -5,7 +5,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 ## Current automated / configuration checks
 
 - [x] Frontend JavaScript parses: `js/app.js` and `js/auth.js`
-- [x] GitHub Actions syntax, portal privacy, audio cleanup, invitation, anonymous-grant, role-smoke, admin inbox, weekly report, attendance and driver check-in regression checks pass; 80 checks passed on the latest feature commit using Node.js 24
+- [x] GitHub Actions syntax, portal privacy, audio cleanup, invitation, anonymous-grant, role-smoke, admin inbox, weekly report, attendance, driver check-in and mark-ledger regression checks pass; 87 checks passed on the latest feature commit using Node.js 24
 - [x] GitHub Pages build and deploy succeeded for commit `05e06f6` ( [deployment run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/45961730460) )
 - [x] All 24 previously unindexed foreign-key columns now have B-tree indexes; PostgreSQL catalog check confirms 42/42 public foreign-key constraints are indexed
 - [x] Row Level Security is enabled on all 19 public application tables; role-specific access still requires the separate manual portal tests
@@ -42,6 +42,9 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] Attendance print report includes present, absent, late, excused and unmarked totals, with student details safely escaped
 - [x] Driver check-in register supports student/route/vehicle/note search, status filtering, CSV export and print reports
 - [x] Driver check-in exports include journey date/type, student, route, vehicle, driver, status, note and timestamp; print view includes status totals and safely escaped details
+- [x] Mark Management transaction history can be searched by student, ID, reason and transaction type
+- [x] Mark ledger CSV includes amount, balance change, before and after balances; quotes values and guards spreadsheet-formula text
+- [x] Mark ledger print report includes positive, negative and net change totals and escapes student/reason content
 - [x] Both deployed Edge Functions are tracked in `supabase/functions`; account provisioning tests administrator authorization, supported roles, active-student validation and student-link conflicts
 - [ ] Signed-in administrator → upload → review → verify → storage deletion end-to-end test
 - [ ] Separate parent account test after publication
@@ -76,6 +79,14 @@ Run [`scripts/security-audit.sql`](scripts/security-audit.sql) in the Supabase S
 3. Select a specific status when needed.
 4. Export CSV and confirm the date, journey, driver, route, vehicle, student, status, note and update time are included.
 5. Print the report and confirm the status totals and filtered check-in rows match the selected criteria.
+
+### Mark ledger export and print
+
+1. Open Award & Deduct Marks and wait for the latest 50 mark transactions to load.
+2. Search by student name, student ID or reason, and optionally choose one transaction type.
+3. Export CSV and confirm the reason, amount, balance change, balance before and balance after are included.
+4. Open Print report and confirm positive, negative and net totals match the filtered rows.
+5. Confirm the report keeps the before/after balances and transaction reason for each entry.
 
 ## Manual test procedure
 

@@ -5,7 +5,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 ## Current automated / configuration checks
 
 - [x] Frontend JavaScript parses: `js/app.js` and `js/auth.js`
-- [x] GitHub Actions syntax, portal privacy, audio cleanup, invitation, anonymous-grant, role-smoke, admin inbox, weekly report, attendance, driver check-in and mark-ledger regression checks pass; 94 checks passed on the latest feature commit using Node.js 24
+- [x] GitHub Actions syntax, portal privacy, audio cleanup, invitation, anonymous-grant, role-smoke, admin inbox, weekly report, attendance, driver check-in, mark-ledger, student-profile, certificate, incident-report, weekly-notification and parent-response-export regression checks pass; 116 checks passed on the latest feature commit using Node.js 24
 - [x] GitHub Pages build and deploy succeeded for commit `05e06f6` ( [deployment run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/45961730460) )
 - [x] All 24 previously unindexed foreign-key columns now have B-tree indexes; PostgreSQL catalog check confirms 42/42 public foreign-key constraints are indexed
 - [x] Row Level Security is enabled on all 19 public application tables; role-specific access still requires the separate manual portal tests

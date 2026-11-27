@@ -1,31 +1,41 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const cors = {
-  "Access-Control-Allow-Origin": "https://vophh44-byte.github.io",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+function corsHeaders(req: Request) {
+  const origin = req.headers.get("Origin") || "";
+  const localDevelopmentOrigin = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+  const allowedOrigin = origin === "https://vophh44-byte.github.io" || localDevelopmentOrigin
+    ? origin
+    : "https://vophh44-byte.github.io";
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-retry-count, traceparent, tracestate, baggage",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+}
 
-function reply(body: unknown, status = 200) {
+function reply(body: unknown, status = 200, headers: Record<string, string> = {}) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...cors, "Content-Type": "application/json" },
+    headers: { ...headers, "Content-Type": "application/json" },
   });
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
-  if (req.method !== "POST") return reply({ error: "Method not allowed" }, 405);
+  const headers = corsHeaders(req);
+  const respond = (body: unknown, status = 200) => reply(body, status, headers);
+  if (req.method === "OPTIONS") return new Response("ok", { headers });
+  if (req.method !== "POST") return respond({ error: "Method not allowed" }, 405);
 
   const url = Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !anonKey || !serviceKey) {
-    return reply({ error: "Server configuration is incomplete." }, 500);
+    return respond({ error: "Server configuration is incomplete." }, 500);
   }
 
   const authHeader = req.headers.get("Authorization") || "";
-  if (!authHeader.startsWith("Bearer ")) return reply({ error: "Sign-in required." }, 401);
+  if (!authHeader.startsWith("Bearer ")) return respond({ error: "Sign-in required." }, 401);
 
   const userClient = createClient(url, anonKey, {
     global: { headers: { Authorization: authHeader } },
@@ -33,7 +43,7 @@ Deno.serve(async (req: Request) => {
   });
   const { data: authData, error: authError } = await userClient.auth.getUser();
   if (authError || !authData.user) {
-    return reply({ error: "Your session is invalid. Please sign in again." }, 401);
+    return respond({ error: "Your session is invalid. Please sign in again." }, 401);
   }
 
   const adminClient = createClient(url, serviceKey, {
@@ -43,12 +53,12 @@ Deno.serve(async (req: Request) => {
     .from("profiles").select("role,is_active")
     .eq("user_id", authData.user.id).maybeSingle();
   if (callerError || !caller || caller.role !== "admin" || caller.is_active !== true) {
-    return reply({ error: "Administrator permission required." }, 403);
+    return respond({ error: "Administrator permission required." }, 403);
   }
 
   let input: { email?: string; display_name?: string; role?: string; student_id?: string; route_name?: string; vehicle_label?: string; student_ids?: string[] };
   try { input = await req.json(); }
-  catch { return reply({ error: "Invalid request body." }, 400); }
+  catch { return respond({ error: "Invalid request body." }, 400); }
 
   const email = (input.email || "").trim().toLowerCase();
   const displayName = (input.display_name || "").trim();
@@ -61,28 +71,28 @@ Deno.serve(async (req: Request) => {
     : [];
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return reply({ error: "Enter a valid email address." }, 400);
+    return respond({ error: "Enter a valid email address." }, 400);
   }
-  if (!displayName) return reply({ error: "Enter the person's name." }, 400);
+  if (!displayName) return respond({ error: "Enter the person's name." }, 400);
   if (role !== "student" && role !== "parent" && role !== "driver") {
-    return reply({ error: "Choose a valid portal account type." }, 400);
+    return respond({ error: "Choose a valid portal account type." }, 400);
   }
   if (role === "driver") {
-    if (routeName.length < 2) return reply({ error: "Enter a route name for the driver." }, 400);
-    if (!driverStudentIds.length) return reply({ error: "Assign at least one student to this driver's route." }, 400);
+    if (routeName.length < 2) return respond({ error: "Enter a route name for the driver." }, 400);
+    if (!driverStudentIds.length) return respond({ error: "Assign at least one student to this driver's route." }, 400);
     const { data: routeStudents, error: routeStudentsError } = await adminClient
       .from("students").select("id,is_active").in("id", driverStudentIds);
     if (routeStudentsError || !routeStudents || routeStudents.length !== driverStudentIds.length ||
         routeStudents.some((s: {is_active:boolean}) => s.is_active !== true)) {
-      return reply({ error: "One or more selected students do not exist or are archived." }, 400);
+      return respond({ error: "One or more selected students do not exist or are archived." }, 400);
     }
   } else {
-    if (!studentId) return reply({ error: "Choose the student profile to link to this account." }, 400);
+    if (!studentId) return respond({ error: "Choose the student profile to link to this account." }, 400);
     const { data: student, error: studentError } = await adminClient
       .from("students").select("id,is_active")
       .eq("id", studentId).maybeSingle();
     if (studentError || !student || student.is_active !== true) {
-      return reply({ error: "The selected student does not exist or is archived." }, 400);
+      return respond({ error: "The selected student does not exist or is archived." }, 400);
     }
   }
 
@@ -143,22 +153,22 @@ Deno.serve(async (req: Request) => {
   const { data: matchingProfiles, error: profileLookupError } = await adminClient
     .from("profiles").select("user_id,role,is_active")
     .ilike("email", email).limit(2);
-  if (profileLookupError) return reply({ error: "Could not check existing portal accounts: " + profileLookupError.message }, 500);
+  if (profileLookupError) return respond({ error: "Could not check existing portal accounts: " + profileLookupError.message }, 500);
   if ((matchingProfiles || []).length > 1) {
-    return reply({ error: "More than one portal profile uses this email. Ask support to review the duplicate profiles before linking." }, 409);
+    return respond({ error: "More than one portal profile uses this email. Ask support to review the duplicate profiles before linking." }, 409);
   }
 
   if (matchingProfiles?.length === 1) {
     const existing = matchingProfiles[0];
     if (existing.role !== role) {
-      return reply({ error: "This email already has a " + existing.role + " account. An account role cannot be changed from this screen." }, 409);
+      return respond({ error: "This email already has a " + existing.role + " account. An account role cannot be changed from this screen." }, 409);
     }
     if (existing.is_active !== true) {
-      return reply({ error: "This portal account is inactive. Ask the administrator to review it." }, 403);
+      return respond({ error: "This portal account is inactive. Ask the administrator to review it." }, 403);
     }
     const linked = await linkAccount(existing.user_id);
-    if (linked.error) return reply({ error: linked.error }, linked.status);
-    return reply({
+    if (linked.error) return respond({ error: linked.error }, linked.status);
+    return respond({
       success: true, existing_account: true, role, email,
       message: "Existing portal account linked to the selected student. No new invitation was sent.",
     }, 200);
@@ -168,9 +178,9 @@ Deno.serve(async (req: Request) => {
   if (role === "student") {
     const { data: assigned, error } = await adminClient
       .from("student_accounts").select("student_id").eq("student_id", studentId).maybeSingle();
-    if (error) return reply({ error: "Could not check the student's existing portal link: " + error.message }, 500);
+    if (error) return respond({ error: "Could not check the student's existing portal link: " + error.message }, 500);
     if (assigned) {
-      return reply({ error: "This student already has a portal account. Select that account's email or review the existing link." }, 409);
+      return respond({ error: "This student already has a portal account. Select that account's email or review the existing link." }, 409);
     }
   }
 
@@ -179,7 +189,7 @@ Deno.serve(async (req: Request) => {
     data: { display_name: displayName },
   });
   if (inviteError || !invited.user) {
-    return reply({ error: inviteError?.message || "Could not send invitation." }, 400);
+    return respond({ error: inviteError?.message || "Could not send invitation." }, 400);
   }
 
   const userId = invited.user.id;
@@ -188,7 +198,7 @@ Deno.serve(async (req: Request) => {
     user_id: userId, role, display_name: displayName, email, is_active: true,
   }, { onConflict: "user_id", ignoreDuplicates: true });
   if (profileError) {
-    return reply({
+    return respond({
       error: "The invitation exists, but the portal profile could not be confirmed: " + profileError.message +
         ". Do not delete the invited user; retry from Portal Accounts or ask for an administrator review.",
     }, 500);
@@ -198,18 +208,18 @@ Deno.serve(async (req: Request) => {
     .from("profiles").select("user_id,role,is_active")
     .eq("user_id", userId).maybeSingle();
   if (confirmError || !confirmedProfile || confirmedProfile.role !== role || confirmedProfile.is_active !== true) {
-    return reply({ error: "The invitation was sent, but its portal role could not be confirmed. Please ask an administrator to review this account." }, 500);
+    return respond({ error: "The invitation was sent, but its portal role could not be confirmed. Please ask an administrator to review this account." }, 500);
   }
 
   const linked = await linkAccount(userId);
   if (linked.error) {
-    return reply({
+    return respond({
       error: "The invitation and portal profile were created, but linking failed: " + linked.error +
         ". The account was kept safely; retry using the same email to finish linking.",
     }, linked.status);
   }
 
-  return reply({
+  return respond({
     success: true, existing_account: false, role, email, display_name: displayName,
     message: "Invitation sent. The user must open the email and set a password.",
   }, 201);

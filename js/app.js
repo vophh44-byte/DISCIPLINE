@@ -553,7 +553,7 @@ async function renderAccounts(){
     vehicleFields.hidden=!isDriver;
     routeNameInput.required=isDriver;
     studentLabel.textContent=isDriver?"Students assigned to this driver":"Link to student";
-    studentHint.textContent=isDriver?"Select every student who travels on this route (use Ctrl to select more than one).":isStudent?"Choose the student profile for this login. Student access is view-only.":"Choose the child linked to this parent.";
+    studentHint.textContent=isDriver?"Select every student who travels on this route (use Ctrl on Windows or Command on Mac to select more than one).":isStudent?"Choose the student profile for this login. Student access is view-only.":"Choose the child linked to this parent.";
     select.setAttribute("aria-label",isDriver?"Select students assigned to this driver":isStudent?"Choose the student profile for this login":"Choose the linked student");
   }
   roleSelect.addEventListener("change",updateAccountForm);
@@ -572,17 +572,29 @@ async function renderAccounts(){
     }else{
       payload.student_id=select.value;
     }
-    const {data,error}=await window.disciplineSupabase.functions.invoke("create-portal-account",{body:payload});
-    if(error||!data||!data.success){msg.textContent=(data&&data.error)||error?.message||"Could not create or link account. Please try again.";}
-    else {
-      msg.style.color="#7ed6a5";
-      msg.textContent=data.existing_account
-        ?"Existing "+data.role+" account for "+data.email+" is linked. No new invitation was sent."
-        :"Invitation sent to "+data.email+". The user must open the email and set a password.";
-      e.target.reset();
-      updateAccountForm();
+    try{
+      const {data,error}=await window.disciplineSupabase.functions.invoke("create-portal-account",{body:payload});
+      if(error||!data||!data.success){
+        msg.style.color="";
+        msg.textContent=(data&&data.error)||error?.message||"Could not create or link account. Please try again.";
+      }else{
+        msg.style.color="#7ed6a5";
+        msg.textContent=data.existing_account
+          ?"Existing "+data.role+" account for "+data.email+" is linked. No new invitation was sent."
+          :"Invitation sent to "+data.email+". The user must open the email and set a password.";
+        e.target.reset();
+        updateAccountForm();
+      }
+    }catch(error){
+      console.error("Portal account request failed:",error);
+      msg.style.color="";
+      msg.textContent=error&&error.message
+        ?"Could not contact the invitation service: "+error.message
+        :"Could not contact the invitation service. Check your connection and try again.";
+    }finally{
+      btn.disabled=false;
+      btn.textContent="Create / link account";
     }
-    btn.disabled=false;btn.textContent="Create / link account";
   });
 }
 

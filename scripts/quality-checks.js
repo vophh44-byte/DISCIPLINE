@@ -437,4 +437,47 @@ check("attendance print sheet escapes student and note content before opening pr
   assert.match(app, /popup\.document\.write\(html\)/);
 });
 
+
+check("driver check-in screen exposes search, status filter, print and CSV controls", () => {
+  for (const id of ["driverCheckinSearch","driverCheckinStatusFilter","driverCheckinPrint","driverCheckinExport"]) {
+    assert.ok(app.includes('id="' + id + '"'), "missing driver report control: " + id);
+  }
+});
+
+check("driver check-in search matches student, class, route, vehicle, status and note", () => {
+  assert.match(app, /function filteredDriverCheckins\(\)/);
+  for (const field of ["s.full_name","s.student_code","s.class_group","r.route_name","r.vehicle_label","x.status","x.note"]) {
+    assert.ok(app.includes(field), "driver filter missing field: " + field);
+  }
+});
+
+check("driver check-in filter dropdown limits rows to the selected status", () => {
+  assert.match(app, /\(!status\|\|x\.status===status\)/);
+  assert.match(app, /rows\.innerHTML=visible\.map/);
+});
+
+check("driver CSV export includes route, vehicle, driver, status, note and journey details", () => {
+  for (const field of ["Date","Journey","Student name","Route","Vehicle","Driver","Status","Note","Updated at"]) {
+    assert.ok(app.includes('"' + field + '"'), "driver CSV missing column: " + field);
+  }
+  assert.match(app, /discipline-driver-checkins-/);
+});
+
+check("driver CSV export quotes text, guards formula-like values and uses UTF-8", () => {
+  assert.match(app, /function driverCsvCell\(value\)/);
+  assert.match(app, /\^\[\\s\]\*\[=\+\\-@\]/);
+  assert.match(app, /text\/csv;charset=utf-8/);
+  assert.match(app, /new Blob\(\[\"\\uFEFF\"\+csv\.join\(\"\\r\\n\"\)\]/);
+});
+
+check("driver print report includes status totals and safely escapes all dynamic record details", () => {
+  for (const value of ['count("boarded")','count("dropped_off")','count("late")','count("absent")','count("not_on_vehicle")']) {
+    assert.ok(app.includes(value), "driver report missing status count: " + value);
+  }
+  for (const value of ["s.full_name||\"Student\"","s.student_code||\"\"","r.route_name||\"—\"","r.vehicle_label||\"—\"","x.note||\"—\""]) {
+    assert.ok(app.includes("escapeHTML("+value+")"), "driver print missing escaped field: " + value);
+  }
+  assert.match(app, /popup\.document\.write\(html\)/);
+});
+
 process.stdout.write("\n" + passed + " DISCIPLINE quality checks passed.\n");

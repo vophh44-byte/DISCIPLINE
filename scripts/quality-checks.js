@@ -287,6 +287,14 @@ check("repeatable database audit checks anonymous table and function access", ()
   assert.match(securityAudit, /authenticated_select_tables/);
 });
 
+check("repeatable database audit checks the private temporary incident audio bucket", () => {
+  assert.match(securityAudit, /discipline-temp-audio/);
+  assert.match(securityAudit, /file_size_limit/);
+  assert.match(securityAudit, /allowed_mime_types/);
+  assert.match(securityAudit, /storage\\.objects/);
+  assert.match(securityAudit, /matching_storage_policy_count/);
+});
+
 
 check("RLS role smoke test exercises parent and admin in rollback-only transactions", () => {
   assert.match(roleSmoke, /where role = 'parent' and is_active = true/);

@@ -57,6 +57,9 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] First-time weekly result publication sends in-app notifications to active linked parents and student portal accounts
 - [x] Weekly publication notification migration only notifies students whose result was not previously published; recalculations of already-published weeks do not send duplicate alerts
 - [x] Weekly publication result message reports the number of portal notifications created
+- [x] Parent Management exports and prints the currently filtered parent communication history, including parent messages and review state
+- [x] Parent communication reports exclude private administrator notes and safely escape parent, student and message content
+- [x] Parent communication export respects pending/all/reviewed and search filters; administrator inbox count refreshes after review status changes
 - [x] Both deployed Edge Functions are tracked in `supabase/functions`; account provisioning tests administrator authorization, supported roles, active-student validation and student-link conflicts
 - [ ] Signed-in administrator → upload → review → verify → storage deletion end-to-end test
 - [ ] Separate parent account test after publication
@@ -84,6 +87,14 @@ Run [`scripts/security-audit.sql`](scripts/security-audit.sql) in the Supabase S
 3. Export CSV and confirm the report includes factual description, category, severity, review state, parent visibility, deduction linkage and action taken.
 4. Print the report and confirm the same filtered records and summary counts are shown.
 5. Confirm neither export contains exact recorded words, transcript text or temporary audio evidence.
+
+### Parent communication history export and print
+
+1. Open Parent Management.
+2. Select Pending review, All responses or Reviewed, and enter a search term if needed.
+3. Export CSV and confirm parent, student, topic, message and review state match the current filters.
+4. Print history and confirm the same filtered parent messages and review counts are shown.
+5. Confirm private administrator follow-up notes are not present in the export or print report.
 
 ### Achievement certificate print
 

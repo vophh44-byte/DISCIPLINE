@@ -1301,7 +1301,7 @@ async function renderIncidents(){
    const result=await db.functions.invoke("incident-audio",{body:{action:"verify",incident_id:reviewIncidentId,transcript_text:transcript}});
    if(result.error||result.data?.error)throw new Error(result.data?.error||result.error?.message||"Verification failed.");
    reviewDialog.close();reviewIncidentId=null;
-   await load();
+   await load();await refreshAdminNotificationBadge();
    showToast(hasAudio?"Transcript verified. Temporary audio has been deleted.":"Incident review verified.");
   }catch(err){message.textContent="Not verified: "+err.message;showToast("Could not verify incident: "+err.message);}
   finally{verifyButton.disabled=false;verifyButton.textContent="Verify transcript & delete audio";}

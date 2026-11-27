@@ -14,7 +14,7 @@ const styles = read("css/style.css");
 const config = read("js/supabase-config.js");
 const audioFunction = read("supabase/functions/incident-audio/index.ts");
 const accountFunction = read("supabase/functions/create-portal-account/index.ts");
-const accountPreflight = read("supabase/functions/_shared/portal-account-preflight.mjs");
+const accountPreflight = read("supabase/functions/create-portal-account/portal-account-preflight.mjs");
 const anonAccessMigration = read("supabase/migrations/20261127115000_revoke_anon_public_application_access.sql");
 const securityAudit = read("scripts/security-audit.sql");
 const roleSmoke = read("scripts/rls-role-smoke.sql");
@@ -1184,7 +1184,7 @@ check("parent journey realtime events are debounced before refreshing the portal
 
 async function runPortalPreflightUnitTests() {
   const { pathToFileURL } = require("node:url");
-  const moduleUrl = pathToFileURL(path.join(root, "supabase/functions/_shared/portal-account-preflight.mjs")).href;
+  const moduleUrl = pathToFileURL(path.join(root, "supabase/functions/create-portal-account/portal-account-preflight.mjs")).href;
   const { validatePortalAccountPreflight } = await import(moduleUrl);
   const STUDENT = "11111111-1111-4111-8111-111111111111";
   const OTHER_STUDENT = "22222222-2222-4222-8222-222222222222";

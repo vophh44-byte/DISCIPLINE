@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { validatePortalAccountPreflight } from "../_shared/portal-account-preflight.mjs";
+import { validatePortalAccountPreflight } from "./portal-account-preflight.mjs";
 
 function corsHeaders(req: Request) {
   const origin = req.headers.get("Origin") || "";

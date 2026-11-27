@@ -480,4 +480,54 @@ check("driver print report includes status totals and safely escapes all dynamic
   assert.match(app, /popup\.document\.write\(html\)/);
 });
 
+
+check("mark ledger exposes search, type filter, print and CSV controls", () => {
+  for (const id of ["markHistorySearch","markHistoryType","markHistoryPrint","markHistoryExport"]) {
+    assert.ok(app.includes('id="' + id + '"'), "missing mark ledger control: " + id);
+  }
+});
+
+check("mark ledger history search covers student, student ID, reason and transaction type", () => {
+  assert.match(app, /function filteredMarkTransactions\(\)/);
+  for (const field of ["t.students?.full_name","t.students?.student_code","t.reason","t.transaction_type"]) {
+    assert.ok(app.includes(field), "mark ledger search missing: " + field);
+  }
+});
+
+check("mark ledger type filter is applied to the displayed and exported records", () => {
+  assert.match(app, /!type\|\|t\.transaction_type===type/);
+  assert.match(app, /const visible=filteredMarkTransactions\(\)/);
+});
+
+check("mark ledger CSV contains reason, amount and before/after balances", () => {
+  for (const field of ["Date and time","Student ID","Transaction type","Reason","Amount","Balance change","Balance before","Balance after"]) {
+    assert.ok(app.includes('"' + field + '"'), "mark CSV missing column: " + field);
+  }
+  assert.match(app, /discipline-mark-ledger-/);
+});
+
+check("mark ledger CSV quotes and guards formula-like text values and uses UTF-8", () => {
+  assert.match(app, /function markCsvCell\(value\)/);
+  assert.match(app, /\^\[\\s\]\*\[=\+\\-@\]/);
+  assert.match(app, /text\/csv;charset=utf-8/);
+  assert.match(app, /new Blob\(\[\"\\uFEFF\"\+csv\.join\(\"\\r\\n\"\)\]/);
+});
+
+check("mark print report includes positive, negative and net summaries and escapes record content", () => {
+  assert.match(app, /function printMarkHistory\(\)/);
+  assert.match(app, /Positive changes/);
+  assert.match(app, /Negative changes/);
+  assert.match(app, /Net change/);
+  for (const value of ["t.students?.full_name||\"Student\"","t.students?.student_code||\"\"","t.reason||\"—\""]) {
+    assert.ok(app.includes("escapeHTML(" + value + ")"), "mark print missing escaped data: " + value);
+  }
+  assert.match(app, /popup\.document\.write\(html\)/);
+});
+
+check("mark transaction table includes both balance-before and balance-after columns", () => {
+  assert.match(app, /<th>BALANCE BEFORE<\/th><th>BALANCE AFTER<\/th>/);
+  assert.match(app, /Number\(t\.balance_before\)/);
+  assert.match(app, /Number\(t\.balance_after\)/);
+});
+
 process.stdout.write("\n" + passed + " DISCIPLINE quality checks passed.\n");

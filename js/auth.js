@@ -66,6 +66,48 @@
     picker.hidden = false;
     loginPanel.hidden = true;
   }
+
+  function hideApplicationShell() {
+    const appShell = document.querySelector(".app-shell");
+    if (appShell) {
+      appShell.hidden = true;
+      appShell.setAttribute("aria-hidden", "true");
+      appShell.setAttribute("inert", "");
+    }
+    document.body.classList.remove("is-authenticated");
+    gate.style.display = "grid";
+  }
+
+  function showSessionAlert(text, canRetry = true) {
+    let alert = document.getElementById("authSessionAlert");
+    if (!alert) {
+      alert = document.createElement("div");
+      alert.id = "authSessionAlert";
+      alert.className = "auth-session-alert";
+      alert.setAttribute("role", "alert");
+      picker.appendChild(alert);
+    }
+    alert.replaceChildren();
+    const messageText = document.createElement("p");
+    messageText.textContent = text;
+    alert.appendChild(messageText);
+    if (canRetry) {
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.className = "button button-outline";
+      retry.textContent = "Retry account check";
+      retry.addEventListener("click", async () => {
+        retry.disabled = true;
+        retry.textContent = "Checking…";
+        await restoreSavedSession();
+        if (retry.isConnected) {
+          retry.disabled = false;
+          retry.textContent = "Retry account check";
+        }
+      });
+      alert.appendChild(retry);
+    }
+  }
   function showLogin(role) {
     selectedPortal = role;
     picker.hidden = true;
@@ -669,21 +711,31 @@
 
   async function openForSession(session, expectedPortal = null) {
     if (isPasswordRecovery || !session || !session.user) return false;
-    const { data: profile, error } = await client.from("profiles")
-      .select("role,is_active,display_name").eq("user_id", session.user.id).maybeSingle();
-    if (error || !profile || profile.is_active !== true) {
-      await client.auth.signOut();
-      gate.style.display = "grid";
+    let profileResult;
+    try {
+      profileResult = await client.from("profiles")
+        .select("role,is_active,display_name").eq("user_id", session.user.id).maybeSingle();
+    } catch (error) {
+      throw new Error("Account verification is temporarily unavailable. Check your internet connection and retry.");
+    }
+    if (profileResult.error) {
+      // A database/network error is not proof that the account is invalid. Keep the session so the user can retry.
+      throw new Error("Account verification is temporarily unavailable. Check your internet connection and retry.");
+    }
+    const profile = profileResult.data;
+    if (!profile || profile.is_active !== true) {
+      try { await client.auth.signOut(); } catch (_) {}
+      hideApplicationShell();
       showPicker();
-      picker.insertAdjacentHTML("beforeend", '<p class="auth-message">This account is inactive or has no active portal role. Please contact the administrator.</p>');
+      showSessionAlert("This account is inactive or has no active portal role. Please contact the administrator.", false);
       return false;
     }
     const allowedRoles = ["admin","parent","student","driver"];
     if (!allowedRoles.includes(String(profile.role))) {
-      await client.auth.signOut();
-      gate.style.display = "grid";
+      try { await client.auth.signOut(); } catch (_) {}
+      hideApplicationShell();
       showPicker();
-      picker.insertAdjacentHTML("beforeend", '<p class="auth-message">This account has no supported portal role. Please contact the administrator.</p>');
+      showSessionAlert("This account has no supported portal role. Please contact the administrator.", false);
       return false;
     }
     if (expectedPortal && profile.role !== expectedPortal) {
@@ -700,16 +752,47 @@
       }
       return true;
     }
-    if (profile.role === "parent") {
-      await renderReadOnlyPortal("parent", profile, session.user);
+    try {
+      if (profile.role === "parent") {
+        await renderReadOnlyPortal("parent", profile, session.user);
+        return true;
+      }
+      if (profile.role === "student") {
+        await renderReadOnlyPortal("student", profile, session.user);
+        return true;
+      }
+      await renderDriverPortal(profile, session.user);
       return true;
+    } catch (error) {
+      hideApplicationShell();
+      showPicker();
+      throw new Error("Your account was verified, but the portal could not finish loading. Check your connection and retry.");
     }
-    if (profile.role === "student") {
-      await renderReadOnlyPortal("student", profile, session.user);
+  }
+
+  async function restoreSavedSession() {
+    try {
+      const { data, error } = await client.auth.getSession();
+      if (error) throw error;
+      if (!data.session) {
+        hideApplicationShell();
+        showPicker();
+        const existingAlert = document.getElementById("authSessionAlert");
+        if (existingAlert) existingAlert.remove();
+        return false;
+      }
+      if (isInviteSetup || isPasswordRecovery) {
+        showNewPasswordForm();
+        return true;
+      }
+      await openForSession(data.session);
       return true;
+    } catch (_) {
+      hideApplicationShell();
+      showPicker();
+      showSessionAlert("We couldn't verify your saved session right now. Check your internet connection and retry; your sign-in has not been cleared.");
+      return false;
     }
-    await renderDriverPortal(profile, session.user);
-    return true;
   }
 
   form.addEventListener("submit", async event => {
@@ -725,7 +808,13 @@
       if (error) {
         message.textContent = "Sign-in failed. Check your email and password.";
       } else {
-        await openForSession(data.session, selectedPortal);
+        try {
+          await openForSession(data.session, selectedPortal);
+        } catch (_) {
+          hideApplicationShell();
+          showPicker();
+          showSessionAlert("We couldn't complete account verification. Check your connection and retry; your sign-in has not been cleared.");
+        }
       }
     } catch (error) {
       message.textContent = "Could not sign in right now. Please try again.";
@@ -735,10 +824,5 @@
     }
   });
 
-  client.auth.getSession().then(({ data, error }) => {
-    if (!error && data.session) {
-      if (isInviteSetup || isPasswordRecovery) showNewPasswordForm();
-      else openForSession(data.session);
-    }
-  });
+  restoreSavedSession();
 })();

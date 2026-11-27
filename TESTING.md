@@ -6,10 +6,10 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 
 - [x] Frontend JavaScript parses: `js/app.js` and `js/auth.js`
 - [x] The workspace starts hidden/inert/aria-hidden; the authenticated portal shell releases it only after the signed-in profile is confirmed active and its role is supported
-- [x] Temporary Supabase/session lookup failures preserve the saved session, keep the workspace closed and offer an accessible retry; automated regression tests passed in the 136-check CI run
+- [x] Temporary Supabase/session lookup failures preserve the saved session, keep the workspace closed and offer an accessible retry; a fresh portal selection clears stale retry notices; automated regression tests passed in the 137-check CI run
 - [ ] Manually simulate an offline/profile lookup failure in a browser, restore the connection and confirm Retry account check opens the same session
-- [x] Latest GitHub Actions quality run passed **136 DISCIPLINE checks** on commit `b82b93f5a7c981df57f5efb9657dff0cf50b0165` ([run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/46013339176)); includes saved-session recovery and retry regression checks
-- [x] GitHub Pages build and deployment completed successfully for the session-recovery app build on commit `b82b93f5a7c981df57f5efb9657dff0cf50b0165` ([deployment run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/46013339029))
+- [x] Latest GitHub Actions quality run passed **137 DISCIPLINE checks** on commit `4ac03f6494fecbc922495c4aa893d729204c28b0` ([run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/46013736214)); includes saved-session recovery, retry and stale-notice cleanup regression checks
+- [x] GitHub Pages build and deployment completed successfully for the latest session-recovery and portal-switch app build on commit `4ac03f6494fecbc922495c4aa893d729204c28b0` ([deployment run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/46013735513))
 - [x] Fail-closed startup and session-recovery hardening are green in CI and deployed; signed-in browser smoke tests for all four roles remain a separate manual release check
 - [x] All 24 previously unindexed foreign-key columns now have B-tree indexes; PostgreSQL catalog check confirms 42/42 public foreign-key constraints are indexed
 - [x] Row Level Security is enabled on all 19 public application tables; parent route/assignment/run/check-in visibility has also been exercised under the authenticated parent role with rollback-only fixture records
@@ -22,7 +22,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] Rollback-only driver journey simulation loaded the assigned roster, started a route run, recorded a check-in and finished the run; completed status was confirmed and all temporary rows were rolled back
 - [x] Rollback-only parent journey RLS test inserted a temporary route, linked assignment, current-day run and boarding check-in, then confirmed the signed-in parent could see exactly the linked route, assignment, run and check-in (1 each); transaction rolled back; after temporarily removing the family link inside the same transaction, the parent saw 0 routes, assignments, runs and check-ins. A post-test query confirmed no temporary QA rows remained.
 - [x] Portal-account Edge Function CORS allow-list deployed as active version 7 with JWT verification enabled; production GitHub Pages and localhost development origins are supported
-- [x] Fresh GitHub Actions quality run passed for the session-recovery hardening changes (136 checks)
+- [x] Fresh GitHub Actions quality run passed for the session-recovery hardening and portal-switch cleanup changes (137 checks)
 - [x] Rollback-only incident lifecycle smoke test used the real incident creation and transcript-verification RPCs: parent visibility was 0 before publication and 1 after verification/publication, with reviewed exact words visible; transaction rolled back
 - [x] Rollback-only Monday publication smoke test published the week starting 2026-11-23, exposed the result to the linked parent and created one parent notification; transaction rolled back
 - [x] Repeatable script added at `scripts/rls-role-smoke.sql`; it simulates signed-in database claims and rolls back all three transactions, including temporary parent journey fixtures, without retaining test records

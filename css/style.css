@@ -1426,3 +1426,5 @@ table tbody tr:hover{background:#f7f9fc}
 .dash-attention-refresh:hover:not(:disabled){border-color:rgba(213,179,106,.45);background:rgba(213,179,106,.1);color:#e8c58e}
 .dash-attention-refresh:disabled{opacity:.55;cursor:wait}
 .dash-attention-refresh:focus-visible,.dash-attention-card:focus-visible{outline:2px solid #d5b36a;outline-offset:3px}
+
+.dash-attention-error{grid-column:1/-1;margin:0;padding:14px;border:1px solid rgba(225,139,133,.25);border-radius:10px;background:rgba(225,139,133,.07);color:#e6b0aa;font-size:10px;line-height:1.55}

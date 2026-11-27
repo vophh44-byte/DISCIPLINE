@@ -173,6 +173,20 @@ check("portal invitations return to the password setup screen", () => {
   assert.match(accountFunction, /redirectTo:\s*"https:\/\/vophh44-byte\.github\.io\/DISCIPLINE\/\?setup=1"/);
   assert.match(accountFunction, /inviteUserByEmail\(email/);
 });
+check("Portal Accounts always restores its submit button after invitation errors", () => {
+  const start = app.indexOf('document.getElementById("portalAccountForm").addEventListener("submit"');
+  const end = app.indexOf("\n}", start);
+  const handler = app.slice(start, end);
+  assert.ok(start >= 0 && end > start, "portal account form handler missing");
+  assert.match(handler, /try\s*\{/);
+  assert.match(handler, /catch\(error\)/);
+  assert.match(handler, /finally\s*\{[\s\S]*btn\.disabled=false;[\s\S]*btn\.textContent="Create \/ link account"/);
+  assert.match(handler, /Could not contact the invitation service/);
+});
+
+check("Driver multi-select instructions cover Windows and Mac keyboards", () => {
+  assert.match(app, /Ctrl on Windows or Command on Mac/);
+});
 
 check("recording consent checkbox starts unchecked", () => {
   assert.match(app, /<input id="incidentAudioConsent" type="checkbox">/);

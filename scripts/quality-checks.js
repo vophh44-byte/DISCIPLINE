@@ -332,6 +332,18 @@ check("administrator inbox loads unreviewed parent responses only", () => {
 check("administrator inbox surfaces incidents awaiting transcript verification", () => {
   assert.match(app, /from\("incidents"\)[\s\S]{0,300}\.eq\("transcript_verified",false\)/);
 });
+check("administrator Command Center shows live parent and incident follow-up queues", () => {
+  const start = app.indexOf("async function renderDashboard()");
+  const end = app.indexOf("\nfunction escapeHTML", start);
+  const dashboard = app.slice(start, end);
+  assert.ok(start >= 0 && end > start, "dashboard renderer missing");
+  assert.match(dashboard, /from\("parent_responses"\)[\s\S]{0,250}\.is\("reviewed_at",null\)/);
+  assert.match(dashboard, /from\("incidents"\)[\s\S]{0,250}\.eq\("transcript_verified",false\)/);
+  assert.match(dashboard, /eq\("transcript_verified",true\)\.is\("published_to_parent_at",null\)/);
+  assert.match(dashboard, /id="dashAttention"/);
+  assert.match(dashboard, /target:"parents"/);
+  assert.match(dashboard, /target:"incidents"/);
+});
 
 check("administrator inbox updates parent and incident navigation counts", () => {
   assert.match(html, /id="parentResponseNavCount"/);

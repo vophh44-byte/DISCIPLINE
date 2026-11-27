@@ -109,6 +109,8 @@
     }
   }
   function showLogin(role) {
+    const staleSessionAlert = document.getElementById("authSessionAlert");
+    if (staleSessionAlert) staleSessionAlert.remove();
     selectedPortal = role;
     picker.hidden = true;
     loginPanel.hidden = false;

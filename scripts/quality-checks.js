@@ -333,7 +333,11 @@ check("RLS role smoke test covers linked-parent route, run and check-in visibili
     assert.ok(roleSmoke.includes(field), "missing parent journey RLS result: " + field);
   }
   assert.match(roleSmoke, /set_config\('test\.parent_route_id'/);
-  assert.match(roleSmoke, /An active linked parent test account is required/);
+  assert.match(roleSmoke, /parent_student as materialized/);
+  assert.match(roleSmoke, /p\.role = 'parent'/);
+  assert.match(roleSmoke, /p\.is_active = true/);
+  assert.match(roleSmoke, /cross join parent_student/);
+  assert.equal((roleSmoke.match(/rollback;/g) || []).length, 3);
 });
 
 

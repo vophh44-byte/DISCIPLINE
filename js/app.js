@@ -692,17 +692,22 @@ async function renderAccounts(){
     directoryStatus.textContent="Loading portal accounts and linked records…";
     directoryRows.innerHTML='<tr><td colspan="7">Loading accounts…</td></tr>';
     try{
-      const [profilesResult,parentLinksResult,studentLinksResult,routesResult,assignmentsResult,studentsResult,authStatusResult]=await Promise.all([
+      const [profilesResult,parentLinksResult,studentLinksResult,routesResult,assignmentsResult,studentsResult]=await Promise.all([
         window.disciplineSupabase.from("profiles").select("user_id,role,display_name,email,is_active,created_at").in("role",["parent","student","driver"]),
         window.disciplineSupabase.from("parent_student_links").select("parent_user_id,student_id,relationship_label"),
         window.disciplineSupabase.from("student_accounts").select("user_id,student_id"),
         window.disciplineSupabase.from("driver_routes").select("id,driver_user_id,route_name,vehicle_label,is_active"),
         window.disciplineSupabase.from("driver_route_students").select("route_id,student_id,valid_from,valid_to"),
-        window.disciplineSupabase.from("students").select("id,student_code,full_name,is_active"),
-        window.disciplineSupabase.functions.invoke("create-portal-account",{body:{action:"list_auth_status"}})
+        window.disciplineSupabase.from("students").select("id,student_code,full_name,is_active")
       ]);
       const failed=[profilesResult,parentLinksResult,studentLinksResult,routesResult,assignmentsResult,studentsResult].find(x=>x.error);
       if(failed)throw failed.error;
+      let authStatusResult={data:null,error:{message:"Authentication timestamps unavailable."}};
+      try{
+        authStatusResult=await window.disciplineSupabase.functions.invoke("create-portal-account",{body:{action:"list_auth_status"}});
+      }catch(authStatusError){
+        console.warn("Portal authentication timestamps unavailable:",authStatusError);
+      }
       const profiles=profilesResult.data||[];
       const studentMap=new Map((studentsResult.data||[]).map(student=>[student.id,student]));
       const parentLinks=parentLinksResult.data||[];

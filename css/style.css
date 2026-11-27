@@ -1472,3 +1472,7 @@ table tbody tr:hover{background:#f7f9fc}
 .accounts-directory-manage{font-size:9px;padding:6px 9px;min-height:30px}
 @media(max-width:760px){.accounts-directory-filters{grid-template-columns:1fr 1fr}.accounts-directory-filters .field:first-child{grid-column:1/-1}}
 @media(max-width:560px){.accounts-directory-panel{padding:16px 14px}.accounts-directory-head{flex-direction:column}.accounts-directory-head .button{width:100%}.accounts-directory-filters{grid-template-columns:1fr}.accounts-directory-filters .field:first-child{grid-column:auto}}
+
+.accounts-directory-auth{min-width:175px;color:#344a63;font-size:9px;line-height:1.5}
+.accounts-directory-auth>strong{display:block;font-size:9px;font-weight:800;color:#4c627b}
+.accounts-directory-auth .registry-email{font-size:8px;line-height:1.5}

@@ -5,7 +5,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 ## Current automated / configuration checks
 
 - [x] Frontend JavaScript parses: `js/app.js` and `js/auth.js`
-- [ ] GitHub Actions syntax and portal privacy regression checks pass on the latest commit (see the repository Actions tab)
+- [x] GitHub Actions syntax and portal privacy regression checks pass; 16 checks passed on commit `995f8f7` ( [workflow run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/45960300092) )
 - [x] All 24 previously unindexed foreign-key columns now have B-tree indexes; PostgreSQL catalog check confirms 42/42 public foreign-key constraints are indexed
 - [x] Row Level Security is enabled on all 19 public application tables; role-specific access still requires the separate manual portal tests
 - [x] Temporary audio bucket exists and is private

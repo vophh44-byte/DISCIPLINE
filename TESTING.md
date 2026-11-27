@@ -54,6 +54,9 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] Incident Center can filter by awaiting verification/verified state as well as parent visibility and search terms
 - [x] Incident CSV and print reports share the active filters and include factual descriptions, review state, publication state and deduction linkage
 - [x] Incident reports exclude exact words, transcript text and temporary audio evidence and escape dynamic student/description content
+- [x] First-time weekly result publication sends in-app notifications to active linked parents and student portal accounts
+- [x] Weekly publication notification migration only notifies students whose result was not previously published; recalculations of already-published weeks do not send duplicate alerts
+- [x] Weekly publication result message reports the number of portal notifications created
 - [x] Both deployed Edge Functions are tracked in `supabase/functions`; account provisioning tests administrator authorization, supported roles, active-student validation and student-link conflicts
 - [ ] Signed-in administrator → upload → review → verify → storage deletion end-to-end test
 - [ ] Separate parent account test after publication
@@ -88,6 +91,14 @@ Run [`scripts/security-audit.sql`](scripts/security-audit.sql) in the Supabase S
 2. Issue or select a saved certificate for a student.
 3. Use Print certificate and confirm the A4 landscape layout, saved student name, title, description and issue date.
 4. Confirm the print action works for both private drafts and published certificates without changing portal visibility.
+
+### Weekly publication notifications
+
+1. Use a fictional test week and test student with a linked parent/student portal account.
+2. Publish that Monday–Sunday result period.
+3. Confirm an in-app notification is created for each active linked parent and active linked student account.
+4. Re-run publication for the same already-published week and confirm no duplicate notification is created for those existing published rows.
+5. Confirm the administrator result message shows the number of notifications sent.
 
 ### Weekly result export and print
 

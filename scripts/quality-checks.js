@@ -264,7 +264,7 @@ check("Portal readiness counts only active role profiles and current active rout
 
 check("Portal readiness displays aggregate totals and does not display emails or raw account identifiers", () => {
   const start=app.indexOf("// Show only aggregate counts;");
-  const end=app.indexOf('const roleSelect=document.getElementById("portalRole")',start);
+  const end=app.indexOf("const directorySearch=document.getElementById",start);
   const block=app.slice(start,end);
   assert.ok(start>=0&&end>start,"readiness loader missing");
   assert.match(block,/textContent=activeStudentIds\.size/);
@@ -277,7 +277,7 @@ check("Portal readiness displays aggregate totals and does not display emails or
 
 check("Portal readiness errors are non-blocking and never pretend a failed query is zero", () => {
   const start=app.indexOf("// Show only aggregate counts;");
-  const end=app.indexOf('const roleSelect=document.getElementById("portalRole")',start);
+  const end=app.indexOf("const directorySearch=document.getElementById",start);
   const block=app.slice(start,end);
   assert.match(block,/if\(failedReadiness\)/);
   assert.match(block,/Snapshot unavailable/);

@@ -13,6 +13,8 @@ const html = read("index.html");
 const config = read("js/supabase-config.js");
 const audioFunction = read("supabase/functions/incident-audio/index.ts");
 const accountFunction = read("supabase/functions/create-portal-account/index.ts");
+const anonAccessMigration = read("supabase/migrations/20261127115000_revoke_anon_public_application_access.sql");
+const securityAudit = read("scripts/security-audit.sql");
 
 let passed = 0;
 function check(name, callback) {
@@ -244,6 +246,33 @@ check("an existing active portal account is linked without sending another invit
   const invite = accountFunction.indexOf("inviteUserByEmail(email");
   assert.ok(existingBranch >= 0 && existingSuccess > existingBranch && invite > existingSuccess);
   assert.doesNotMatch(accountFunction.slice(existingBranch, invite), /inviteUserByEmail/);
+});
+
+
+check("anonymous table privileges are revoked from existing public application tables", () => {
+  assert.match(anonAccessMigration, /REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM anon/i);
+});
+
+check("anonymous sequence and function privileges are revoked", () => {
+  assert.match(anonAccessMigration, /REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM anon/i);
+  assert.match(anonAccessMigration, /REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA public FROM anon/i);
+});
+
+check("future public objects created by postgres do not grant anonymous privileges", () => {
+  assert.match(anonAccessMigration, /ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public[\s\S]*REVOKE ALL PRIVILEGES ON TABLES FROM anon/i);
+  assert.match(anonAccessMigration, /ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public[\s\S]*REVOKE ALL PRIVILEGES ON SEQUENCES FROM anon/i);
+  assert.match(anonAccessMigration, /ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public[\s\S]*REVOKE EXECUTE ON FUNCTIONS FROM anon/i);
+});
+
+check("anonymous access hardening leaves authenticated permissions untouched", () => {
+  assert.doesNotMatch(anonAccessMigration, /REVOKE[\s\S]{0,180}FROM authenticated/i);
+});
+
+check("repeatable database audit checks anonymous table and function access", () => {
+  assert.match(securityAudit, /tables_with_anonymous_access/);
+  assert.match(securityAudit, /anon_executable_functions/);
+  assert.match(securityAudit, /anon_table_defaults/);
+  assert.match(securityAudit, /authenticated_select_tables/);
 });
 
 process.stdout.write("\n" + passed + " DISCIPLINE quality checks passed.\n");

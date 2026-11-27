@@ -16,6 +16,7 @@ const accountFunction = read("supabase/functions/create-portal-account/index.ts"
 const anonAccessMigration = read("supabase/migrations/20261127115000_revoke_anon_public_application_access.sql");
 const securityAudit = read("scripts/security-audit.sql");
 const roleSmoke = read("scripts/rls-role-smoke.sql");
+const weeklyPublishMigration = read("supabase/migrations/20261127132000_notify_linked_portals_when_weekly_results_first_published.sql");
 
 let passed = 0;
 function check(name, callback) {
@@ -671,6 +672,33 @@ check("incident print report escapes student and factual descriptions", () => {
 
 check("incident review-state change redraws the register without changing saved records", () => {
   assert.match(app, /incidentReviewFilter\"\)\.addEventListener\(\"change\",drawIncidentRows\)/);
+});
+
+
+check("weekly result publication snapshots only results that have not been published before", () => {
+  assert.match(weeklyPublishMigration, /wr\.published_at is not null/);
+  assert.match(weeklyPublishMigration, /wr\.student_id is null/);
+  assert.match(weeklyPublishMigration, /v_newly_published uuid\[\]/);
+});
+
+check("weekly publication notifications target active linked parents and student accounts", () => {
+  assert.match(weeklyPublishMigration, /public\.parent_student_links/);
+  assert.match(weeklyPublishMigration, /p\.role = 'parent'::public\.app_role/);
+  assert.match(weeklyPublishMigration, /p\.role = 'student'::public\.app_role/);
+  assert.match(weeklyPublishMigration, /p\.is_active = true/);
+});
+
+check("weekly publication notifications are scoped to newly published students and include week dates", () => {
+  assert.match(weeklyPublishMigration, /l\.student_id = any\(v_newly_published\)/);
+  assert.match(weeklyPublishMigration, /sa\.student_id = any\(v_newly_published\)/);
+  assert.match(weeklyPublishMigration, /p_week_start::text/);
+  assert.match(weeklyPublishMigration, /v_week_end::text/);
+  assert.match(weeklyPublishMigration, /get diagnostics v_notified = row_count/);
+});
+
+check("weekly publication success message shows the number of notifications sent", () => {
+  assert.match(app, /Number\(r\.data\.notifications_sent\|\|0\)/);
+  assert.match(app, /portal notification\(s\) to linked families and students/);
 });
 
 process.stdout.write("\n" + passed + " DISCIPLINE quality checks passed.\n");

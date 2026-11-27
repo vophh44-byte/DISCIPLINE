@@ -8,9 +8,9 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] The workspace starts hidden/inert/aria-hidden; the authenticated portal shell releases it only after the signed-in profile is confirmed active and its role is supported
 - [x] Temporary Supabase/session lookup failures preserve the saved session, keep the workspace closed and offer an accessible retry; a fresh portal selection clears stale retry notices; automated regression tests passed in the 137-check CI run
 - [ ] Manually simulate an offline/profile lookup failure in a browser, restore the connection and confirm Retry account check opens the same session
-- [x] Latest GitHub Actions quality run passed **137 DISCIPLINE checks** on commit `4ac03f6494fecbc922495c4aa893d729204c28b0` ([run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/46013736214)); includes saved-session recovery, retry and stale-notice cleanup regression checks
-- [x] GitHub Pages build and deployment completed successfully for the latest session-recovery and portal-switch app build on commit `4ac03f6494fecbc922495c4aa893d729204c28b0` ([deployment run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/46013735513))
-- [x] Fail-closed startup and session-recovery hardening are green in CI and deployed; signed-in browser smoke tests for all four roles remain a separate manual release check
+- [x] Latest GitHub Actions quality run passed **142 DISCIPLINE checks** on commit `2500f17f03f2dc1582eec308062d2a1a3705ea43` ([run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/46015216964)); includes the count-only Portal Accounts readiness snapshot, active-role/current-route calculations and responsive layout checks
+- [x] GitHub Pages build and deployment completed successfully for the Portal Accounts readiness release on commit `2500f17f03f2dc1582eec308062d2a1a3705ea43` ([deployment run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/46015217454))
+- [x] Fail-closed startup, session recovery and Portal Accounts readiness improvements are green in CI and deployed; signed-in browser smoke tests for all four roles remain a separate manual release check
 - [x] All 24 previously unindexed foreign-key columns now have B-tree indexes; PostgreSQL catalog check confirms 42/42 public foreign-key constraints are indexed
 - [x] Row Level Security is enabled on all 19 public application tables; parent route/assignment/run/check-in visibility has also been exercised under the authenticated parent role with rollback-only fixture records
 - [x] Removed `anon` table privileges from all 19 public application tables; fresh live grant audit confirms zero anonymous SELECT/INSERT/UPDATE/DELETE privileges
@@ -22,7 +22,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] Rollback-only driver journey simulation loaded the assigned roster, started a route run, recorded a check-in and finished the run; completed status was confirmed and all temporary rows were rolled back
 - [x] Rollback-only parent journey RLS test inserted a temporary route, linked assignment, current-day run and boarding check-in, then confirmed the signed-in parent could see exactly the linked route, assignment, run and check-in (1 each); transaction rolled back; after temporarily removing the family link inside the same transaction, the parent saw 0 routes, assignments, runs and check-ins. A post-test query confirmed no temporary QA rows remained.
 - [x] Portal-account Edge Function CORS allow-list deployed as active version 7 with JWT verification enabled; production GitHub Pages and localhost development origins are supported
-- [x] Fresh GitHub Actions quality run passed for the session-recovery hardening and portal-switch cleanup changes (137 checks)
+- [x] Fresh GitHub Actions quality run passed for the Portal Accounts readiness snapshot and associated accessibility/privacy checks (142 checks)
 - [x] Rollback-only incident lifecycle smoke test used the real incident creation and transcript-verification RPCs: parent visibility was 0 before publication and 1 after verification/publication, with reviewed exact words visible; transaction rolled back
 - [x] Rollback-only Monday publication smoke test published the week starting 2026-11-23, exposed the result to the linked parent and created one parent notification; transaction rolled back
 - [x] Repeatable script added at `scripts/rls-role-smoke.sql`; it simulates signed-in database claims and rolls back all three transactions, including temporary parent journey fixtures, without retaining test records
@@ -81,6 +81,10 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] Invite/recovery password setup form requires 12+ characters with uppercase, lowercase, a number and a symbol (application-side check only)
 
 ## Portal account onboarding readiness
+
+- [x] Snapshot queries read active role profiles, student-account links, parent-student links, active driver routes and route assignments; a live read under the authenticated administrator role confirmed access to each summary source and returned aggregate totals only.
+- [x] Live aggregate baseline: 1 active student, 0 student logins, 1 active parent account, 0 active driver accounts, 0 active routes and 0 students assigned to active routes.
+
 
 1. Open Portal Accounts and confirm the five setup totals load from Supabase without exposing emails or user IDs.
 2. Compare active student and portal login totals with Student Registry and the account list.

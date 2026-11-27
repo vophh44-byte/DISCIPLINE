@@ -348,23 +348,33 @@ check("administrator inbox surfaces incidents awaiting transcript verification",
   assert.match(app, /from\("incidents"\)[\s\S]{0,300}\.eq\("transcript_verified",false\)/);
 });
 check("administrator Command Center shows live parent and incident follow-up queues", () => {
-  const start = app.indexOf("async function renderDashboard()");
-  const end = app.indexOf("\nfunction escapeHTML", start);
-  const dashboard = app.slice(start, end);
-  assert.ok(start >= 0 && end > start, "dashboard renderer missing");
-  assert.match(dashboard, /from\("parent_responses"\)[\s\S]{0,250}\.is\("reviewed_at",null\)/);
-  assert.match(dashboard, /from\("incidents"\)[\s\S]{0,250}\.eq\("transcript_verified",false\)/);
-  assert.match(dashboard, /eq\("transcript_verified",true\)\.is\("published_to_parent_at",null\)/);
+  const start = app.indexOf("async function refreshDashboardAttentionQueue()");
+  const end = app.indexOf("async function renderDashboard()", start);
+  const queue = app.slice(start, end);
+  const dashboardStart = end;
+  const dashboardEnd = app.indexOf("\nfunction escapeHTML", dashboardStart);
+  const dashboard = app.slice(dashboardStart, dashboardEnd);
+  assert.ok(start >= 0 && end > start, "dashboard review queue loader missing");
+  assert.match(queue, /from\("parent_responses"\)[\s\S]{0,250}\.is\("reviewed_at",null\)/);
+  assert.match(queue, /from\("incidents"\)[\s\S]{0,250}\.eq\("transcript_verified",false\)/);
+  assert.match(queue, /eq\("transcript_verified",true\)\.is\("published_to_parent_at",null\)/);
   assert.match(dashboard, /id="dashAttention"/);
-  assert.match(dashboard, /target:"parents"/);
-  assert.match(dashboard, /target:"incidents"/);
+  assert.match(queue, /target:"parents"/);
+  assert.match(queue, /target:"incidents"/);
 });
-check("Command Center review queue refresh is responsive and keyboard accessible", () => {
+check("Command Center review queue refreshes manually and polls only while open", () => {
   assert.match(app, /id="dashAttentionRefresh"/);
-  assert.match(app, /setActivePage\("dashboard"\)/);
+  assert.match(app, /await refreshDashboardAttentionQueue\(\)/);
+  assert.match(app, /window\.setInterval\([\s\S]{0,160}60000\)/);
+  assert.match(app, /clearInterval\(dashboardAttentionTimer\)/);
+  assert.match(app, /finally\{attentionRefresh\.disabled=false;attentionRefresh\.textContent="↻";\}/);
   assert.match(app, /aria-live="polite"/);
+});
+
+check("Command Center review queue is responsive and keyboard accessible", () => {
   assert.match(styles, /\.dash-attention-grid\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   assert.match(styles, /\.dash-attention-refresh:focus-visible/);
+  assert.match(styles, /\.dash-attention-card:focus-visible/);
   assert.match(styles, /@media\(max-width:1000px\)\{\.dash-attention-grid\{grid-template-columns:1fr\}\}/);
 });
 

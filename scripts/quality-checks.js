@@ -330,4 +330,38 @@ check("administrator inbox safely escapes parent messages and student names", ()
   assert.match(app, /escapeHTML\(row\.severity/);
 });
 
+
+check("weekly results provides print and CSV export controls", () => {
+  assert.match(app, /id="weeklyPrintButton"/);
+  assert.match(app, /id="weeklyExportButton"/);
+  assert.match(app, /function exportWeeklyResults\(\)/);
+  assert.match(app, /function printWeeklyResults\(\)/);
+});
+
+check("weekly CSV and print exports respect the current search and publication filters", () => {
+  assert.match(app, /function filteredWeeklyResults\(\)/);
+  assert.match(app, /const rows=filteredWeeklyResults\(\)/);
+});
+
+check("weekly CSV export prevents spreadsheet formula execution in text fields", () => {
+  assert.match(app, /const safe=isText&&\/\^\[=\+\\-@\]\/\.test\(raw\)/);
+  assert.match(app, /text\/csv;charset=utf-8/);
+});
+
+check("weekly CSV export names the file for its selected Monday", () => {
+  assert.match(app, /discipline-weekly-results-"\+input\.value\+"\.csv/);
+});
+
+check("weekly print report escapes student data before writing a print document", () => {
+  assert.match(app, /escapeHTML\(x\.students\?\.full_name\|\|"Student"\)/);
+  assert.match(app, /escapeHTML\(x\.students\?\.student_code\|\|""\)/);
+  assert.match(app, /popup\.document\.write\(printHtml\)/);
+});
+
+check("weekly print report includes date range, score totals and a responsive print layout", () => {
+  assert.match(app, /Official Monday–Sunday scoring summary/);
+  assert.match(app, /total\("total_awards"\)/);
+  assert.match(app, /@media print/);
+});
+
 process.stdout.write("\n" + passed + " DISCIPLINE quality checks passed.\n");

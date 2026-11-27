@@ -1,0 +1,216 @@
+import { createClient } from "npm:@supabase/supabase-js@2";
+
+const cors = {
+  "Access-Control-Allow-Origin": "https://vophh44-byte.github.io",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+function reply(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...cors, "Content-Type": "application/json" },
+  });
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (req.method !== "POST") return reply({ error: "Method not allowed" }, 405);
+
+  const url = Deno.env.get("SUPABASE_URL");
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !anonKey || !serviceKey) {
+    return reply({ error: "Server configuration is incomplete." }, 500);
+  }
+
+  const authHeader = req.headers.get("Authorization") || "";
+  if (!authHeader.startsWith("Bearer ")) return reply({ error: "Sign-in required." }, 401);
+
+  const userClient = createClient(url, anonKey, {
+    global: { headers: { Authorization: authHeader } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data: authData, error: authError } = await userClient.auth.getUser();
+  if (authError || !authData.user) {
+    return reply({ error: "Your session is invalid. Please sign in again." }, 401);
+  }
+
+  const adminClient = createClient(url, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data: caller, error: callerError } = await adminClient
+    .from("profiles").select("role,is_active")
+    .eq("user_id", authData.user.id).maybeSingle();
+  if (callerError || !caller || caller.role !== "admin" || caller.is_active !== true) {
+    return reply({ error: "Administrator permission required." }, 403);
+  }
+
+  let input: { email?: string; display_name?: string; role?: string; student_id?: string; route_name?: string; vehicle_label?: string; student_ids?: string[] };
+  try { input = await req.json(); }
+  catch { return reply({ error: "Invalid request body." }, 400); }
+
+  const email = (input.email || "").trim().toLowerCase();
+  const displayName = (input.display_name || "").trim();
+  const role = input.role;
+  const studentId = (input.student_id || "").trim();
+  const routeName = (input.route_name || "").trim();
+  const vehicleLabel = (input.vehicle_label || "").trim();
+  const driverStudentIds = Array.isArray(input.student_ids)
+    ? [...new Set(input.student_ids.filter((id): id is string => typeof id === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)))]
+    : [];
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return reply({ error: "Enter a valid email address." }, 400);
+  }
+  if (!displayName) return reply({ error: "Enter the person's name." }, 400);
+  if (role !== "student" && role !== "parent" && role !== "driver") {
+    return reply({ error: "Choose a valid portal account type." }, 400);
+  }
+  if (role === "driver") {
+    if (routeName.length < 2) return reply({ error: "Enter a route name for the driver." }, 400);
+    if (!driverStudentIds.length) return reply({ error: "Assign at least one student to this driver's route." }, 400);
+    const { data: routeStudents, error: routeStudentsError } = await adminClient
+      .from("students").select("id,is_active").in("id", driverStudentIds);
+    if (routeStudentsError || !routeStudents || routeStudents.length !== driverStudentIds.length ||
+        routeStudents.some((s: {is_active:boolean}) => s.is_active !== true)) {
+      return reply({ error: "One or more selected students do not exist or are archived." }, 400);
+    }
+  } else {
+    if (!studentId) return reply({ error: "Choose the student profile to link to this account." }, 400);
+    const { data: student, error: studentError } = await adminClient
+      .from("students").select("id,is_active")
+      .eq("id", studentId).maybeSingle();
+    if (studentError || !student || student.is_active !== true) {
+      return reply({ error: "The selected student does not exist or is archived." }, 400);
+    }
+  }
+
+  async function linkAccount(userId: string) {
+    if (role === "driver") {
+      const { data: routeId, error: routeError } = await userClient.rpc("admin_save_driver_route", {
+        p_driver_user_id: userId,
+        p_route_name: routeName,
+        p_vehicle_label: vehicleLabel || null,
+        p_student_ids: driverStudentIds,
+      });
+      if (routeError || !routeId) {
+        return { error: routeError?.message || "Could not save the driver's route.", status: routeError?.code === "42501" ? 403 : 400 };
+      }
+      return { error: null, status: 200 };
+    }
+    if (role === "student") {
+      const { data: byStudent, error: studentLinkError } = await adminClient
+        .from("student_accounts").select("student_id,user_id")
+        .eq("student_id", studentId).maybeSingle();
+      if (studentLinkError) return { error: studentLinkError.message, status: 500 };
+      if (byStudent && byStudent.user_id !== userId) {
+        return { error: "This student already has a different portal account. No account was changed.", status: 409 };
+      }
+
+      const { data: byUser, error: userLinkError } = await adminClient
+        .from("student_accounts").select("student_id,user_id")
+        .eq("user_id", userId).maybeSingle();
+      if (userLinkError) return { error: userLinkError.message, status: 500 };
+      if (byUser && byUser.student_id !== studentId) {
+        return { error: "This student login is already linked to another student profile.", status: 409 };
+      }
+
+      if (!byStudent) {
+        const { error } = await adminClient.from("student_accounts")
+          .insert({ student_id: studentId, user_id: userId });
+        if (error) return { error: "Could not link the student account: " + error.message, status: 500 };
+      }
+    } else {
+      const { data: existing, error: lookupError } = await adminClient
+        .from("parent_student_links").select("id")
+        .eq("parent_user_id", userId).eq("student_id", studentId).maybeSingle();
+      if (lookupError) return { error: lookupError.message, status: 500 };
+      if (!existing) {
+        const { error } = await adminClient.from("parent_student_links").insert({
+          student_id: studentId,
+          parent_user_id: userId,
+          relationship_label: "Parent/Guardian",
+        });
+        if (error) return { error: "Could not link the parent account: " + error.message, status: 500 };
+      }
+    }
+    return { error: null, status: 200 };
+  }
+
+  // Reuse an existing, active portal profile for this email instead of issuing
+  // another invitation or attempting duplicate inserts.
+  const { data: matchingProfiles, error: profileLookupError } = await adminClient
+    .from("profiles").select("user_id,role,is_active")
+    .ilike("email", email).limit(2);
+  if (profileLookupError) return reply({ error: "Could not check existing portal accounts: " + profileLookupError.message }, 500);
+  if ((matchingProfiles || []).length > 1) {
+    return reply({ error: "More than one portal profile uses this email. Ask support to review the duplicate profiles before linking." }, 409);
+  }
+
+  if (matchingProfiles?.length === 1) {
+    const existing = matchingProfiles[0];
+    if (existing.role !== role) {
+      return reply({ error: "This email already has a " + existing.role + " account. An account role cannot be changed from this screen." }, 409);
+    }
+    if (existing.is_active !== true) {
+      return reply({ error: "This portal account is inactive. Ask the administrator to review it." }, 403);
+    }
+    const linked = await linkAccount(existing.user_id);
+    if (linked.error) return reply({ error: linked.error }, linked.status);
+    return reply({
+      success: true, existing_account: true, role, email,
+      message: "Existing portal account linked to the selected student. No new invitation was sent.",
+    }, 200);
+  }
+
+  // Check student-slot conflicts before sending an invitation.
+  if (role === "student") {
+    const { data: assigned, error } = await adminClient
+      .from("student_accounts").select("student_id").eq("student_id", studentId).maybeSingle();
+    if (error) return reply({ error: "Could not check the student's existing portal link: " + error.message }, 500);
+    if (assigned) {
+      return reply({ error: "This student already has a portal account. Select that account's email or review the existing link." }, 409);
+    }
+  }
+
+  const { data: invited, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
+    redirectTo: "https://vophh44-byte.github.io/DISCIPLINE/?setup=1",
+    data: { display_name: displayName },
+  });
+  if (inviteError || !invited.user) {
+    return reply({ error: inviteError?.message || "Could not send invitation." }, 400);
+  }
+
+  const userId = invited.user.id;
+  // Ignore a raced duplicate rather than overwriting the existing profile role.
+  const { error: profileError } = await adminClient.from("profiles").upsert({
+    user_id: userId, role, display_name: displayName, email, is_active: true,
+  }, { onConflict: "user_id", ignoreDuplicates: true });
+  if (profileError) {
+    return reply({
+      error: "The invitation exists, but the portal profile could not be confirmed: " + profileError.message +
+        ". Do not delete the invited user; retry from Portal Accounts or ask for an administrator review.",
+    }, 500);
+  }
+
+  const { data: confirmedProfile, error: confirmError } = await adminClient
+    .from("profiles").select("user_id,role,is_active")
+    .eq("user_id", userId).maybeSingle();
+  if (confirmError || !confirmedProfile || confirmedProfile.role !== role || confirmedProfile.is_active !== true) {
+    return reply({ error: "The invitation was sent, but its portal role could not be confirmed. Please ask an administrator to review this account." }, 500);
+  }
+
+  const linked = await linkAccount(userId);
+  if (linked.error) {
+    return reply({
+      error: "The invitation and portal profile were created, but linking failed: " + linked.error +
+        ". The account was kept safely; retry using the same email to finish linking.",
+    }, linked.status);
+  }
+
+  return reply({
+    success: true, existing_account: false, role, email, display_name: displayName,
+    message: "Invitation sent. The user must open the email and set a password.",
+  }, 201);
+});

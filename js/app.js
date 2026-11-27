@@ -260,6 +260,7 @@ async function renderStudents(){
       <div class="table-scroll"><table class="registry-table"><thead><tr><th>STUDENT</th><th>STUDENT ID</th><th>CLASS / GROUP</th><th>PARENT / GUARDIAN</th><th>CONTACT</th><th>STATUS</th><th>ACTIONS</th></tr></thead><tbody id="studentRows"></tbody></table></div>
       <p class="registry-empty" id="studentEmpty" hidden>No student profiles found.</p>
     </section>
+     <section class="panel registry-panel student-profile-panel" id="studentProfilePanel" hidden><div id="studentProfileContent"></div></section>
     <footer class="page-footer"><span>© 2026 DISCIPLINE. Built for better journeys.</span><span>SUPABASE · ADMINISTRATOR ACCESS</span></footer>`;
 
   if(!db){ showToast("Database client is unavailable. Refresh and sign in again."); return; }
@@ -287,7 +288,7 @@ async function renderStudents(){
         <td>${escapeHTML(g.guardian_name||"—")}</td>
         <td>${escapeHTML(g.phone||"—")}<small class="registry-email">${escapeHTML(g.email||"")}</small></td>
         <td><span class="session-status completed">Active</span></td>
-        <td><div class="registry-actions"><button type="button" class="button button-quiet" data-edit-student="${escapeHTML(s.id)}">Edit</button><button type="button" class="button button-quiet registry-archive" data-archive-student="${escapeHTML(s.id)}">Archive</button></div></td>
+        <td><div class="registry-actions"><button type="button" class="button button-quiet" data-view-student="${escapeHTML(s.id)}">View profile</button><button type="button" class="button button-quiet" data-edit-student="${escapeHTML(s.id)}">Edit</button><button type="button" class="button button-quiet registry-archive" data-archive-student="${escapeHTML(s.id)}">Archive</button></div></td>
       </tr>`;
     }).join("");
     document.getElementById("studentEmpty").hidden=list.length>0;

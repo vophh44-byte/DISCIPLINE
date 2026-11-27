@@ -9,18 +9,19 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] A previously confirmed GitHub Pages deployment succeeded for functional commit `470f84e9c91f686a851fd6c83a1dcfd8284dd64f` ([deployment run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/46006180307)); this predates the latest Command Center enhancement
 - [ ] Confirm the latest `main` commit is published to GitHub Pages and complete a signed-in browser smoke test
 - [x] All 24 previously unindexed foreign-key columns now have B-tree indexes; PostgreSQL catalog check confirms 42/42 public foreign-key constraints are indexed
-- [x] Row Level Security is enabled on all 19 public application tables; role-specific access still requires the separate manual portal tests
+- [x] Row Level Security is enabled on all 19 public application tables; parent route/assignment/run/check-in visibility has also been exercised under the authenticated parent role with rollback-only fixture records
 - [x] Removed `anon` table privileges from all 19 public application tables; live grant query confirms zero anonymous SELECT/INSERT/UPDATE/DELETE privileges while authenticated SELECT remains available on all 19
 - [x] Removed anonymous execute privileges from all public functions; live query confirms zero anon-executable functions
 - [x] Rollback-only PostgreSQL RLS smoke test run under the existing parent role: visible scope is one linked student, own profile/link, two mark-ledger rows, and no incident/evidence rows
 - [x] Rollback-only PostgreSQL RLS smoke test run under the existing administrator role: visible scope includes the current two profiles, one student, one parent link and two mark-ledger rows
 - [x] Rollback-only student RLS simulation confirmed one profile, one linked student, two mark-ledger rows and zero incident/evidence rows; temporary student link and role change were rolled back
 - [x] Rollback-only driver journey simulation loaded the assigned roster, started a route run, recorded a check-in and finished the run; completed status was confirmed and all temporary rows were rolled back
+- [x] Rollback-only parent journey RLS test inserted a temporary route, linked assignment, current-day run and boarding check-in, then confirmed the signed-in parent could see exactly the linked route, assignment, run and check-in (1 each); transaction rolled back
 - [x] Portal-account Edge Function CORS allow-list deployed as active version 7 with JWT verification enabled; production GitHub Pages and localhost development origins are supported
 - [ ] Fresh GitHub Actions quality run for the Command Center review-queue changes and latest Pages deployment confirmation
 - [x] Rollback-only incident lifecycle smoke test used the real incident creation and transcript-verification RPCs: parent visibility was 0 before publication and 1 after verification/publication, with reviewed exact words visible; transaction rolled back
 - [x] Rollback-only Monday publication smoke test published the week starting 2026-11-23, exposed the result to the linked parent and created one parent notification; transaction rolled back
-- [x] Repeatable script added at `scripts/rls-role-smoke.sql`; it simulates signed-in database claims and rolls back both transactions without changing records
+- [x] Repeatable script added at `scripts/rls-role-smoke.sql`; it simulates signed-in database claims and rolls back all three transactions, including temporary parent journey fixtures, without retaining test records
 - [x] Revoked anonymous default privileges for future public tables, sequences and functions created by the `postgres` migration owner; platform-managed `supabase_admin` defaults were not changed
 - [x] Temporary audio bucket exists and is private
 - [x] Audio bucket accepts only the configured audio MIME types and is limited to 8 MB

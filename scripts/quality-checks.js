@@ -15,6 +15,7 @@ const audioFunction = read("supabase/functions/incident-audio/index.ts");
 const accountFunction = read("supabase/functions/create-portal-account/index.ts");
 const anonAccessMigration = read("supabase/migrations/20261127115000_revoke_anon_public_application_access.sql");
 const securityAudit = read("scripts/security-audit.sql");
+const roleSmoke = read("scripts/rls-role-smoke.sql");
 
 let passed = 0;
 function check(name, callback) {
@@ -273,6 +274,21 @@ check("repeatable database audit checks anonymous table and function access", ()
   assert.match(securityAudit, /anon_executable_functions/);
   assert.match(securityAudit, /anon_table_defaults/);
   assert.match(securityAudit, /authenticated_select_tables/);
+});
+
+
+check("RLS role smoke test exercises parent and admin in rollback-only transactions", () => {
+  assert.match(roleSmoke, /where role = 'parent' and is_active = true/);
+  assert.match(roleSmoke, /where role = 'admin' and is_active = true/);
+  assert.equal((roleSmoke.match(/set local role authenticated;/g) || []).length, 2);
+  assert.equal((roleSmoke.match(/rollback;/g) || []).length, 2);
+});
+
+check("RLS smoke test inspects profile, student, mark, incident and evidence boundaries", () => {
+  for (const field of ["visible_profiles", "visible_students", "visible_mark_transactions", "visible_parent_links", "visible_incidents", "visible_incident_evidence"]) {
+    assert.ok(roleSmoke.includes(field), "missing RLS smoke result: " + field);
+  }
+  assert.match(roleSmoke, /not a substitute for signing into the website/);
 });
 
 process.stdout.write("\n" + passed + " DISCIPLINE quality checks passed.\n");

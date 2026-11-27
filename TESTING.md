@@ -84,8 +84,12 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 
 ## Existing portal account directory
 
+- [x] `create-portal-account` Edge Function deployed as active version 8 with JWT verification still enabled; the `list_auth_status` action runs only after signed-in user and active-administrator checks and returns only user ID plus invitation, email-confirmation and last-sign-in timestamps for portal roles.
+
 1. Open Portal Accounts and confirm the directory lists only parent, student and driver profiles.
 2. Search by display name or email; filter separately by portal type and active/inactive profile state.
+3. Confirm the Authentication Setup column distinguishes Email confirmed, Invitation issued · not confirmed, No invitation timestamp and Unavailable; it may show the last sign-in timestamp when Auth provides it.
+4. Confirm the invitation timestamp is described as an invitation record only, not proof of actual inbox delivery.
 3. Confirm parent rows show linked-student counts, student rows show their linked student profile, and driver rows show active route names and current assignment counts.
 4. Open the management action on a parent, student and driver row and confirm it opens Parent Management, Student Registry or Drivers & Routes respectively.
 5. Confirm all user-provided names, emails and route names display as text and cannot inject markup.

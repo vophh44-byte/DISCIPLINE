@@ -837,7 +837,7 @@ async function renderWeeklyReports(){
    <article class="weekly-stat"><span>Combined weekly net</span><strong id="weeklyNetTotal">—</strong><small>Sum of displayed student net scores</small></article>
   </section>
   <section class="weekly-results-panel">
-   <div class="weekly-section-heading"><div><span class="weekly-step">02 · REVIEW SCORES</span><h2>Student results register</h2><p>Check each student's score breakdown and portal visibility before publishing.</p></div><span class="weekly-register-label">SELECTED WEEK</span></div>
+    <div class="weekly-section-heading"><div><span class="weekly-step">02 · REVIEW SCORES</span><h2>Student results register</h2><p>Check each student score breakdown and portal visibility before publishing.</p></div><div class="weekly-result-actions"><span class="weekly-register-label">SELECTED WEEK</span><button class="button button-outline" id="weeklyPrintButton" type="button">Print report</button><button class="button button-quiet" id="weeklyExportButton" type="button">Export CSV</button></div></div>
    <div class="weekly-filter-bar">
     <div class="field"><label for="weeklySearch">Find a student</label><input id="weeklySearch" type="search" placeholder="Search student name or ID…" aria-label="Search weekly results"></div>
     <div class="field"><label for="weeklyStatusFilter">Publication status</label><select id="weeklyStatusFilter"><option value="">All results</option><option value="published">Published</option><option value="pending">Not published</option></select></div>
@@ -860,12 +860,15 @@ async function renderWeeklyReports(){
  if(!db){showToast("Database is unavailable.");return;}
  const input=document.getElementById("weeklyStart"),tbody=document.getElementById("weeklyResultRows"),info=document.getElementById("weeklyPublishInfo"),publish=document.getElementById("publishWeeklyResults");
  let resultRecords=[];
- function drawResults(){
-  const query=document.getElementById("weeklySearch").value.trim().toLowerCase(),status=document.getElementById("weeklyStatusFilter").value;
-  const filtered=resultRecords.filter(x=>{
-   const published=!!x.published_at;
-   return (!status||(status==="published"?published:!published))&&[x.students?.full_name,x.students?.student_code].join(" ").toLowerCase().includes(query);
-  });
+  function filteredWeeklyResults(){
+   const query=document.getElementById("weeklySearch").value.trim().toLowerCase(),status=document.getElementById("weeklyStatusFilter").value;
+   return resultRecords.filter(x=>{
+    const published=!!x.published_at;
+    return (!status||(status==="published"?published:!published))&&[x.students?.full_name,x.students?.student_code].join(" ").toLowerCase().includes(query);
+   });
+  }
+  function drawResults(){
+   const filtered=filteredWeeklyResults();
   tbody.innerHTML=filtered.map(x=>{
    const published=!!x.published_at,net=Number(x.weekly_net||0);
    return '<tr><td><strong>'+escapeHTML(x.students?.full_name||"Student")+'</strong><small class="registry-email">'+escapeHTML(x.students?.student_code||"")+'</small></td><td class="weekly-positive">+'+Number(x.total_awards||0)+'</td><td class="weekly-negative">−'+Number(x.total_deductions||0)+'</td><td>+'+Number(x.total_received||0)+'</td><td>−'+Number(x.total_transferred||0)+'</td><td class="'+(net>=0?"positive-text":"negative-text")+'"><strong>'+(net>0?"+":"")+net+'</strong></td><td><strong>'+Number(x.lifetime_balance||0)+'</strong></td><td><span class="session-status '+(published?"completed":"pending")+'">'+(published?"Published":"Not published")+'</span></td></tr>';

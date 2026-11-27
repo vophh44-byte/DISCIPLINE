@@ -549,7 +549,8 @@ check("student profile lifetime balance adds starting marks to the full saved ma
 });
 
 check("student profile summarizes recent attendance and portal links", () => {
-  assert.match(app, /attendance\)[\s\S]{0,300}\.limit\(20\)/);
+  assert.match(app, /db\.from\("attendance"\)/);
+  assert.match(app, /\.order\("recorded_at",\{ascending:false\}\)\.limit\(20\)/);
   assert.match(app, /studentAccount\.data\?"Student linked":"No student login"/);
   assert.match(app, /parentLinks\.data\|\|\[\]/);
 });

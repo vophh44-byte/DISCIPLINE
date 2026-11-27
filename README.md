@@ -33,7 +33,7 @@ Use audio only when the institution has a lawful, appropriate basis and has foll
 - Frontend: HTML, CSS and JavaScript; no frontend build step.
 - Backend: Supabase Auth, PostgreSQL with Row Level Security, Supabase Storage and Edge Functions.
 - The browser uses only the Supabase publishable client key. Never place a Supabase secret or service-role key in frontend files or commit history.
-- Incident audio is handled by the `incident-audio` Edge Function. It validates the signed-in administrator and performs private upload, short-lived playback URL creation, deletion and verification.
+- Incident audio is handled by the `incident-audio` Edge Function. It validates the signed-in administrator and performs private upload, short-lived playback URL creation, deletion and verification. Signed-in administrators have read-only access to evidence metadata; writes to evidence metadata are handled by the server-side function.
 - Database migrations already exist in the connected project. Apply further schema changes as migrations and retain the existing RLS policies.
 
 ## Run locally

@@ -701,4 +701,58 @@ check("weekly publication success message shows the number of notifications sent
   assert.match(app, /portal notification\(s\) to linked families and students/);
 });
 
+
+check("Parent Management provides print and CSV history controls", () => {
+  assert.match(app, /id="parentResponsePrint"/);
+  assert.match(app, /id="parentResponseExport"/);
+  assert.match(app, /function exportParentResponses\(\)/);
+  assert.match(app, /function printParentResponses\(\)/);
+});
+
+check("parent response export and print use the same pending/all/reviewed and search filters", () => {
+  assert.match(app, /function filteredParentResponses\(\)/);
+  const start=app.indexOf("function exportParentResponses()");
+  const end=app.indexOf("function printParentResponses()",start);
+  const csv=app.slice(start,end);
+  assert.match(csv, /filteredParentResponses\(\)/);
+  const printStart=app.indexOf("function printParentResponses()");
+  const printEnd=app.indexOf('document.getElementById("parentResponseExport")',printStart);
+  assert.match(app.slice(printStart,printEnd), /filteredParentResponses\(\)/);
+});
+
+check("parent response CSV includes parent, student, message and review state but omits private admin notes", () => {
+  const start=app.indexOf("function exportParentResponses()");
+  const end=app.indexOf("function printParentResponses()",start);
+  const csv=app.slice(start,end);
+  for (const field of ["Parent email","Student ID","Parent message","Review status","Reviewed at"]) {
+    assert.ok(csv.includes('"' + field + '"'), "parent response CSV missing column: " + field);
+  }
+  assert.doesNotMatch(csv, /admin_note|Private administrator note/);
+  assert.match(csv, /text\/csv;charset=utf-8/);
+});
+
+check("parent response print report excludes private administrator notes", () => {
+  const start=app.indexOf("function printParentResponses()");
+  const end=app.indexOf('document.getElementById("parentResponseExport")',start);
+  const report=app.slice(start,end);
+  assert.doesNotMatch(report, /admin_note|x\.admin_note/);
+  assert.match(report, /Private administrator notes are intentionally omitted/);
+  assert.match(report, /popup\.document\.write\(html\)/);
+});
+
+check("parent response print report escapes parent, student and message content", () => {
+  const start=app.indexOf("function printParentResponses()");
+  const end=app.indexOf('document.getElementById("parentResponseExport")',start);
+  const report=app.slice(start,end);
+  assert.match(report, /escapeHTML\(x\.profiles\?\.display_name\|\|\"Parent\"\)/);
+  assert.match(report, /escapeHTML\(x\.students\?\.full_name\|\|\"Student\"\)/);
+  assert.match(report, /escapeHTML\(x\.message\|\|\"—\"\)/);
+});
+
+check("parent response review changes refresh the administrator inbox badge", () => {
+  const start=app.indexOf("async function renderParents()");
+  const end=app.indexOf("async function renderLedger()",start);
+  assert.match(app.slice(start,end), /await refreshAdminNotificationBadge\(\)/);
+});
+
 process.stdout.write("\n" + passed + " DISCIPLINE quality checks passed.\n");

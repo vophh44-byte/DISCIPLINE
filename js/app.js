@@ -960,6 +960,7 @@ async function renderParents(){
  const responseRows=responses.data||[];
  document.getElementById("totalParentResponseCount").textContent=responseRows.length;
  document.getElementById("pendingParentResponseCount").textContent=responseRows.filter(x=>!x.reviewed_at).length;
+    await refreshAdminNotificationBadge();
  function drawResponses(){
   const filter=document.getElementById("parentResponseFilter").value;
   const q=document.getElementById("parentResponseSearch").value.trim().toLowerCase();

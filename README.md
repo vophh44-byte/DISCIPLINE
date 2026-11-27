@@ -13,7 +13,7 @@ DISCIPLINE is connected to Supabase for authenticated, role-scoped records. The 
 - Controlled publication of verified behaviour reports to linked parent accounts
 - Parent notifications, responses, certificates and reporting
 
-Student portal accounts are read-only. Parent accounts are created by an administrator and can access only linked student information allowed by the database policies.
+Student portal accounts are read-only and can view only their own published weekly scores and mark history. They do not see incident narratives, exact words or evidence. Parent accounts are created by an administrator and can access only linked student information allowed by the database policies; incident details are visible to a parent only after administrator verification and publication.
 
 ## Incident audio and transcript handling
 

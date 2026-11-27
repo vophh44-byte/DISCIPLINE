@@ -378,6 +378,8 @@ check("administrator Command Center shows live parent and incident follow-up que
   assert.match(dashboard, /id="dashAttention"/);
   assert.match(queue, /target:"parents"/);
   assert.match(queue, /target:"incidents"/);
+  assert.match(queue, /select\("id",\{count:"exact",head:true\}\)/);
+  assert.doesNotMatch(queue, /exact_words|factual_description|transcript|storage_path|audio|message/i);
 });
 check("Command Center review queue refreshes manually and polls only while open", () => {
   assert.match(app, /id="dashAttentionRefresh"/);

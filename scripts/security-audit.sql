@@ -99,3 +99,37 @@ cross join lateral aclexplode(d.defaclacl) a
 where d.defaclrole = 'postgres'::regrole
   and d.defaclnamespace = 'public'::regnamespace
   and a.grantee = 'anon'::regrole;
+
+-- 9) Confirm temporary incident audio is stored in the intended private bucket.
+--    The expected bucket is private, limited to 8 MB, and accepts only the
+--    configured browser audio formats. The storage policies are administrator-only.
+select
+  b.id as bucket_id,
+  b.public as is_public,
+  b.file_size_limit,
+  b.allowed_mime_types,
+  (select count(*) from pg_policies p
+    where p.schemaname = 'storage'
+      and p.tablename = 'objects'
+      and (
+        coalesce(p.qual, '') ilike '%discipline-temp-audio%'
+        or coalesce(p.with_check, '') ilike '%discipline-temp-audio%'
+      )
+  ) as matching_storage_policy_count
+from storage.buckets b
+where b.id = 'discipline-temp-audio';
+
+select
+  policyname,
+  cmd,
+  roles,
+  qual,
+  with_check
+from pg_policies
+where schemaname = 'storage'
+  and tablename = 'objects'
+  and (
+    coalesce(qual, '') ilike '%discipline-temp-audio%'
+    or coalesce(with_check, '') ilike '%discipline-temp-audio%'
+  )
+order by policyname;

@@ -14,6 +14,7 @@ const styles = read("css/style.css");
 const config = read("js/supabase-config.js");
 const audioFunction = read("supabase/functions/incident-audio/index.ts");
 const accountFunction = read("supabase/functions/create-portal-account/index.ts");
+const accountPreflight = read("supabase/functions/_shared/portal-account-preflight.mjs");
 const anonAccessMigration = read("supabase/migrations/20261127115000_revoke_anon_public_application_access.sql");
 const securityAudit = read("scripts/security-audit.sql");
 const roleSmoke = read("scripts/rls-role-smoke.sql");
@@ -31,6 +32,9 @@ for (const file of ["js/auth.js", "js/app.js", "js/supabase-config.js"]) {
   check(file + " parses", () => {
     new vm.Script(read(file), { filename: file });
   });
+check("shared portal-account preflight module parses", () => {
+  new vm.Script(accountPreflight, { filename: "portal-account-preflight.mjs" });
+});
 }
 
 check("all four portal choices are present", () => {
@@ -439,24 +443,24 @@ check("Portal account preflight is protected by the active administrator check",
 });
 
 check("Portal preview and final submission share the same read-only validator before invitation", () => {
-  const validator=accountFunction.indexOf("async function validatePortalAccountReadiness()");
-  const preflight=accountFunction.indexOf('if (input.action === "preflight")');
-  const createValidation=accountFunction.lastIndexOf("const readiness = await validatePortalAccountReadiness()");
-  const invitation=accountFunction.indexOf("inviteUserByEmail(email");
-  assert.ok(validator>=0&&preflight>validator&&createValidation>preflight&&invitation>createValidation);
-  assert.match(accountFunction, /status: "ok" \| "blocked"/);
+  assert.match(accountFunction, /validatePortalAccountReadiness = \(\) => validatePortalAccountPreflight/);
+  assert.match(accountFunction, /if \(input\.action === "preflight"\)[\s\S]*validatePortalAccountReadiness/);
+  assert.match(accountFunction, /const readiness = await validatePortalAccountReadiness\(\)/);
+  assert.match(accountFunction, /inviteUserByEmail\(email/);
+  assert.match(accountPreflight, /export async function validatePortalAccountPreflight/);
+  assert.match(accountPreflight, /return \{ ready: blockers\.length === 0, checks, blockers \}/);
 });
 
 check("Student portal preflight catches an existing student or user link", () => {
-  assert.match(accountFunction, /from\("student_accounts"\)\.select\("student_id,user_id"\)\.eq\("student_id", studentId\)/);
-  assert.match(accountFunction, /eq\("user_id", existingUserId\)/);
-  assert.match(accountFunction, /Student portal link/);
+  assert.match(accountPreflight, /from\("student_accounts"\)\.select\("student_id,user_id"\)\.eq\("student_id", studentId\)/);
+  assert.match(accountPreflight, /eq\("user_id", existingUserId\)/);
+  assert.match(accountPreflight, /Student portal link/);
 });
 
 check("Driver preflight blocks students assigned to another active route before invitation", () => {
-  assert.match(accountFunction, /from\("driver_route_students"\)\.select\("student_id,route_id"\)/);
-  assert.match(accountFunction, /from\("driver_routes"\)[\s\S]{0,180}\.eq\("is_active", true\)/);
-  assert.match(accountFunction, /already have an active assignment with another driver/);
+  assert.match(accountPreflight, /from\("driver_route_students"\)\.select\("student_id,route_id"\)/);
+  assert.match(accountPreflight, /from\("driver_routes"\)[\s\S]{0,180}\.eq\("is_active", true\)/);
+  assert.match(accountPreflight, /already have an active assignment with another driver/);
 });
 
 check("Portal Account form automatically repeats preflight before account creation", () => {
@@ -1180,4 +1184,208 @@ check("parent journey realtime events are debounced before refreshing the portal
   assert.match(handler, /console\.error\("Parent journey refresh failed:"/);
 });
 
-process.stdout.write("\n" + passed + " DISCIPLINE quality checks passed.\n");
+
+async function runPortalPreflightUnitTests() {
+  const { pathToFileURL } = require("node:url");
+  const moduleUrl = pathToFileURL(path.join(root, "supabase/functions/_shared/portal-account-preflight.mjs")).href;
+  const { validatePortalAccountPreflight } = await import(moduleUrl);
+  const STUDENT = "11111111-1111-4111-8111-111111111111";
+  const OTHER_STUDENT = "22222222-2222-4222-8222-222222222222";
+  const DRIVER_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const DRIVER_B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+  const USER_PARENT = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+  const USER_STUDENT = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+  const TODAY = "2026-11-27";
+
+  function makeClient(seed = {}) {
+    const state = {
+      profiles: seed.profiles || [],
+      students: seed.students || [{ id: STUDENT, is_active: true }, { id: OTHER_STUDENT, is_active: true }],
+      student_accounts: seed.student_accounts || [],
+      driver_route_students: seed.assignments || [],
+      driver_routes: seed.routes || [],
+      authUsers: seed.authUsers || [],
+      errors: seed.errors || {},
+      calls: [],
+      writes: 0
+    };
+    function match(row, filters) {
+      return Object.entries(filters).every(([key, filter]) => {
+        if (filter.kind === "eq") return row[key] === filter.value;
+        if (filter.kind === "ilike") return String(row[key] || "").toLowerCase() === filter.value.toLowerCase().replace(/\\/g, "");
+        if (filter.kind === "in") return filter.value.includes(row[key]);
+        if (filter.kind === "lte") return String(row[key] || "") <= filter.value;
+        if (filter.kind === "activeWindow") return row.valid_to == null || String(row.valid_to) >= filter.value;
+        return true;
+      });
+    }
+    class Query {
+      constructor(table) { this.table=table; this.filters={}; this.limitValue=null; }
+      select() { this.stateSelect=true; return this; }
+      eq(key,value) { this.filters[key]={kind:"eq",value}; return this; }
+      ilike(key,value) { this.filters[key]={kind:"ilike",value}; return this; }
+      in(key,value) { this.filters[key]={kind:"in",value}; return this; }
+      lte(key,value) { this.filters[key]={kind:"lte",value}; return this; }
+      or(expression) {
+        const date=expression.split("valid_to.gte.")[1];
+        this.filters.valid_to={kind:"activeWindow",value:date};
+        return this;
+      }
+      limit(value) { this.limitValue=value; return this; }
+      result(single) {
+        state.calls.push({table:this.table,filters:this.filters,single});
+        const error=state.errors[this.table] || null;
+        if(error)return {data:null,error:{message:error}};
+        let rows=(state[this.table]||[]).filter(row=>match(row,this.filters));
+        if(this.limitValue!=null)rows=rows.slice(0,this.limitValue);
+        if(single){
+          if(rows.length>1)return {data:null,error:{message:"Multiple rows"}};
+          return {data:rows[0]||null,error:null};
+        }
+        return {data:rows,error:null};
+      }
+      maybeSingle() { return Promise.resolve(this.result(true)); }
+      then(resolve,reject) { return Promise.resolve(this.result(false)).then(resolve,reject); }
+    }
+    const client={
+      from(table) { return new Query(table); },
+      auth:{admin:{
+        async listUsers({page,perPage}) {
+          state.calls.push({table:"auth.users",page});
+          if(state.errors["auth.users"])return {data:null,error:{message:state.errors["auth.users"]}};
+          return {data:{users:state.authUsers.slice((page-1)*perPage,page*perPage)},error:null};
+        },
+        async inviteUserByEmail() { state.writes++; throw new Error("preflight must never invite"); }
+      }},
+      async rpc() { state.writes++; throw new Error("preflight must never call RPC"); }
+    };
+    return {client,state};
+  }
+  function payload(overrides={}) {
+    return {
+      email:"new.person@example.com",displayName:"New Person",role:"parent",
+      studentId:STUDENT,routeName:"North Route",vehicleLabel:"Van 1",
+      rawDriverStudentIds:[STUDENT],today:TODAY, ...overrides
+    };
+  }
+  async function expect(name, run) {
+    await run();
+    passed++;
+    process.stdout.write("PASS  " + name + "\n");
+  }
+
+  await expect("Preflight rejects invalid input before making database calls", async () => {
+    const {client,state}=makeClient();
+    const result=await validatePortalAccountPreflight({...payload({email:"bad",displayName:""}),adminClient:client});
+    assert.equal(result.ready,false);
+    assert.equal(state.calls.length,0);
+    assert.equal(state.writes,0);
+  });
+  await expect("New parent account passes when email is unused and student is active", async () => {
+    const {client,state}=makeClient();
+    const result=await validatePortalAccountPreflight({...payload(),adminClient:client});
+    assert.equal(result.ready,true);
+    assert.ok(result.checks.some(x=>x.label==="Student profile"&&x.status==="ok"));
+    assert.equal(state.writes,0);
+  });
+  await expect("Existing active parent account may be linked without a new invitation", async () => {
+    const {client,state}=makeClient({profiles:[{user_id:USER_PARENT,email:"new.person@example.com",role:"parent",is_active:true}]});
+    const result=await validatePortalAccountPreflight({...payload(),adminClient:client});
+    assert.equal(result.ready,true);
+    assert.equal(state.calls.some(x=>x.table==="auth.users"),false);
+    assert.equal(state.writes,0);
+  });
+  await expect("Inactive or mismatched portal profiles block account setup", async () => {
+    for(const profile of [
+      {user_id:USER_PARENT,email:"new.person@example.com",role:"parent",is_active:false},
+      {user_id:USER_PARENT,email:"new.person@example.com",role:"driver",is_active:true}
+    ]){
+      const {client}=makeClient({profiles:[profile]});
+      const result=await validatePortalAccountPreflight({...payload(),adminClient:client});
+      assert.equal(result.ready,false);
+      assert.ok(result.blockers.some(x=>/inactive|already has a driver account/.test(x)));
+    }
+  });
+  await expect("Existing Auth user without a portal profile is safely blocked for review", async () => {
+    const {client,state}=makeClient({authUsers:[{id:USER_PARENT,email:"new.person@example.com"}]});
+    const result=await validatePortalAccountPreflight({...payload(),adminClient:client});
+    assert.equal(result.ready,false);
+    assert.match(result.blockers.join(" "),/no matching portal profile/);
+    assert.equal(state.writes,0);
+  });
+  await expect("Student portal preflight blocks a student already linked to another login", async () => {
+    const {client}=makeClient({student_accounts:[{student_id:STUDENT,user_id:USER_STUDENT}]});
+    const result=await validatePortalAccountPreflight({...payload({role:"student"}),adminClient:client});
+    assert.equal(result.ready,false);
+    assert.match(result.blockers.join(" "),/already linked/);
+  });
+  await expect("Student portal preflight allows an existing matching account link", async () => {
+    const {client}=makeClient({
+      profiles:[{user_id:USER_STUDENT,email:"new.person@example.com",role:"student",is_active:true}],
+      student_accounts:[{student_id:STUDENT,user_id:USER_STUDENT}]
+    });
+    const result=await validatePortalAccountPreflight({...payload({role:"student"}),adminClient:client});
+    assert.equal(result.ready,true);
+  });
+  await expect("Archived student profiles fail closed", async () => {
+    const {client}=makeClient({students:[{id:STUDENT,is_active:false}]});
+    const result=await validatePortalAccountPreflight({...payload(),adminClient:client});
+    assert.equal(result.ready,false);
+    assert.match(result.blockers.join(" "),/archived/);
+  });
+  await expect("Driver preflight rejects an assignment on another active route", async () => {
+    const {client}=makeClient({
+      assignments:[{student_id:STUDENT,route_id:"route-1",valid_from:"2026-01-01",valid_to:null}],
+      routes:[{id:"route-1",driver_user_id:DRIVER_A,is_active:true}]
+    });
+    const result=await validatePortalAccountPreflight({...payload({role:"driver"}),adminClient:client});
+    assert.equal(result.ready,false);
+    assert.match(result.blockers.join(" "),/already have an active assignment/);
+  });
+  await expect("Driver preflight allows current assignments under the same driver", async () => {
+    const {client}=makeClient({
+      profiles:[{user_id:DRIVER_A,email:"new.person@example.com",role:"driver",is_active:true}],
+      assignments:[{student_id:STUDENT,route_id:"route-1",valid_from:"2026-01-01",valid_to:null}],
+      routes:[{id:"route-1",driver_user_id:DRIVER_A,is_active:true}]
+    });
+    const result=await validatePortalAccountPreflight({...payload({role:"driver"}),adminClient:client});
+    assert.equal(result.ready,true);
+  });
+  await expect("Assignments on inactive routes do not block a new driver", async () => {
+    const {client}=makeClient({
+      assignments:[{student_id:STUDENT,route_id:"route-old",valid_from:"2026-01-01",valid_to:null}],
+      routes:[{id:"route-old",driver_user_id:DRIVER_A,is_active:false}]
+    });
+    const result=await validatePortalAccountPreflight({...payload({role:"driver"}),adminClient:client});
+    assert.equal(result.ready,true);
+  });
+  await expect("Database lookup failures fail closed for account and route conflict checks", async () => {
+    const {client}=makeClient({errors:{profiles:"temporary profiles error"}});
+    const result=await validatePortalAccountPreflight({...payload(),adminClient:client});
+    assert.equal(result.ready,false);
+    const {client:driverClient}=makeClient({errors:{driver_route_students:"temporary assignment error"}});
+    const driverResult=await validatePortalAccountPreflight({...payload({role:"driver"}),adminClient:driverClient});
+    assert.equal(driverResult.ready,false);
+    assert.match(driverResult.blockers.join(" "),/Could not check current driver assignments/);
+  });
+  await expect("Preflight does not mutate Auth, profiles, student links or driver routes", async () => {
+    const scenarios=[
+      makeClient(),
+      makeClient({profiles:[{user_id:USER_PARENT,email:"new.person@example.com",role:"parent",is_active:true}]}),
+      makeClient({assignments:[{student_id:STUDENT,route_id:"route-1",valid_from:"2026-01-01",valid_to:null}],routes:[{id:"route-1",driver_user_id:DRIVER_A,is_active:true}]})
+    ];
+    for(const {client,state} of scenarios){
+      await validatePortalAccountPreflight({...payload(),adminClient:client});
+      assert.equal(state.writes,0);
+      assert.ok(state.calls.every(call=>!["insert","update","upsert","delete","rpc","inviteUserByEmail"].includes(call.operation)));
+    }
+  });
+}
+
+runPortalPreflightUnitTests().then(() => {
+  process.stdout.write("\n" + passed + " DISCIPLINE quality checks passed.\n");
+}).catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
+

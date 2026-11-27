@@ -5,14 +5,15 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 ## Current automated / configuration checks
 
 - [x] Portal Accounts preflight preview is read-only: it does not create Auth users, change profile links or send email; final submit reruns the same server-side checks before provisioning
-- [ ] Manually verify parent, student and driver preview outcomes with fictional test records, including a student already assigned to another active driver; do not send real invitations as part of this check
+- [x] Shared preflight module is unit-tested with a mocked Supabase client for unused/existing emails, inactive/mismatched profiles, student-link conflicts, active/inactive driver-route conflicts and fail-closed database errors; tests assert no write calls occur
+- [ ] Manually verify parent, student and driver preview rendering in a signed-in browser with fictional test records; automated mocked tests already cover server outcomes; do not send real invitations as part of this check
 
 - [x] Frontend JavaScript parses: `js/app.js` and `js/auth.js`
 - [x] The workspace starts hidden/inert/aria-hidden; the authenticated portal shell releases it only after the signed-in profile is confirmed active and its role is supported
-- [x] Temporary Supabase/session lookup failures preserve the saved session, keep the workspace closed and offer an accessible retry; a fresh portal selection clears stale retry notices; automated regression tests passed in the 163-check CI run on commit `8970500cf2633d20466e3c7ca67d463dab832b51`
+- [x] Temporary Supabase/session lookup failures preserve the saved session, keep the workspace closed and offer an accessible retry; a fresh portal selection clears stale retry notices; automated regression tests are extended with mocked account-preflight cases; the new run is pending
 - [ ] Manually simulate an offline/profile lookup failure in a browser, restore the connection and confirm Retry account check opens the same session
-- [x] GitHub Actions quality run passed **163 DISCIPLINE checks** on commit `8970500cf2633d20466e3c7ca67d463dab832b51` ([run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/46028824258))
-- [x] GitHub Pages deployment completed successfully for commit `8970500cf2633d20466e3c7ca67d463dab832b51` ([deployment run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/46028823568))
+- [ ] GitHub Actions quality run for the new mocked preflight suite is pending
+- [ ] GitHub Pages deployment for this test-coverage update is pending
 - [x] Fail-closed startup, session recovery, Portal Accounts readiness, searchable account directory and Auth timestamp indicators are green in CI and deployed; signed-in browser smoke tests for all four roles remain a separate manual release check
 - [x] All 24 previously unindexed foreign-key columns now have B-tree indexes; PostgreSQL catalog check confirms 42/42 public foreign-key constraints are indexed
 - [x] Row Level Security is enabled on all 19 public application tables; parent route/assignment/run/check-in visibility has also been exercised under the authenticated parent role with rollback-only fixture records

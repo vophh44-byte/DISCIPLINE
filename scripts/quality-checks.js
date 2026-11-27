@@ -43,6 +43,33 @@ check("only supported roles can open a session", () => {
   assert.match(auth, /const allowedRoles = \["admin","parent","student","driver"\]/);
 });
 
+check("application shell starts hidden, inert and unavailable to assistive technology", () => {
+  assert.match(html, /<div class="app-shell" hidden aria-hidden="true" inert>/);
+  assert.match(styles, /\.app-shell\[hidden\]\{display:none!important\}/);
+});
+
+check("a validated portal session explicitly releases the hidden application shell", () => {
+  const start = auth.indexOf("function portalShell(");
+  const end = auth.indexOf("async function renderReadOnlyPortal(", start);
+  const shell = auth.slice(start, end);
+  assert.ok(start >= 0 && end > start, "portal shell function missing");
+  assert.match(shell, /appShell\.hidden = false/);
+  assert.match(shell, /appShell\.removeAttribute\("aria-hidden"\)/);
+  assert.match(shell, /appShell\.removeAttribute\("inert"\)/);
+});
+
+check("inactive, unsupported or mismatched accounts cannot release the application shell", () => {
+  const start = auth.indexOf("async function openForSession(");
+  const end = auth.indexOf('form.addEventListener("submit"', start);
+  const openSession = auth.slice(start, end);
+  assert.ok(start >= 0 && end > start, "session validation flow missing");
+  assert.match(openSession, /profile\.is_active !== true/);
+  assert.match(openSession, /!allowedRoles\.includes\(String\(profile\.role\)\)/);
+  assert.match(openSession, /expectedPortal && profile\.role !== expectedPortal/);
+  assert.ok(openSession.indexOf("const allowedRoles") < openSession.indexOf('if (profile.role === "admin")'));
+  assert.ok(openSession.indexOf("expectedPortal && profile.role") < openSession.indexOf('if (profile.role === "admin")'));
+});
+
 check("selected portal must match the signed-in account role", () => {
   assert.match(auth, /if \(expectedPortal && profile\.role !== expectedPortal\)/);
 });

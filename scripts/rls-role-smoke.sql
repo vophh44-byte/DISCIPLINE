@@ -49,24 +49,16 @@ driver as materialized (
    order by created_at
    limit 1
 ),
-parent_guard as materialized (
-  select case when exists(select 1 from parent_student)
-              then true else 1 / 0 = 0 end as ok
-),
-driver_guard as materialized (
-  select case when exists(select 1 from driver)
-              then true else 1 / 0 = 0 end as ok
-),
 new_route as (
   insert into public.driver_routes(route_name, vehicle_label, driver_user_id, is_active)
   select 'QA Temporary Route', 'QA Vehicle', driver.user_id, true
-    from driver cross join driver_guard
+    from driver cross join parent_student
   returning id, driver_user_id
 ),
 new_assignment as (
   insert into public.driver_route_students(route_id, student_id, valid_from)
   select new_route.id, parent_student.student_id, (timezone('Asia/Kolkata', now()))::date
-    from new_route cross join parent_student cross join parent_guard
+    from new_route cross join parent_student
   returning route_id, student_id
 ),
 new_run as (

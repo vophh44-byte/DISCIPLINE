@@ -532,6 +532,20 @@ async function renderAccounts(){
       <div class="accounts-overview-card"><span class="accounts-overview-icon accounts-icon-blue">02</span><div><strong>Connect records</strong><small>Link students or route riders</small></div></div>
       <div class="accounts-overview-card"><span class="accounts-overview-icon accounts-icon-green">03</span><div><strong>Send invitation</strong><small>They create their own password</small></div></div>
     </div>
+    <section class="panel accounts-readiness-panel" aria-labelledby="accountsReadinessTitle">
+      <div class="accounts-readiness-head">
+        <div><span class="accounts-readiness-kicker">LIVE SETUP CHECK</span><h2 id="accountsReadinessTitle">Portal readiness</h2><p>Count-only overview of student access, family links and transport setup.</p></div>
+        <span class="accounts-readiness-status" id="accountsReadinessStatus" role="status">Checking live setup…</span>
+      </div>
+      <div class="accounts-readiness-grid">
+        <article><small>ACTIVE STUDENTS</small><strong id="accountsReadyStudents">—</strong><span>Student profiles</span></article>
+        <article><small>STUDENT LOGINS</small><strong id="accountsReadyStudentLogins">—</strong><span>Linked view-only access</span></article>
+        <article><small>PARENT ACCOUNTS</small><strong id="accountsReadyParents">—</strong><span>Active parent portals</span></article>
+        <article><small>DRIVER ACCOUNTS</small><strong id="accountsReadyDrivers">—</strong><span>Active driver portals</span></article>
+        <article><small>ACTIVE ROUTES</small><strong id="accountsReadyRoutes">—</strong><span>Routes with active drivers</span></article>
+      </div>
+      <p class="accounts-readiness-note" id="accountsReadinessNote" aria-live="polite">Loading access coverage. No invitation is sent by viewing this page.</p>
+    </section>
     <div class="accounts-workspace">
       <section class="panel accounts-create-panel">
         <div class="accounts-panel-heading"><div><span class="accounts-step-label">ACCOUNT DETAILS</span><h2>Create or link an account</h2><p>Enter the person's details, then connect their student records.</p></div><span class="accounts-heading-symbol">＋</span></div>
@@ -562,6 +576,55 @@ async function renderAccounts(){
   const {data:students,error}=await window.disciplineSupabase.from("students").select("id,student_code,full_name,class_group").eq("is_active",true).order("full_name");
   if(error){select.innerHTML='<option value="">Could not load students</option>';document.getElementById("portalAccountMessage").textContent=error.message;return;}
   select.innerHTML='<option value="">Choose a student</option>'+(students||[]).map(s=>'<option value="'+s.id+'">'+escapeHTML(s.student_code)+' — '+escapeHTML(s.full_name)+(s.class_group?' ('+escapeHTML(s.class_group)+')':'')+'</option>').join("");
+
+  // Show only aggregate counts; never expose emails or family/route details in this setup summary.
+  const readinessStatus=document.getElementById("accountsReadinessStatus");
+  const readinessNote=document.getElementById("accountsReadinessNote");
+  try{
+    const [profilesResult,studentLinksResult,parentLinksResult,routesResult,assignmentsResult]=await Promise.all([
+      window.disciplineSupabase.from("profiles").select("user_id,role,is_active").in("role",["parent","student","driver"]),
+      window.disciplineSupabase.from("student_accounts").select("student_id,user_id"),
+      window.disciplineSupabase.from("parent_student_links").select("student_id,parent_user_id"),
+      window.disciplineSupabase.from("driver_routes").select("id,driver_user_id").eq("is_active",true),
+      window.disciplineSupabase.from("driver_route_students").select("route_id,student_id,valid_from,valid_to")
+    ]);
+    const readinessResults=[profilesResult,studentLinksResult,parentLinksResult,routesResult,assignmentsResult];
+    const failedReadiness=readinessResults.some(result=>result.error);
+    if(failedReadiness){
+      readinessStatus.textContent="Snapshot unavailable";
+      readinessNote.textContent="Some readiness totals could not be loaded. You can still use the form, but verify the account and route lists before sending an invitation.";
+    }else{
+      const activeProfiles=(profilesResult.data||[]).filter(profile=>profile.is_active===true);
+      const activeParentIds=new Set(activeProfiles.filter(profile=>profile.role==="parent").map(profile=>profile.user_id));
+      const activeStudentIds=new Set((students||[]).map(student=>student.id));
+      const activeDriverIds=new Set(activeProfiles.filter(profile=>profile.role==="driver").map(profile=>profile.user_id));
+      const studentLoginCount=(studentLinksResult.data||[]).filter(link=>activeStudentIds.has(link.student_id)&&activeProfiles.some(profile=>profile.role==="student"&&profile.user_id===link.user_id)).length;
+      const parentLinkCount=(parentLinksResult.data||[]).filter(link=>activeStudentIds.has(link.student_id)&&activeParentIds.has(link.parent_user_id)).length;
+      const activeRoutes=(routesResult.data||[]).filter(route=>activeDriverIds.has(route.driver_user_id));
+      const activeRouteIds=new Set(activeRoutes.map(route=>route.id));
+      const today=disciplineToday();
+      const assignedStudentIds=new Set((assignmentsResult.data||[])
+        .filter(assignment=>activeRouteIds.has(assignment.route_id)&&activeStudentIds.has(assignment.student_id)&&assignment.valid_from<=today&&(!assignment.valid_to||assignment.valid_to>=today))
+        .map(assignment=>assignment.student_id));
+      document.getElementById("accountsReadyStudents").textContent=activeStudentIds.size;
+      document.getElementById("accountsReadyStudentLogins").textContent=studentLoginCount;
+      document.getElementById("accountsReadyParents").textContent=activeParentIds.size;
+      document.getElementById("accountsReadyDrivers").textContent=activeDriverIds.size;
+      document.getElementById("accountsReadyRoutes").textContent=activeRoutes.length;
+      const parts=[
+        studentLoginCount+" student login(s) linked to "+activeStudentIds.size+" active student profile(s)",
+        parentLinkCount+" active parent-to-student link(s)",
+        assignedStudentIds.size+" student(s) assigned to "+activeRoutes.length+" active driver route(s)"
+      ];
+      readinessStatus.textContent="Live totals loaded";
+      readinessNote.textContent=parts.join(" · ")+". Student portals are optional and view-only. Submitting the form sends an invitation or links an existing account.";
+    }
+  }catch(readinessError){
+    console.error("Portal readiness snapshot failed:",readinessError);
+    readinessStatus.textContent="Snapshot unavailable";
+    readinessNote.textContent="The setup totals could not be loaded. You can still use the form, but verify the account and route lists before sending an invitation.";
+  }
+
   const roleSelect=document.getElementById("portalRole");
   const routeFields=document.getElementById("driverRouteFields");
   const vehicleFields=document.getElementById("driverVehicleFields");

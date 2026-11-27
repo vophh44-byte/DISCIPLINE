@@ -49,6 +49,8 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] Student profile lifetime balance is calculated from starting marks plus all saved ledger balance changes
 - [x] Student profile incident section shows factual summary and verification/publication state without loading exact words or evidence
 - [x] Student profile print report escapes student and guardian data and omits temporary audio and exact-word content
+- [x] Certificate register has a print action for private and published certificates; print output uses saved title, student name, description and issue date
+- [x] Certificate print page is formatted for A4 landscape and escapes dynamic certificate/student text before writing the print document
 - [x] Both deployed Edge Functions are tracked in `supabase/functions`; account provisioning tests administrator authorization, supported roles, active-student validation and student-link conflicts
 - [ ] Signed-in administrator → upload → review → verify → storage deletion end-to-end test
 - [ ] Separate parent account test after publication
@@ -68,6 +70,13 @@ Run [`scripts/security-audit.sql`](scripts/security-audit.sql) in the Supabase S
 4. Review recent attendance, incident review/publication state, weekly results and certificates.
 5. Confirm exact recorded words and temporary audio are not shown in the general profile summary.
 6. Open Print record and check the student/guardian details and saved report sections.
+
+### Achievement certificate print
+
+1. Open Achievement Certificates as an administrator.
+2. Issue or select a saved certificate for a student.
+3. Use Print certificate and confirm the A4 landscape layout, saved student name, title, description and issue date.
+4. Confirm the print action works for both private drafts and published certificates without changing portal visibility.
 
 ### Weekly result export and print
 

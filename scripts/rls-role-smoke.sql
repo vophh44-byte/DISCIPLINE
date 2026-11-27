@@ -33,57 +33,68 @@ rollback;
 -- for the linked child, then prove that the authenticated parent can see those
 -- four related records. All temporary writes are rolled back at the end.
 begin;
-do $
-declare
-  v_parent uuid;
-  v_student uuid;
-  v_driver uuid;
-  v_route uuid;
-  v_run uuid;
-  v_today date := (timezone('Asia/Kolkata', now()))::date;
-begin
+with parent_student as materialized (
   select l.parent_user_id, l.student_id
-    into v_parent, v_student
     from public.parent_student_links l
     join public.profiles p
       on p.user_id = l.parent_user_id
      and p.role = 'parent'
      and p.is_active = true
-    limit 1;
-  if v_parent is null or v_student is null then
-    raise exception 'An active linked parent test account is required';
-  end if;
-
-  select user_id into v_driver
+    limit 1
+),
+driver as materialized (
+  select user_id
     from public.profiles
    where is_active = true
    order by created_at
-   limit 1;
-  if v_driver is null then
-    raise exception 'An active profile is required for the temporary route fixture';
-  end if;
-
+   limit 1
+),
+parent_guard as materialized (
+  select case when exists(select 1 from parent_student)
+              then true else 1 / 0 = 0 end as ok
+),
+driver_guard as materialized (
+  select case when exists(select 1 from driver)
+              then true else 1 / 0 = 0 end as ok
+),
+new_route as (
   insert into public.driver_routes(route_name, vehicle_label, driver_user_id, is_active)
-  values ('QA Temporary Route', 'QA Vehicle', v_driver, true)
-  returning id into v_route;
-
+  select 'QA Temporary Route', 'QA Vehicle', driver.user_id, true
+    from driver cross join driver_guard
+  returning id, driver_user_id
+),
+new_assignment as (
   insert into public.driver_route_students(route_id, student_id, valid_from)
-  values (v_route, v_student, v_today);
-
+  select new_route.id, parent_student.student_id, (timezone('Asia/Kolkata', now()))::date
+    from new_route cross join parent_student cross join parent_guard
+  returning route_id, student_id
+),
+new_run as (
   insert into public.driver_route_runs(route_id, journey_date, journey_type, status, started_by)
-  values (v_route, v_today, 'morning', 'in_progress', v_driver)
-  returning id into v_run;
-
+  select new_route.id, (timezone('Asia/Kolkata', now()))::date, 'morning', 'in_progress', new_route.driver_user_id
+    from new_route
+  returning id, route_id
+),
+new_checkin as (
   insert into public.driver_journey_checkins(
     route_id, student_id, journey_date, journey_type, status, recorded_by, driver_route_run_id
   )
-  values (v_route, v_student, v_today, 'morning', 'boarded', v_driver, v_run);
-
-  perform set_config('request.jwt.claim.sub', v_parent::text, true);
-  perform set_config('request.jwt.claim.role', 'authenticated', true);
-  perform set_config('test.parent_route_id', v_route::text, true);
-  perform set_config('test.parent_student_id', v_student::text, true);
-end $;
+  select new_assignment.route_id, new_assignment.student_id,
+         (timezone('Asia/Kolkata', now()))::date, 'morning', 'boarded',
+         new_route.driver_user_id, new_run.id
+    from new_assignment
+    cross join new_run
+    cross join new_route
+  returning route_id, student_id
+)
+select
+  length(set_config('request.jwt.claim.sub', parent_student.parent_user_id::text, true)) > 0 as parent_context_loaded,
+  length(set_config('request.jwt.claim.role', 'authenticated', true)) > 0 as role_context_loaded,
+  length(set_config('test.parent_route_id', new_route.id::text, true)) > 0 as route_fixture_loaded,
+  length(set_config('test.parent_student_id', parent_student.student_id::text, true)) > 0 as student_fixture_loaded
+from parent_student
+cross join new_route
+where exists(select 1 from new_checkin);
 set local role authenticated;
 select jsonb_build_object(
   'portal_role', private.current_app_role()::text,

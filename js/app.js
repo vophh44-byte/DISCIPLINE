@@ -550,6 +550,52 @@ async function renderAttendance(){
   }).join("")||'<tr><td colspan="5" class="registry-empty">No students match your search.</td></tr>';
   save.disabled=!session||!!session.ends_at;
  }
+  function attendanceCsvCell(value){
+   const raw=String(value??"");
+   const safe=/^[\s]*[=+\-@]/.test(raw)?"'"+raw:raw;
+   return '"'+safe.replace(/"/g,'""')+'"';
+  }
+  function exportAttendanceCsv(){
+   const visible=filteredAttendanceStudents();
+   if(!visible.length){showToast("There are no students matching the attendance search.");return;}
+   const csvRows=[
+    ["Student name","Student ID","Class / group","Attendance date","Status","Note"].map(x=>attendanceCsvCell(x)).join(","),
+    ...visible.map(student=>{
+     const entry=existing[student.id]||{};
+     return [student.full_name,student.student_code,student.class_group||"",date.value,entry.status||"Not marked",entry.notes||""].map(attendanceCsvCell).join(",");
+    })
+   ];
+   const blob=new Blob(["\uFEFF"+csvRows.join("\r\n")],{type:"text/csv;charset=utf-8;"});
+   const url=URL.createObjectURL(blob),link=document.createElement("a");
+   link.href=url;link.download="discipline-attendance-"+date.value+".csv";
+   document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1200);
+   showToast(visible.length+" attendance row(s) exported.");
+  }
+  function printAttendanceRegister(){
+   const visible=filteredAttendanceStudents();
+   if(!visible.length){showToast("There are no students matching the attendance search.");return;}
+   const count=status=>visible.filter(student=>(existing[student.id]?.status||"not_marked")===status).length;
+   const marked=count("present")+count("absent")+count("late")+count("excused");
+   const printRows=visible.map(student=>{
+    const entry=existing[student.id]||{};
+    const status=entry.status?entry.status.charAt(0).toUpperCase()+entry.status.slice(1):"Not marked";
+    return "<tr><td>"+escapeHTML(student.full_name)+"</td><td>"+escapeHTML(student.student_code)+"</td><td>"+escapeHTML(student.class_group||"—")+"</td><td>"+escapeHTML(status)+"</td><td>"+escapeHTML(entry.notes||"")+"</td><td>________________</td></tr>";
+   }).join("");
+   const popup=window.open("","_blank");
+   if(!popup){showToast("Allow pop-ups to print the attendance register.");return;}
+   popup.opener=null;
+   const html="<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>DISCIPLINE Attendance Register</title>"+
+    "<style>body{font-family:Arial,sans-serif;color:#24364d;margin:26px}header{display:flex;justify-content:space-between;gap:15px;align-items:flex-start;border-bottom:2px solid #c7a56b;padding-bottom:13px;margin-bottom:17px}h1{font-size:22px;margin:0 0 6px}p{margin:4px 0;color:#697a90;font-size:10px}.meta{text-align:right;font-size:10px;color:#697a90}.summary{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}.summary span{border:1px solid #dce3ec;border-radius:6px;padding:8px 10px;font-size:10px}.summary strong{font-size:14px;margin-left:5px}table{width:100%;border-collapse:collapse;font-size:10px}th{background:#edf2f7;text-align:left;color:#50637b;font-size:8px;letter-spacing:.4px}th,td{padding:8px 6px;border-bottom:1px solid #e5eaf0}footer{margin-top:18px;padding-top:10px;border-top:1px solid #dce3ec;color:#718096;font-size:9px}@media print{body{margin:12mm}tr{break-inside:avoid}}@media(max-width:680px){body{margin:10px}table{font-size:8px}th,td{padding:5px 3px}}</style></head><body>"+
+    "<header><div><h1>DISCIPLINE · Morning Attendance Register</h1><p>Home to institute · Daily student roll</p></div><div class=\"meta\"><strong>Date</strong><br>"+escapeHTML(date.value)+"<br><br>Register: "+(session?(session.ends_at?"Closed":"Open"):"Not started")+"</div></header>"+
+    "<div class=\"summary\"><span>Students <strong>"+visible.length+"</strong></span><span>Marked <strong>"+marked+"</strong></span><span>Present <strong>"+count("present")+"</strong></span><span>Absent <strong>"+count("absent")+"</strong></span><span>Late <strong>"+count("late")+"</strong></span><span>Excused <strong>"+count("excused")+"</strong></span><span>Not marked <strong>"+count("not_marked")+"</strong></span></div>"+
+    "<table><thead><tr><th>STUDENT</th><th>STUDENT ID</th><th>CLASS / GROUP</th><th>STATUS</th><th>NOTE</th><th>TEACHER INITIALS</th></tr></thead><tbody>"+printRows+"</tbody></table>"+
+    "<footer>DISCIPLINE · Attendance register · Printed "+escapeHTML(new Date().toLocaleString("en-IN"))+"</footer></body></html>";
+   popup.document.open();popup.document.write(html);popup.document.close();popup.focus();
+   window.setTimeout(()=>popup.print(),350);
+  }
+  document.getElementById("attendanceExportCsv").addEventListener("click",exportAttendanceCsv);
+  document.getElementById("attendancePrintRegister").addEventListener("click",printAttendanceRegister);
+
  async function load(){
   try{
    session=await disciplineSession(db,"morning",date.value,false);existing={};

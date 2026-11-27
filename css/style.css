@@ -1397,3 +1397,7 @@ table tbody tr:hover{background:#f7f9fc}
 .incidents-report-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .incidents-report-actions .button{white-space:nowrap}
 @media(max-width:760px){.incidents-report-actions{width:100%;justify-content:flex-start}.incidents-report-actions .button{flex:1}}
+
+/* Parent response export and print actions */
+.parent-response-export-actions{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin:0 0 12px}
+@media(max-width:680px){.parent-response-export-actions{justify-content:flex-start}.parent-response-export-actions .button{flex:1}}

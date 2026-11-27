@@ -5,7 +5,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 ## Current automated / configuration checks
 
 - [x] Frontend JavaScript parses: `js/app.js` and `js/auth.js`
-- [x] All 23 previously unindexed foreign-key columns now have B-tree indexes; checked against PostgreSQL catalog metadata after migration
+- [x] All 24 previously unindexed foreign-key columns now have B-tree indexes; PostgreSQL catalog check confirms 42/42 public foreign-key constraints are indexed
 - [x] Temporary audio bucket exists and is private
 - [x] Audio bucket accepts only the configured audio MIME types and is limited to 8 MB
 - [x] Storage object policies restrict read, upload and delete to active administrators

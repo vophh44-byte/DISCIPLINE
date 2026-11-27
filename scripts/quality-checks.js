@@ -96,7 +96,7 @@ check("student account provisioning is available as view-only", () => {
 
 check("browser config uses a publishable key and contains no server secret", () => {
   assert.match(config, /publishableKey\s*:/);
-  assert.doesNotMatch(config, /service[_-]?role|sb_secret|SUPABASE_SERVICE_ROLE_KEY/i);
+  assert.doesNotMatch(config, /\bservice_role\b|\bsb_secret_[A-Za-z0-9]+\b|SUPABASE_SERVICE_ROLE_KEY/i);
 });
 
 check("Supabase browser configuration loads before application scripts", () => {

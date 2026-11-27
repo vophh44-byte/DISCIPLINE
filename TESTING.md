@@ -5,7 +5,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 ## Current automated / configuration checks
 
 - [x] Frontend JavaScript parses: `js/app.js` and `js/auth.js`
-- [x] GitHub Actions syntax, portal privacy, audio cleanup, invitation, anonymous-grant, role-smoke, admin inbox, weekly report, attendance, driver check-in and mark-ledger regression checks pass; 87 checks passed on the latest feature commit using Node.js 24
+- [x] GitHub Actions syntax, portal privacy, audio cleanup, invitation, anonymous-grant, role-smoke, admin inbox, weekly report, attendance, driver check-in and mark-ledger regression checks pass; 94 checks passed on the latest feature commit using Node.js 24
 - [x] GitHub Pages build and deploy succeeded for commit `05e06f6` ( [deployment run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/45961730460) )
 - [x] All 24 previously unindexed foreign-key columns now have B-tree indexes; PostgreSQL catalog check confirms 42/42 public foreign-key constraints are indexed
 - [x] Row Level Security is enabled on all 19 public application tables; role-specific access still requires the separate manual portal tests
@@ -45,6 +45,10 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] Mark Management transaction history can be searched by student, ID, reason and transaction type
 - [x] Mark ledger CSV includes amount, balance change, before and after balances; quotes values and guards spreadsheet-formula text
 - [x] Mark ledger print report includes positive, negative and net change totals and escapes student/reason content
+- [x] Student Registry provides an administrator-only View profile action with mark, attendance, incident summary, weekly-results and certificate data
+- [x] Student profile lifetime balance is calculated from starting marks plus all saved ledger balance changes
+- [x] Student profile incident section shows factual summary and verification/publication state without loading exact words or evidence
+- [x] Student profile print report escapes student and guardian data and omits temporary audio and exact-word content
 - [x] Both deployed Edge Functions are tracked in `supabase/functions`; account provisioning tests administrator authorization, supported roles, active-student validation and student-link conflicts
 - [ ] Signed-in administrator → upload → review → verify → storage deletion end-to-end test
 - [ ] Separate parent account test after publication
@@ -55,6 +59,15 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 ## Repeatable database audit
 
 Run [`scripts/security-audit.sql`](scripts/security-audit.sql) in the Supabase SQL Editor while connected to the DISCIPLINE project. It is read-only and returns function execute grants, RLS table coverage, the temporary-audio uniqueness index, verification-RPC privileges and aggregate integrity counts. It does not return student names, parent emails or incident narratives. Review each authenticated-executable SECURITY DEFINER routine's definition to confirm it binds authorization to `auth.uid()` and the intended role.
+
+### Individual student profile report
+
+1. Sign in as an administrator and open Student Registry.
+2. Search for a student and select View profile.
+3. Confirm lifetime balance equals starting marks plus the saved mark ledger.
+4. Review recent attendance, incident review/publication state, weekly results and certificates.
+5. Confirm exact recorded words and temporary audio are not shown in the general profile summary.
+6. Open Print record and check the student/guardian details and saved report sections.
 
 ### Weekly result export and print
 

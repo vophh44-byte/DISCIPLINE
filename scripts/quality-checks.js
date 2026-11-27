@@ -530,4 +530,48 @@ check("mark transaction table includes both balance-before and balance-after col
   assert.match(app, /Number\(t\.balance_after\)/);
 });
 
+
+check("student registry offers a View profile action and a hidden detail panel", () => {
+  assert.match(app, /data-view-student=/);
+  assert.match(app, /id="studentProfilePanel" hidden/);
+  assert.match(app, /function viewStudentProfile\(student\)/);
+});
+
+check("student profile loads marks, attendance, incidents, weekly results and certificates for the selected student", () => {
+  for (const table of ["mark_transactions","attendance","incidents","weekly_results","certificates","student_accounts","parent_student_links"]) {
+    assert.ok(app.includes('db.from("' + table + '")'), "student profile missing source: " + table);
+  }
+  assert.match(app, /\.eq\("student_id",student\.id\)/);
+});
+
+check("student profile lifetime balance adds starting marks to the full saved mark ledger", () => {
+  assert.match(app, /student\.starting_marks\|\|0\)\+\(allMarks\.data\|\|\[\]\)\.reduce/);
+});
+
+check("student profile summarizes recent attendance and portal links", () => {
+  assert.match(app, /attendance\)[\s\S]{0,300}\.limit\(20\)/);
+  assert.match(app, /studentAccount\.data\?"Student linked":"No student login"/);
+  assert.match(app, /parentLinks\.data\|\|\[\]/);
+});
+
+check("student profile shows incident review and publication state without loading exact words", () => {
+  assert.match(app, /transcript_verified,published_to_parent_at/);
+  assert.match(app, /Exact words and temporary evidence are not included/);
+  assert.doesNotMatch(app, /select\([^\n]*exact_words[^\n]*\)/);
+});
+
+check("student profile displays recent weekly results and certificates", () => {
+  assert.match(app, /weekly\.data\|\|\[\]/);
+  assert.match(app, /certificates\.data\|\|\[\]/);
+  assert.match(app, /Weekly results · latest 8/);
+  assert.match(app, /Certificates · latest 8/);
+});
+
+check("student profile print report escapes student and guardian data", () => {
+  assert.match(app, /escapeHTML\(student\.full_name\)/);
+  assert.match(app, /escapeHTML\(guardian\.phone\|\|\"—\"\)/);
+  assert.match(app, /escapeHTML\(guardian\.email\|\|\"—\"\)/);
+  assert.match(app, /popup\.document\.write\([\s\S]*report\.innerHTML/);
+});
+
 process.stdout.write("\n" + passed + " DISCIPLINE quality checks passed.\n");

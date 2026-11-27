@@ -298,7 +298,7 @@ async function renderStudents(){
   async function loadRecords(){
     rows.innerHTML='<tr><td colspan="7">Loading…</td></tr>';
     const {data,error}=await db.from("students")
-      .select("id,student_code,full_name,class_group,is_active,created_at,student_guardians(guardian_name,phone,email)")
+      .select("id,student_code,full_name,class_group,starting_marks,is_active,created_at,student_guardians(guardian_name,phone,email)")
       .order("created_at",{ascending:false});
     if(error){
       rows.innerHTML='<tr><td colspan="7">Could not load records. Check your administrator session and database permissions.</td></tr>';

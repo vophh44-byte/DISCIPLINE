@@ -190,14 +190,20 @@ async function renderDashboard(){
    </aside>
   </div>
   <section class="panel dash-panel dash-attention-panel" aria-labelledby="dashAttentionHeading">
-   <div class="dash-section-head"><div><h2 id="dashAttentionHeading">Needs your attention</h2><p>Follow-ups that need an administrator decision</p></div><span class="dash-attention-caption">LIVE QUEUE</span></div>
-   <div class="dash-attention-grid" id="dashAttention">
+   <div class="dash-section-head"><div><h2 id="dashAttentionHeading">Needs your attention</h2><p>Follow-ups that need an administrator decision</p></div><div class="dash-attention-tools"><span class="dash-attention-caption">LIVE QUEUE</span><button class="dash-attention-refresh" id="dashAttentionRefresh" type="button" aria-label="Refresh review queue" title="Refresh review queue">↻</button></div></div>
+   <div class="dash-attention-grid" id="dashAttention" aria-live="polite">
     <button class="dash-attention-card" type="button" data-page="parents"><span class="dash-attention-icon parent">↩</span><span class="dash-attention-copy"><strong>Parent responses</strong><small>Loading pending follow-ups…</small></span><span class="dash-attention-count">—</span><span class="dash-attention-link">Review →</span></button>
     <button class="dash-attention-card" type="button" data-page="incidents"><span class="dash-attention-icon incident">!</span><span class="dash-attention-copy"><strong>Incident verification</strong><small>Loading reports to review…</small></span><span class="dash-attention-count">—</span><span class="dash-attention-link">Review →</span></button>
     <button class="dash-attention-card" type="button" data-page="incidents"><span class="dash-attention-icon publish">✓</span><span class="dash-attention-copy"><strong>Verified reports</strong><small>Loading publication queue…</small></span><span class="dash-attention-count">—</span><span class="dash-attention-link">Publish →</span></button>
    </div>
   </section>
   <footer class="page-footer"><span>DISCIPLINE · Administrator workspace</span><span>All figures are based on saved records.</span></footer>`;
+ const attentionRefresh=document.getElementById("dashAttentionRefresh");
+ if(attentionRefresh)attentionRefresh.addEventListener("click",()=>{
+  attentionRefresh.disabled=true;
+  attentionRefresh.textContent="…";
+  setActivePage("dashboard");
+ });
  if(!db){pageContent.insertAdjacentHTML("beforeend",'<p class="registry-disclaimer">Database connection is not ready. Refresh after signing in.</p>');return;}
  try{
   const [students,session,weeklyTx,recent,parentPending,incidentReviewPending,incidentPublishPending]=await Promise.all([

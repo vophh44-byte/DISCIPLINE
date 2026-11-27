@@ -837,7 +837,41 @@ async function renderMarks(){
   transactionRecords=tr.data||[];drawMarkHistory();
  }
  document.getElementById("markStudentSearch").addEventListener("input",loadMarkData);
- document.getElementById("markEntryForm").addEventListener("submit",async e=>{
+   document.getElementById("markHistorySearch").addEventListener("input",drawMarkHistory);
+  document.getElementById("markHistoryType").addEventListener("change",drawMarkHistory);
+  function markCsvCell(value){
+   const raw=String(value??"");
+   const safe=/^[\s]*[=+\-@]/.test(raw)?"'"+raw:raw;
+   return '"'+safe.replace(/"/g,'""')+'"';
+  }
+  function exportMarkHistory(){
+   const visible=filteredMarkTransactions();
+   if(!visible.length){showToast("There are no mark transactions matching the current filters.");return;}
+   const csv=[
+    ["Date and time","Student","Student ID","Transaction type","Reason","Amount","Balance change","Balance before","Balance after"].map(markCsvCell).join(","),
+    ...visible.map(t=>[
+     new Date(t.occurred_at).toLocaleString("en-IN"),t.students?.full_name||"Student",t.students?.student_code||"",
+     t.transaction_type,t.reason||"",t.amount,t.balance_delta,t.balance_before,t.balance_after
+    ].map(markCsvCell).join(","))
+   ];
+   const blob=new Blob(["\uFEFF"+csv.join("\r\n")],{type:"text/csv;charset=utf-8;"}),url=URL.createObjectURL(blob),link=document.createElement("a");
+   link.href=url;link.download="discipline-mark-ledger-"+disciplineToday()+".csv";
+   document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1200);
+   showToast(visible.length+" mark transaction(s) exported.");
+  }
+  function printMarkHistory(){
+   const visible=filteredMarkTransactions();
+   if(!visible.length){showToast("There are no mark transactions matching the current filters.");return;}
+   const positive=visible.filter(x=>Number(x.balance_delta)>0).reduce((n,x)=>n+Number(x.balance_delta),0);
+   const negative=visible.filter(x=>Number(x.balance_delta)<0).reduce((n,x)=>n+Math.abs(Number(x.balance_delta)),0);
+   const table=visible.map(t=>"<tr><td>"+escapeHTML(new Date(t.occurred_at).toLocaleString("en-IN"))+"</td><td>"+escapeHTML(t.students?.full_name||"Student")+"</td><td>"+escapeHTML(t.students?.student_code||"")+"</td><td>"+escapeHTML(t.transaction_type.replaceAll("_"," "))+"</td><td>"+escapeHTML(t.reason||"—")+"</td><td>"+(Number(t.balance_delta)>0?"+":"")+Number(t.balance_delta)+"</td><td>"+Number(t.balance_before)+"</td><td>"+Number(t.balance_after)+"</td></tr>").join("");
+   const popup=window.open("","_blank");if(!popup){showToast("Allow pop-ups to print the mark report.");return;}popup.opener=null;
+   const html="<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>DISCIPLINE Mark Ledger</title><style>body{font-family:Arial,sans-serif;color:#24364d;margin:26px}header{display:flex;justify-content:space-between;gap:15px;align-items:flex-start;border-bottom:2px solid #c7a56b;padding-bottom:13px;margin-bottom:17px}h1{font-size:22px;margin:0 0 6px}p{margin:4px 0;color:#697a90;font-size:10px}.meta{text-align:right;font-size:10px;color:#697a90}.summary{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}.summary span{border:1px solid #dce3ec;border-radius:6px;padding:8px 10px;font-size:10px}.summary strong{font-size:14px;margin-left:5px}table{width:100%;border-collapse:collapse;font-size:9px}th{background:#edf2f7;text-align:left;color:#50637b;font-size:8px}th,td{padding:7px 5px;border-bottom:1px solid #e5eaf0}footer{margin-top:18px;padding-top:10px;border-top:1px solid #dce3ec;color:#718096;font-size:9px}@media print{body{margin:12mm}tr{break-inside:avoid}}@media(max-width:680px){body{margin:10px}table{font-size:8px}th,td{padding:5px 3px}}</style></head><body><header><div><h1>DISCIPLINE · Mark Transaction Ledger</h1><p>Administrator audit report · Latest 50 loaded transactions</p></div><div class=\"meta\">Generated "+escapeHTML(new Date().toLocaleString("en-IN"))+"</div></header><div class=\"summary\"><span>Transactions <strong>"+visible.length+"</strong></span><span>Positive changes <strong>+"+positive+"</strong></span><span>Negative changes <strong>−"+negative+"</strong></span><span>Net change <strong>"+(positive-negative>0?"+":"")+(positive-negative)+"</strong></span></div><table><thead><tr><th>DATE</th><th>STUDENT</th><th>ID</th><th>TYPE</th><th>REASON</th><th>CHANGE</th><th>BEFORE</th><th>AFTER</th></tr></thead><tbody>"+table+"</tbody></table><footer>DISCIPLINE · This report includes only the current filtered ledger rows.</footer></body></html>";
+   popup.document.open();popup.document.write(html);popup.document.close();popup.focus();setTimeout(()=>popup.print(),350);
+  }
+  document.getElementById("markHistoryExport").addEventListener("click",exportMarkHistory);
+  document.getElementById("markHistoryPrint").addEventListener("click",printMarkHistory);
+document.getElementById("markEntryForm").addEventListener("submit",async e=>{
   e.preventDefault();const btn=document.getElementById("saveMarkButton"),msg=document.getElementById("markFormMessage");
   btn.disabled=true;btn.textContent="Saving securely…";msg.textContent="";
   const args={p_student_id:studentSelect.value,p_transaction_type:document.getElementById("markType").value,p_amount:Number(document.getElementById("markAmount").value),p_reason:document.getElementById("markReason").value.trim(),p_session_id:sessionSelect.value||null};

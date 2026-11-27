@@ -1266,6 +1266,7 @@ async function renderParents(){
    status.textContent=save?"Private note saved.":"Review status updated.";
    drawResponses();
    showToast(save?"Administrator note saved privately.":"Parent response status updated.");
+   await refreshAdminNotificationBadge();
   }catch(error){if(status)status.textContent="Could not save: "+error.message;showToast(error.message);}
   finally{buttons.forEach(b=>b.disabled=false);}
  });

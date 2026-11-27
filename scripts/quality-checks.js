@@ -314,8 +314,8 @@ check("administrator inbox surfaces incidents awaiting transcript verification",
 });
 
 check("administrator inbox updates parent and incident navigation counts", () => {
-  assert.match(app, /id="parentResponseNavCount"/);
-  assert.match(app, /id="incidentReviewNavCount"/);
+  assert.match(html, /id="parentResponseNavCount"/);
+  assert.match(html, /id="incidentReviewNavCount"/);
   assert.match(app, /function updateAdminNavBadges\(parentCount, incidentCount\)/);
 });
 

@@ -1393,7 +1393,7 @@ async function renderIncidents(){
    }
    if(recordedAudioBlob)clearRecordedAudio();
    e.target.reset();document.getElementById("incidentWhen").value=localDateTime;
-   await load();
+   await load();await refreshAdminNotificationBadge();
    if(audioUploaded)showToast("Incident saved with private temporary audio. Verify transcript to delete it.");
    else if(!audioUploadFailed)showToast(hadRecordedAudio?"Incident saved, but no temporary audio was attached.":"Incident saved privately and consistently.");
   }catch(err){msg.textContent="Not saved: "+err.message;showToast("Incident save failed: "+err.message);}

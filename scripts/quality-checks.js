@@ -187,4 +187,63 @@ check("browser rejects audio clips larger than 8 MB", () => {
   assert.match(app, /blob\.size>8\*1024\*1024/);
 });
 
+
+check("temporary audio cannot be attached after verification or parent publication", () => {
+  assert.match(audioFunction, /incident\.transcript_verified === true \|\| incident\.published_to_parent_at/);
+});
+
+check("a second temporary audio upload for the same incident is rejected", () => {
+  assert.match(audioFunction, /\.eq\("evidence_type", "audio_temp"\)\.maybeSingle\(\)/);
+  assert.match(audioFunction, /This incident already has temporary audio evidence/);
+});
+
+check("failed evidence metadata insertion removes the just-uploaded audio object", () => {
+  assert.match(
+    audioFunction,
+    /if \(evidenceError\) \{\s*await adminClient\.storage\.from\(bucket\)\.remove\(\[storagePath\]\);\s*throw evidenceError;\s*\}/
+  );
+});
+
+check("audio verification requires a non-empty reviewed transcript when audio exists", () => {
+  assert.match(audioFunction, /if \(hasStoredAudio && !transcript\)/);
+});
+
+check("audio verification fails closed when storage deletion state cannot be checked", () => {
+  const verifyStart = audioFunction.indexOf('if (action === "verify")');
+  const listCall = audioFunction.indexOf('.from(bucket).list(folder', verifyStart);
+  const listError = audioFunction.indexOf("if (listError)", listCall);
+  const verifyRpc = audioFunction.indexOf('adminClient.rpc("admin_verify_incident_transcript"', verifyStart);
+  assert.ok(verifyStart >= 0 && listCall > verifyStart);
+  assert.ok(listError > listCall && verifyRpc > listError);
+  assert.match(audioFunction.slice(listError, verifyRpc), /return respond\([\s\S]*?, 502\)/);
+});
+
+check("audio verification fails closed when object removal fails", () => {
+  const removeCall = audioFunction.indexOf('.remove([storedPath])');
+  const removeError = audioFunction.indexOf("if (removeError)", removeCall);
+  const verifyRpc = audioFunction.indexOf('adminClient.rpc("admin_verify_incident_transcript"');
+  assert.ok(removeCall >= 0 && removeError > removeCall && verifyRpc > removeError);
+  assert.match(audioFunction.slice(removeError, verifyRpc), /return respond\([\s\S]*?, 502\)/);
+});
+
+check("temporary audio is deleted before the privileged transcript-verification RPC", () => {
+  const removeCall = audioFunction.indexOf('.remove([storedPath])');
+  const verifyRpc = audioFunction.indexOf('adminClient.rpc("admin_verify_incident_transcript"');
+  assert.ok(removeCall >= 0 && verifyRpc > removeCall);
+  assert.match(audioFunction, /p_audio_deleted:\s*hasStoredAudio/);
+  assert.doesNotMatch(audioFunction, /userClient\.rpc\("admin_verify_incident_transcript"/);
+});
+
+check("listening is blocked after the evidence deletion marker is set", () => {
+  assert.match(audioFunction, /if \(!evidence\?\.storage_path \|\| evidence\.audio_deleted_at\)/);
+});
+
+check("an existing active portal account is linked without sending another invitation", () => {
+  const existingBranch = accountFunction.indexOf("if (matchingProfiles?.length === 1)");
+  const existingSuccess = accountFunction.indexOf("existing_account: true", existingBranch);
+  const invite = accountFunction.indexOf("inviteUserByEmail(email");
+  assert.ok(existingBranch >= 0 && existingSuccess > existingBranch && invite > existingSuccess);
+  assert.doesNotMatch(accountFunction.slice(existingBranch, invite), /inviteUserByEmail/);
+});
+
 process.stdout.write("\n" + passed + " DISCIPLINE quality checks passed.\n");

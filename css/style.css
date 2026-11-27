@@ -1432,3 +1432,20 @@ table tbody tr:hover{background:#f7f9fc}
 .dash-attention-refresh:focus-visible,.dash-attention-card:focus-visible{outline:2px solid #d5b36a;outline-offset:3px}
 
 .dash-attention-error{grid-column:1/-1;margin:0;padding:14px;border:1px solid rgba(225,139,133,.25);border-radius:10px;background:rgba(225,139,133,.07);color:#e6b0aa;font-size:10px;line-height:1.55}
+
+
+/* Portal Accounts — live onboarding readiness */
+.accounts-readiness-panel{padding:20px 22px;margin:0 0 17px;border:1px solid #e4eaf2;background:#fff;box-shadow:0 5px 18px rgba(25,45,72,.035)}
+.accounts-readiness-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:16px}
+.accounts-readiness-kicker{font-size:8px;letter-spacing:1.3px;font-weight:800;color:#a78347}
+.accounts-readiness-head h2{margin:5px 0 3px;color:#263b55;font:800 17px Manrope,sans-serif;letter-spacing:-.3px}
+.accounts-readiness-head p{margin:0;color:#8793a3;font-size:9px;line-height:1.5}
+.accounts-readiness-status{padding:6px 9px;border:1px solid #e3e9ef;border-radius:20px;color:#718096;font-size:9px;font-weight:700;white-space:nowrap}
+.accounts-readiness-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}
+.accounts-readiness-grid article{min-width:0;padding:12px 13px;border:1px solid #e9edf2;border-radius:10px;background:#fbfcfd}
+.accounts-readiness-grid small{display:block;color:#8390a1;font-size:8px;letter-spacing:.55px;font-weight:800}
+.accounts-readiness-grid strong{display:block;margin:7px 0 2px;color:#263b55;font:800 22px Manrope,sans-serif;font-variant-numeric:tabular-nums}
+.accounts-readiness-grid span{display:block;color:#8b97a6;font-size:8px;line-height:1.4}
+.accounts-readiness-note{margin:13px 0 0;padding-top:11px;border-top:1px solid #edf0f4;color:#758396;font-size:9px;line-height:1.6}
+@media(max-width:900px){.accounts-readiness-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:560px){.accounts-readiness-panel{padding:16px 14px}.accounts-readiness-head{flex-direction:column}.accounts-readiness-status{align-self:flex-start}.accounts-readiness-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.accounts-readiness-grid article{padding:10px}.accounts-readiness-grid strong{font-size:19px}}

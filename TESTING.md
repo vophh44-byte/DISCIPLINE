@@ -5,8 +5,9 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 ## Current automated / configuration checks
 
 - [x] Frontend JavaScript parses: `js/app.js` and `js/auth.js`
-- [x] GitHub Actions syntax, portal privacy, audio cleanup, invitation, anonymous-grant, role-smoke, admin inbox, weekly report, attendance, driver check-in, mark-ledger, student-profile, certificate, incident-report, weekly-notification and parent-response-export regression checks pass; 122 checks passed on the latest feature commit using Node.js 24
-- [x] GitHub Pages build and deploy succeeded for commit `05e06f6` ( [latest deployment run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/46006808406) )
+- [x] A previously confirmed GitHub Actions run passed 122 DISCIPLINE regression checks on commit `1ce1889aab71226c2d166d0f301940187de379e0` using Node.js 24; the new Command Center review-queue assertions were added after that run and await a fresh CI result
+- [x] A previously confirmed GitHub Pages deployment succeeded for functional commit `470f84e9c91f686a851fd6c83a1dcfd8284dd64f` ([deployment run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/46006180307)); this predates the latest Command Center enhancement
+- [ ] Confirm the latest `main` commit is published to GitHub Pages and complete a signed-in browser smoke test
 - [x] All 24 previously unindexed foreign-key columns now have B-tree indexes; PostgreSQL catalog check confirms 42/42 public foreign-key constraints are indexed
 - [x] Row Level Security is enabled on all 19 public application tables; role-specific access still requires the separate manual portal tests
 - [x] Removed `anon` table privileges from all 19 public application tables; live grant query confirms zero anonymous SELECT/INSERT/UPDATE/DELETE privileges while authenticated SELECT remains available on all 19
@@ -16,7 +17,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] Rollback-only student RLS simulation confirmed one profile, one linked student, two mark-ledger rows and zero incident/evidence rows; temporary student link and role change were rolled back
 - [x] Rollback-only driver journey simulation loaded the assigned roster, started a route run, recorded a check-in and finished the run; completed status was confirmed and all temporary rows were rolled back
 - [x] Portal-account Edge Function CORS allow-list deployed as active version 7 with JWT verification enabled; production GitHub Pages and localhost development origins are supported
-- [x] Latest GitHub Actions quality run passed 122 regression checks and the latest GitHub Pages deployment completed successfully
+- [ ] Fresh GitHub Actions quality run for the Command Center review-queue changes and latest Pages deployment confirmation
 - [x] Rollback-only incident lifecycle smoke test used the real incident creation and transcript-verification RPCs: parent visibility was 0 before publication and 1 after verification/publication, with reviewed exact words visible; transaction rolled back
 - [x] Rollback-only Monday publication smoke test published the week starting 2026-11-23, exposed the result to the linked parent and created one parent notification; transaction rolled back
 - [x] Repeatable script added at `scripts/rls-role-smoke.sql`; it simulates signed-in database claims and rolls back both transactions without changing records
@@ -73,6 +74,16 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [ ] Driver portal browser test with a separate driver account (assigned roster only, start/check-in/finish a route, and parent journey notifications)
 - [ ] Verify GitHub Pages has finished publishing the latest main-branch commit
 - [x] Invite/recovery password setup form requires 12+ characters with uppercase, lowercase, a number and a symbol (application-side check only)
+
+## Administrator Command Center review queue
+
+1. Sign in through the Administrator portal and open Command Center.
+2. Confirm the three live queue cards load from Supabase: unanswered parent responses, incidents awaiting transcript verification, and verified incidents awaiting parent publication.
+3. Confirm counts reflect the corresponding administrator lists and show zero when there are no matching records.
+4. Select each card and confirm it opens Parent Management or Incident Center as appropriate.
+5. Use the refresh control and confirm the queue reloads without signing out.
+6. At a narrow mobile width, confirm the cards stack in one column and all labels/counts remain readable.
+7. Confirm the dashboard shows counts and category labels only; do not display parent messages, student incident narratives, exact words, transcript text, or temporary audio evidence in this summary.
 
 ## Repeatable database audit
 

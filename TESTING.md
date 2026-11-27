@@ -13,6 +13,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] Database blocks attaching new temporary audio to an already verified or published incident
 - [x] Edge Function validates signed-in administrator role, requires permission confirmation for upload, and creates only a 60-second listening URL
 - [x] Parent and student incident/evidence visibility remains governed by existing Row Level Security
+- [x] Weekly-results RLS exposes only published rows to linked portal accounts; rollback-only checks confirmed parent 0 / admin 1 while unpublished, then parent 1 after publication
 - [ ] Browser microphone test on HTTPS with an appropriately consenting adult
 - [ ] Signed-in administrator → upload → review → verify → storage deletion end-to-end test
 - [ ] Separate parent account test after publication

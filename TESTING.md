@@ -86,6 +86,14 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 7. At a narrow mobile width, confirm the cards stack in one column and all labels/counts remain readable.
 8. Confirm the dashboard shows counts and category labels only; do not display parent messages, student incident narratives, exact words, transcript text, or temporary audio evidence in this summary.
 
+### Parent journey live-update behavior
+
+1. Sign in with a linked parent test account and leave the parent portal open.
+2. Start a test route and record a student check-in in quick succession.
+3. Confirm journey status and check-in history update automatically without repeated flicker or duplicate dashboard content.
+4. Confirm several database events arriving within a short burst result in one consolidated parent portal refresh.
+5. Navigate away or sign out and confirm the old portal is no longer refreshed.
+
 ### Portal invitation retry behaviour
 
 1. Open Portal Accounts as an administrator and complete a test invitation form using a controlled test inbox and a fictional test student.

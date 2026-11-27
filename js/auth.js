@@ -296,8 +296,8 @@
         client.from("mark_transactions").select("transaction_type,amount,balance_delta,balance_after,reason,occurred_at").eq("student_id", student.id).order("occurred_at", { ascending: false }).limit(8),
         role === "student" ? client.from("notifications").select("id,title,message,read_at,created_at").eq("recipient_user_id", user.id).eq("related_student_id", student.id).order("created_at", { ascending: false }).limit(20) : Promise.resolve({ data: [], error: null })
       ];
-      const [weeklyResult, txResult, notificationResult] = await Promise.all(commonQueries);
-      if (weeklyResult.error || txResult.error || notificationResult.error) {
+      const [weeklyResult, txResult, studentNotificationResult] = await Promise.all(commonQueries);
+      if (weeklyResult.error || txResult.error || studentNotificationResult.error) {
         container.insertAdjacentHTML("beforeend", '<section class="panel registry-panel"><h3>'+esc(student.full_name)+'</h3><p>Unable to load this profile’s results. Please contact the administrator.</p></section>');
         continue;
       }
@@ -306,7 +306,7 @@
       const latestWeekly = weeklyRows[0] || null;
       const lifetimeBalance = tx.length ? tx[0].balance_after : (student.starting_marks || 0);
       const history = tx.map(t => '<tr><td>'+esc(new Date(t.occurred_at).toLocaleDateString("en-IN"))+'</td><td>'+esc(t.reason || t.transaction_type)+'</td><td>'+esc(t.balance_delta > 0 ? "+" : "")+esc(t.balance_delta)+'</td></tr>').join("");
-      const studentNotifications = notificationResult.data || [];
+      const studentNotifications = studentNotificationResult.data || [];
       const studentUnreadNotifications = studentNotifications.filter(x => !x.read_at).length;
       const studentNotificationHtml = studentNotifications.map(x => '<li><strong>'+esc(x.title)+'</strong><p>'+esc(x.message)+'</p><small>'+esc(new Date(x.created_at).toLocaleString("en-IN"))+'</small>'+(x.read_at ? '<span class="session-status completed">Read</span>' : '<button class="button button-quiet" type="button" data-mark-notification-read="'+esc(x.id)+'">Mark read</button>')+'</li>').join("");
       const studentNotificationPanelHtml = '<div class="panel-heading parent-notification-heading"><div><h3>Notifications</h3><p><span data-unread-count="'+esc(student.id)+'" data-count="' + studentUnreadNotifications +'">' + studentUnreadNotifications +' unread</span> · Updates for this student only</p></div>'+(studentUnreadNotifications ? '<button class="button button-quiet" type="button" data-mark-all-notifications-read="'+esc(student.id)+'">Mark all read</button>' : '')+'</div><ul class="simple-list">'+(studentNotificationHtml || '<li>No notifications yet.</li>')+'</ul>';

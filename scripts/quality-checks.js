@@ -364,4 +364,40 @@ check("weekly print report includes date range, score totals and a responsive pr
   assert.match(app, /@media print/);
 });
 
+
+check("weekly results page exposes print and CSV actions", () => {
+  assert.match(app, /id="weeklyPrintButton"/);
+  assert.match(app, /id="weeklyExportButton"/);
+});
+
+check("weekly report export and print share the current student/status filter", () => {
+  assert.match(app, /function filteredWeeklyResults\(\)/);
+  assert.equal((app.match(/filteredWeeklyResults\(\)/g) || []).length >= 3, true);
+});
+
+check("weekly CSV export escapes text cells and protects formula-like values", () => {
+  assert.match(app, /const csvCell=\(value,isText=false\)=>/);
+  assert.match(app, /isText&&\/\^\[=\+\\-@\]\/\.test\(raw\)/);
+  assert.match(app, /text\/csv;charset=utf-8/);
+});
+
+check("weekly CSV export uses a date-specific filename and UTF-8 BOM", () => {
+  assert.match(app, /discipline-weekly-results-\"\+input\.value\+\"\.csv/);
+  assert.match(app, /new Blob\(\[\"\\uFEFF\"\+csvRows\.join\(\"\\r\\n\"\)\]/);
+});
+
+check("weekly print report writes an escaped student table to a separate window", () => {
+  assert.match(app, /const popup=window\.open\(\"\",\"_blank\"\)/);
+  assert.match(app, /popup\.document\.write\(printHtml\)/);
+  assert.match(app, /escapeHTML\(x\.students\?\.full_name\|\|\"Student\"\)/);
+  assert.match(app, /escapeHTML\(x\.students\?\.student_code\|\|\"\"\)/);
+});
+
+check("weekly print report includes scoring period, totals and print-specific layout", () => {
+  assert.match(app, /Official Monday–Sunday scoring summary/);
+  assert.match(app, /total\(\"total_awards\"\)/);
+  assert.match(app, /total\(\"total_deductions\"\)/);
+  assert.match(app, /@media print/);
+});
+
 process.stdout.write("\n" + passed + " DISCIPLINE quality checks passed.\n");

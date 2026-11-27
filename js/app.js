@@ -26,6 +26,7 @@ const modalBackdrop = document.getElementById("modalBackdrop");
 const modalTitle = document.getElementById("modalTitle");
 const modalBody = document.getElementById("modalBody");
 let toastTimer;
+let dashboardAttentionTimer = null;
 
 function showToast(message){
   toast.textContent = message;
@@ -125,6 +126,7 @@ function toggleAdminNotificationPanel(){
   loadAdminNotifications();
 }
 function setActivePage(page){
+  if(dashboardAttentionTimer){clearInterval(dashboardAttentionTimer);dashboardAttentionTimer=null;}
   if(!pageMeta[page]) page="dashboard";
   document.querySelectorAll(".nav-item").forEach(btn=>btn.classList.toggle("active",btn.dataset.page===page));
   breadcrumbCurrent.textContent=(pageMeta[page]||pageMeta.dashboard).title;
@@ -152,6 +154,35 @@ function showPageError(error){
 function closeSidebar(){
   document.getElementById("sidebar").classList.remove("open");
   document.getElementById("sidebarBackdrop").classList.remove("show");
+}
+
+async function refreshDashboardAttentionQueue(){
+ const db=window.disciplineSupabase;
+ const container=document.getElementById("dashAttention");
+ if(!db||!container)return;
+ try{
+  const [parentPending,incidentReviewPending,incidentPublishPending]=await Promise.all([
+   db.from("parent_responses").select("id",{count:"exact",head:true}).is("reviewed_at",null),
+   db.from("incidents").select("id",{count:"exact",head:true}).eq("transcript_verified",false),
+   db.from("incidents").select("id",{count:"exact",head:true}).eq("transcript_verified",true).is("published_to_parent_at",null)
+  ]);
+  if(parentPending.error)throw parentPending.error;
+  if(incidentReviewPending.error)throw incidentReviewPending.error;
+  if(incidentPublishPending.error)throw incidentPublishPending.error;
+  const parentCount=parentPending.count||0,reviewCount=incidentReviewPending.count||0,publicationCount=incidentPublishPending.count||0;
+  updateAdminNavBadges(parentCount,reviewCount);
+  const items=[
+   {label:"Parent responses",count:parentCount,detail:"Awaiting administrator review",target:"parents",action:"Review",kind:"parent"},
+   {label:"Incident verification",count:reviewCount,detail:"Reports awaiting transcript review",target:"incidents",action:"Review",kind:"incident"},
+   {label:"Verified reports",count:publicationCount,detail:"Ready for parent publication",target:"incidents",action:"Publish",kind:"publish"}
+  ];
+  container.innerHTML=items.map(item=>
+   '<button class="dash-attention-card" type="button" data-page="'+item.target+'"><span class="dash-attention-icon '+item.kind+'">'+(item.kind==="parent"?"↩":item.kind==="incident"?"!":"✓")+'</span><span class="dash-attention-copy"><strong>'+item.label+'</strong><small>'+item.detail+'</small></span><span class="dash-attention-count '+(item.count?"has-items":"")+'">'+item.count+'</span><span class="dash-attention-link">'+item.action+' →</span></button>'
+  ).join("");
+ }catch(error){
+  console.error("Command Center review queue refresh failed:",error);
+  container.innerHTML='<p class="dash-attention-error" role="status">The review queue could not be refreshed. Use the refresh control to try again.</p>';
+ }
 }
 
 async function renderDashboard(){
@@ -199,32 +230,26 @@ async function renderDashboard(){
   </section>
   <footer class="page-footer"><span>DISCIPLINE · Administrator workspace</span><span>All figures are based on saved records.</span></footer>`;
  const attentionRefresh=document.getElementById("dashAttentionRefresh");
- if(attentionRefresh)attentionRefresh.addEventListener("click",()=>{
+ if(attentionRefresh)attentionRefresh.addEventListener("click",async()=>{
   attentionRefresh.disabled=true;
   attentionRefresh.textContent="…";
-  setActivePage("dashboard");
+  try{await refreshDashboardAttentionQueue();}
+  finally{attentionRefresh.disabled=false;attentionRefresh.textContent="↻";}
  });
  if(!db){pageContent.insertAdjacentHTML("beforeend",'<p class="registry-disclaimer">Database connection is not ready. Refresh after signing in.</p>');return;}
  try{
-  const [students,session,weeklyTx,recent,parentPending,incidentReviewPending,incidentPublishPending]=await Promise.all([
+  await refreshDashboardAttentionQueue();
+  if(dashboardAttentionTimer)clearInterval(dashboardAttentionTimer);
+  dashboardAttentionTimer=window.setInterval(()=>{
+   if(document.getElementById("dashAttention"))refreshDashboardAttentionQueue();
+  },60000);
+  const [students,session,weeklyTx,recent]=await Promise.all([
    db.from("students").select("id",{count:"exact",head:true}).eq("is_active",true),
    db.from("journey_sessions").select("id").eq("session_type","morning").eq("session_date",today).maybeSingle(),
    db.from("mark_transactions").select("transaction_type,amount,balance_delta").gte("occurred_at",week+"T00:00:00+05:30").lt("occurred_at",weekEnd+"T00:00:00+05:30"),
-   db.from("mark_transactions").select("transaction_type,amount,balance_delta,reason,occurred_at,students(full_name,student_code)").order("occurred_at",{ascending:false}).limit(7),
-   db.from("parent_responses").select("id",{count:"exact",head:true}).is("reviewed_at",null),
-   db.from("incidents").select("id",{count:"exact",head:true}).eq("transcript_verified",false),
-   db.from("incidents").select("id",{count:"exact",head:true}).eq("transcript_verified",true).is("published_to_parent_at",null)
+   db.from("mark_transactions").select("transaction_type,amount,balance_delta,reason,occurred_at,students(full_name,student_code)").order("occurred_at",{ascending:false}).limit(7)
   ]);
   if(students.error)throw students.error;if(session.error)throw session.error;if(weeklyTx.error)throw weeklyTx.error;if(recent.error)throw recent.error;
-  if(parentPending.error)throw parentPending.error;if(incidentReviewPending.error)throw incidentReviewPending.error;if(incidentPublishPending.error)throw incidentPublishPending.error;
-  const attentionItems=[
-   {label:"Parent responses",count:parentPending.count||0,detail:"Awaiting administrator review",target:"parents",action:"Review",kind:"parent"},
-   {label:"Incident verification",count:incidentReviewPending.count||0,detail:"Reports awaiting transcript review",target:"incidents",action:"Review",kind:"incident"},
-   {label:"Verified reports",count:incidentPublishPending.count||0,detail:"Ready for parent publication",target:"incidents",action:"Publish",kind:"publish"}
-  ];
-  document.getElementById("dashAttention").innerHTML=attentionItems.map(item=>
-   '<button class="dash-attention-card" type="button" data-page="'+item.target+'"><span class="dash-attention-icon '+item.kind+'">'+(item.kind==="parent"?"↩":item.kind==="incident"?"!":"✓")+'</span><span class="dash-attention-copy"><strong>'+item.label+'</strong><small>'+item.detail+'</small></span><span class="dash-attention-count '+(item.count?"has-items":"")+'">'+item.count+'</span><span class="dash-attention-link">'+item.action+' →</span></button>'
-  ).join("");
   document.getElementById("dashStudents").textContent=students.count??0;
   if(session.data){
    const at=await db.from("attendance").select("status").eq("session_id",session.data.id);

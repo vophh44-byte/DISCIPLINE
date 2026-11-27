@@ -15,6 +15,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] Edge Function validates signed-in administrator role, requires permission confirmation for upload, and creates only a 60-second listening URL
 - [x] Parent and student incident/evidence visibility remains governed by existing Row Level Security
 - [x] Weekly-results RLS exposes only published rows to linked portal accounts; rollback-only checks confirmed parent 0 / admin 1 while unpublished, then parent 1 after publication
+- [x] Incident deductions use a generic shared-ledger reason so factual narratives are not copied into parent/student mark history
 - [ ] Browser microphone test on HTTPS with an appropriately consenting adult
 - [ ] Signed-in administrator → upload → review → verify → storage deletion end-to-end test
 - [ ] Separate parent account test after publication
@@ -40,7 +41,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 ### 2. Parent access
 
 1. Sign in using a separate parent test account linked only to the test student.
-2. Before publication, confirm the incident is not visible.
+2. Before publication, confirm the incident is not visible and the shared mark history shows only the generic “Incident deduction” label, not the factual narrative.
 3. Publish the verified test incident from the administrator account.
 4. Confirm only the linked parent can see the report and its reviewed exact words.
 5. Confirm the parent cannot open, list, or download temporary audio.
@@ -51,7 +52,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 
 1. From Portal Accounts, create a Student (view only) invitation for a fictional test student and an email inbox controlled by the tester. Complete password setup from the invitation.
 2. Choose Student on the welcome screen and sign in using that separate student test account linked to the test student.
-3. Confirm the student can view only their own published weekly score and mark history.
+3. Confirm the student can view only their own published weekly score and mark history; any incident-related mark entry uses only the generic “Incident deduction” label.
 4. Confirm the student cannot see incident narratives, exact words, parent-only responses, or evidence.
 5. Confirm the student cannot create or modify incidents, exact words, marks, parent publication, or evidence.
 6. Confirm the student cannot list or download temporary audio.

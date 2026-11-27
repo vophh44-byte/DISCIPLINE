@@ -1318,3 +1318,5 @@ table tbody tr:hover{background:#f7f9fc}
 .incidents-review-audio small{display:block;margin-top:5px;color:#718198;font-size:9px}
 .incidents-review-actions{display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap;margin-top:15px;padding-top:13px;border-top:1px solid #edf0f4}
 @media(max-width:560px){.incidents-review-dialog form{padding:16px}.incidents-review-actions{justify-content:stretch}.incidents-review-actions .button{flex:1}}
+
+.auth-password-hint{display:block;margin:3px 0 9px;padding:9px 11px;background:#f8fafc;border:1px solid #e4eaf1;border-radius:8px;color:#63758b;font-size:10px;line-height:1.55}

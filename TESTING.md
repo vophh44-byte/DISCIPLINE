@@ -5,7 +5,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 ## Current automated / configuration checks
 
 - [x] Frontend JavaScript parses: `js/app.js` and `js/auth.js`
-- [x] GitHub Actions syntax, portal privacy, audio cleanup, invitation, anonymous-grant and role-smoke regression checks pass; 49 checks passed on the latest release-code commit using Node.js 24
+- [x] GitHub Actions syntax, portal privacy, audio cleanup, invitation, anonymous-grant, role-smoke, admin inbox and weekly report export regression checks pass; 68 checks passed on the latest feature commit using Node.js 24
 - [x] GitHub Pages build and deploy succeeded for commit `05e06f6` ( [deployment run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/45961730460) )
 - [x] All 24 previously unindexed foreign-key columns now have B-tree indexes; PostgreSQL catalog check confirms 42/42 public foreign-key constraints are indexed
 - [x] Row Level Security is enabled on all 19 public application tables; role-specific access still requires the separate manual portal tests
@@ -32,6 +32,11 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] Incident deductions use a generic shared-ledger reason so factual narratives are not copied into parent/student mark history
 - [ ] Browser microphone test on HTTPS with an appropriately consenting adult
 - [x] Automated regression checks confirm multipart recording uploads forward explicit permission confirmation, the browser blocks recording without consent, consent is reconfirmed before upload, the 60-second stop and 8 MB limit remain in place, and server-side admin, MIME-type and short-lived playback guards remain
+- [x] Administrator inbox loads pending parent responses and incidents awaiting transcript verification; live counts appear in the Parent Management and Incident Center navigation badges
+- [x] Administrator inbox is hidden from parent, student and driver portals and escapes user-provided message/name content before display
+- [x] Weekly results support CSV export and print-ready report output; both respect the current student search and publication-status filters
+- [x] Weekly CSV export quotes text fields, guards formula-like text values, uses UTF-8 BOM and includes the selected Monday in the filename
+- [x] Weekly print report escapes student names/IDs, includes scoring period and totals, and uses a responsive print layout
 - [x] Both deployed Edge Functions are tracked in `supabase/functions`; account provisioning tests administrator authorization, supported roles, active-student validation and student-link conflicts
 - [ ] Signed-in administrator → upload → review → verify → storage deletion end-to-end test
 - [ ] Separate parent account test after publication
@@ -42,6 +47,14 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 ## Repeatable database audit
 
 Run [`scripts/security-audit.sql`](scripts/security-audit.sql) in the Supabase SQL Editor while connected to the DISCIPLINE project. It is read-only and returns function execute grants, RLS table coverage, the temporary-audio uniqueness index, verification-RPC privileges and aggregate integrity counts. It does not return student names, parent emails or incident narratives. Review each authenticated-executable SECURITY DEFINER routine's definition to confirm it binds authorization to `auth.uid()` and the intended role.
+
+### Weekly result export and print
+
+1. Sign in as an administrator and open Weekly Results.
+2. Select a Monday and load the saved result records for that scoring week.
+3. Enter a student search and/or select a publication-status filter.
+4. Export CSV and confirm the downloaded rows match the current filters and the selected Monday appears in the filename.
+5. Open Print report and confirm the same filtered rows, date range, score totals and portal publication status appear in the print preview.
 
 ## Manual test procedure
 

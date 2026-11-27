@@ -196,7 +196,7 @@ Deno.serve(async (req: Request) => {
           } else {
             const routeIds = [...new Set((assignments || []).map(item => item.route_id))];
             let activeRoutes: { id: string; driver_user_id: string; is_active: boolean }[] = [];
-            let routesError = null;
+            let routesError: { message: string } | null = null;
             if (routeIds.length) {
               const routeResult = await adminClient.from("driver_routes")
                 .select("id,driver_user_id,is_active").in("id", routeIds).eq("is_active", true);
@@ -230,7 +230,7 @@ Deno.serve(async (req: Request) => {
           const { data: byStudent, error: byStudentError } = await adminClient
             .from("student_accounts").select("student_id,user_id").eq("student_id", studentId).maybeSingle();
           let byUser: { student_id: string; user_id: string } | null = null;
-          let byUserError = null;
+          let byUserError: { message: string } | null = null;
           if (existingUserId) {
             const result = await adminClient.from("student_accounts").select("student_id,user_id")
               .eq("user_id", existingUserId).maybeSingle();

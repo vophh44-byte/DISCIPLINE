@@ -460,13 +460,13 @@ check("Driver preflight blocks students assigned to another active route before 
 });
 
 check("Portal Account form automatically repeats preflight before account creation", () => {
-  const start=app.indexOf("portalAccountForm.addEventListener(\\"submit\\",async e=>{");
-  const end=app.indexOf("\\n  });",start);
+  const start=app.indexOf("portalAccountForm.addEventListener(\"submit\",async e=>{");
+  const end=app.indexOf("\n  });",start);
   const handler=app.slice(start,end);
   assert.ok(start>=0&&end>start,"portal account submit handler missing");
   assert.match(handler, /await runPortalPreflight\(payload\)/);
   assert.ok(handler.indexOf("await runPortalPreflight(payload)")<handler.indexOf('functions.invoke("create-portal-account",{body:payload})'));
-  assert.match(handler, /finally\{[\\s\\S]*btn\.disabled=false/);
+  assert.match(handler, /finally\{[\s\S]*btn\.disabled=false/);
 });
 
 check("Portal preflight displays returned details as escaped text and clears stale previews on edits", () => {

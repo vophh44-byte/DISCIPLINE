@@ -5,6 +5,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 ## Current automated / configuration checks
 
 - [x] Portal Accounts preflight preview is read-only: it does not create Auth users, change profile links or send email; final submit reruns the same server-side checks before provisioning
+- [x] Partial invitation recovery reuses an existing Auth user only when Supabase shows an invitation timestamp; it creates the missing portal profile/link without sending another invitation, while unrelated sign-in records remain blocked for review
 - [x] Separate preflight module is unit-tested with a mocked Supabase client for unused/existing emails, inactive/mismatched profiles, student-link conflicts, active/inactive driver-route conflicts and fail-closed database errors; tests assert no write calls occur
 - [ ] Manually verify parent, student and driver preview rendering in a signed-in browser with fictional test records; automated mocked tests already cover server outcomes; do not send real invitations as part of this check
 

@@ -19,6 +19,7 @@ export async function validatePortalAccountPreflight({
 }) {
   const checks = [];
   const blockers = [];
+  let resumeAuthUserId = null;
   const addCheck = (label, ok, passDetail, failDetail) => {
     checks.push({ label, status: ok ? "ok" : "blocked", detail: ok ? passDetail : failDetail });
     if (!ok) blockers.push(failDetail);
@@ -29,7 +30,7 @@ export async function validatePortalAccountPreflight({
   addCheck("Email address", validEmail, "The email format is valid.", "Enter a valid email address (254 characters or fewer).");
   addCheck("Name", validName, "A name has been provided.", "Enter a name (100 characters or fewer).");
   addCheck("Portal type", validRole, "A supported portal type is selected.", "Choose Parent, Student or Driver.");
-  if (!validEmail || !validName || !validRole) return { ready: false, checks, blockers };
+  if (!validEmail || !validName || !validRole) return { ready: false, checks, blockers, resumeAuthUserId };
 
   const emailPattern = email.replace(/[\\%_]/g, "\\$&");
   const { data: matchingProfiles, error: profileLookupError } = await adminClient
@@ -47,7 +48,7 @@ export async function validatePortalAccountPreflight({
         ? "This email already has a " + existing.role + " account. An account role cannot be changed here."
         : "This portal account is inactive. Ask the administrator to review it.");
   } else {
-    let authMatch = false;
+    let matchingAuthUser = null;
     let authLookupComplete = false;
     let authLookupFailed = false;
     for (let page = 1; page <= 10; page++) {
@@ -56,8 +57,8 @@ export async function validatePortalAccountPreflight({
         authLookupFailed = true;
         break;
       }
-      if (authPage.users.some((user) => (user.email || "").toLowerCase() === email)) {
-        authMatch = true;
+      matchingAuthUser = authPage.users.find((user) => (user.email || "").toLowerCase() === email) || null;
+      if (matchingAuthUser) {
         authLookupComplete = true;
         break;
       }
@@ -66,8 +67,13 @@ export async function validatePortalAccountPreflight({
         break;
       }
     }
-    if (authMatch) {
-      addCheck("Existing account", false, "", "A sign-in record already exists for this email but has no matching portal profile. Ask an administrator to review it before inviting.");
+    if (matchingAuthUser?.invited_at) {
+      resumeAuthUserId = matchingAuthUser.id;
+      addCheck("Existing invitation", true,
+        "A previous invitation exists without a portal profile. Setup can resume without sending another email.", "");
+    } else if (matchingAuthUser) {
+      addCheck("Existing account", false, "",
+        "A sign-in record exists but was not created through an invitation. Ask an administrator to review it before linking.");
     } else if (!authLookupComplete || authLookupFailed) {
       addCheck("Existing account", false, "", "Could not verify the complete sign-in directory. Ask an administrator to review this email before inviting.");
     } else {
@@ -164,5 +170,5 @@ export async function validatePortalAccountPreflight({
       }
     }
   }
-  return { ready: blockers.length === 0, checks, blockers };
+  return { ready: blockers.length === 0, checks, blockers, resumeAuthUserId };
 }

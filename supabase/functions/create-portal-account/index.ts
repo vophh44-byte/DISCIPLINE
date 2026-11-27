@@ -226,23 +226,26 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  const { data: invited, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
-    redirectTo: "https://vophh44-byte.github.io/DISCIPLINE/?setup=1",
-    data: { display_name: displayName },
-  });
-  if (inviteError || !invited.user) {
-    return respond({ error: inviteError?.message || "Could not send invitation." }, 400);
+  const recoveredInvitation = !!readiness.resumeAuthUserId;
+  let userId = readiness.resumeAuthUserId;
+  if (!userId) {
+    const { data: invited, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
+      redirectTo: "https://vophh44-byte.github.io/DISCIPLINE/?setup=1",
+      data: { display_name: displayName },
+    });
+    if (inviteError || !invited.user) {
+      return respond({ error: inviteError?.message || "Could not send invitation." }, 400);
+    }
+    userId = invited.user.id;
   }
-
-  const userId = invited.user.id;
   // Ignore a raced duplicate rather than overwriting the existing profile role.
   const { error: profileError } = await adminClient.from("profiles").upsert({
     user_id: userId, role, display_name: displayName, email, is_active: true,
   }, { onConflict: "user_id", ignoreDuplicates: true });
   if (profileError) {
     return respond({
-      error: "The invitation exists, but the portal profile could not be confirmed: " + profileError.message +
-        ". Do not delete the invited user; retry from Portal Accounts or ask for an administrator review.",
+      error: "The invited sign-in account exists, but the portal profile could not be confirmed: " + profileError.message +
+        ". Keep the account; retry from Portal Accounts to resume setup or ask for an administrator review.",
     }, 500);
   }
 
@@ -262,7 +265,12 @@ Deno.serve(async (req: Request) => {
   }
 
   return respond({
-    success: true, existing_account: false, role, email, display_name: displayName,
-    message: "Invitation sent. The user must open the email and set a password.",
-  }, 201);
+    success: true,
+    existing_account: false,
+    recovered_invitation: recoveredInvitation,
+    role, email, display_name: displayName,
+    message: recoveredInvitation
+      ? "The previous invitation was recovered and the portal link is complete. No second email was sent."
+      : "Invitation sent. The user must open the email and set a password.",
+  }, recoveredInvitation ? 200 : 201);
 });

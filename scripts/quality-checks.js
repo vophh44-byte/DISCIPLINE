@@ -448,6 +448,26 @@ check("Portal preview and final submission share the same read-only validator be
   assert.match(accountPreflight, /return \{ ready: blockers\.length === 0, checks, blockers \}/);
 });
 
+check("Invitation recovery is limited to Auth users with a prior invitation timestamp", () => {
+  assert.match(accountPreflight, /matchingAuthUser\?\.invited_at/);
+  assert.match(accountPreflight, /resumeAuthUserId = matchingAuthUser\.id/);
+  assert.match(accountPreflight, /not created through an invitation/);
+});
+
+check("Recovered invitations reuse the existing Auth user and skip inviteUserByEmail", () => {
+  const recovery=accountFunction.indexOf("const recoveredInvitation = !!readiness.resumeAuthUserId");
+  const invite=accountFunction.indexOf("inviteUserByEmail(email");
+  const upsert=accountFunction.indexOf('from("profiles").upsert',recovery);
+  assert.ok(recovery>=0&&invite>recovery&&upsert>invite);
+  assert.match(accountFunction, /if \(!userId\) \{[\s\S]*inviteUserByEmail\(email/);
+  assert.match(accountFunction, /recovered_invitation: recoveredInvitation/);
+});
+
+check("Portal Accounts reports recovered invitations without claiming another email was sent", () => {
+  assert.match(app, /data\.recovered_invitation/);
+  assert.match(app, /no second email was sent/);
+});
+
 check("Student portal preflight catches an existing student or user link", () => {
   assert.match(accountPreflight, /from\("student_accounts"\)\.select\("student_id,user_id"\)\.eq\("student_id", studentId\)/);
   assert.match(accountPreflight, /eq\("user_id", existingUserId\)/);
@@ -1303,11 +1323,22 @@ async function runPortalPreflightUnitTests() {
       assert.ok(result.blockers.some(x=>/inactive|already has a driver account/.test(x)));
     }
   });
-  await expect("Existing Auth user without a portal profile is safely blocked for review", async () => {
+  await expect("Uninvited Auth users without a portal profile remain blocked for review", async () => {
     const {client,state}=makeClient({authUsers:[{id:USER_PARENT,email:"new.person@example.com"}]});
     const result=await validatePortalAccountPreflight({...payload(),adminClient:client});
     assert.equal(result.ready,false);
-    assert.match(result.blockers.join(" "),/no matching portal profile/);
+    assert.match(result.blockers.join(" "),/not created through an invitation/);
+    assert.equal(result.resumeAuthUserId,null);
+    assert.equal(state.writes,0);
+  });
+  await expect("An existing invited Auth user without a profile can safely resume without a second invitation", async () => {
+    const {client,state}=makeClient({
+      authUsers:[{id:USER_PARENT,email:"new.person@example.com",invited_at:"2026-11-26T12:00:00Z"}]
+    });
+    const result=await validatePortalAccountPreflight({...payload(),adminClient:client});
+    assert.equal(result.ready,true);
+    assert.equal(result.resumeAuthUserId,USER_PARENT);
+    assert.ok(result.checks.some(x=>x.label==="Existing invitation"&&x.status==="ok"));
     assert.equal(state.writes,0);
   });
   await expect("Student portal preflight blocks a student already linked to another login", async () => {

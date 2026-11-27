@@ -863,9 +863,11 @@ async function renderAccounts(){
         msg.textContent=(data&&data.error)||error?.message||"Could not create or link account. Please try again.";
       }else{
         msg.style.color="#7ed6a5";
-        msg.textContent=data.existing_account
-          ?"Existing "+data.role+" account for "+data.email+" is linked. No new invitation was sent."
-          :"Invitation sent to "+data.email+". The user must open the email and set a password.";
+        msg.textContent=data.recovered_invitation
+          ?"Recovered the earlier invitation for "+data.email+". The account is now linked; no second email was sent."
+          :data.existing_account
+            ?"Existing "+data.role+" account for "+data.email+" is linked. No new invitation was sent."
+            :"Invitation sent to "+data.email+". The user must open the email and set a password.";
         e.target.reset();
         updateAccountForm();
         preflightResult.hidden=true;

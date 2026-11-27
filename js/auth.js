@@ -12,6 +12,7 @@
         <div class="portal-choice-grid">
           <button type="button" class="portal-choice" data-portal="admin"><span class="portal-choice-icon">⌘</span><strong>Administrator</strong><small>Manage students, journeys, marks and reports</small><span class="portal-choice-arrow">→</span></button>
           <button type="button" class="portal-choice" data-portal="parent"><span class="portal-choice-icon">♧</span><strong>Parent</strong><small>View your child’s progress and updates</small><span class="portal-choice-arrow">→</span></button>
+          <button type="button" class="portal-choice" data-portal="student"><span class="portal-choice-icon">♙</span><strong>Student</strong><small>View your own score and mark history</small><span class="portal-choice-arrow">→</span></button>
           <button type="button" class="portal-choice" data-portal="driver"><span class="portal-choice-icon">↗</span><strong>Driver</strong><small>View your route and update journey check-ins</small><span class="portal-choice-arrow">→</span></button>
         </div>
         <div class="auth-note">Use the account provided by the DISCIPLINE administrator. Your access is based on your assigned role.</div>
@@ -68,7 +69,7 @@
     selectedPortal = role;
     picker.hidden = true;
     loginPanel.hidden = false;
-    const names = { admin: "Administrator", parent: "Parent", driver: "Driver" };
+    const names = { admin: "Administrator", parent: "Parent", student: "Student", driver: "Driver" };
     document.getElementById("loginHeading").textContent = names[role] + " sign in";
     document.getElementById("loginDescription").textContent = "Sign in to your " + names[role].toLowerCase() + " dashboard.";
     message.textContent = "";
@@ -259,7 +260,7 @@
     const name = profile.display_name || user.email || (role === "parent" ? "Parent" : "Student");
     portalShell(role, name);
     const page = document.getElementById("pageContent");
-    page.innerHTML = '<div class="registry-head"><div><div class="eyebrow">DISCIPLINE / '+role.toUpperCase()+'</div><h1>Welcome, '+esc(name)+'</h1><p class="page-intro">'+(role==="parent"?"Private updates for the student profiles linked to your account.":"Your personal, read-only journey dashboard.")+'</p></div></div><div class="registry-stats"><article class="stat-card"><div class="stat-label">Linked profile(s)</div><div class="stat-value" id="linkedCount">…</div></article><article class="stat-card"><div class="stat-label">Portal access</div><div class="stat-value" style="font-size:18px">'+(role==="parent"?"View & respond":"View only")+'</div></article></div><div id="portalChildren"></div><footer class="page-footer"><span>© 2026 DISCIPLINE.</span><span>'+(role==="parent"?"PRIVATE PARENT PORTAL":"PRIVATE STUDENT PORTAL · VIEW ONLY")+'</span></footer>';
+    page.innerHTML = '<div class="registry-head"><div><div class="eyebrow">DISCIPLINE / '+role.toUpperCase()+'</div><h1>Welcome, '+esc(name)+'</h1><p class="page-intro">'+(role==="parent"?"Private updates for the student profiles linked to your account.":"Your personal, read-only score and progress dashboard.")+'</p></div></div><div class="registry-stats"><article class="stat-card"><div class="stat-label">Linked profile(s)</div><div class="stat-value" id="linkedCount">…</div></article><article class="stat-card"><div class="stat-label">Portal access</div><div class="stat-value" style="font-size:18px">'+(role==="parent"?"View & respond":"View only")+'</div></article></div><div id="portalChildren"></div><footer class="page-footer"><span>© 2026 DISCIPLINE.</span><span>'+(role==="parent"?"PRIVATE PARENT PORTAL":"PRIVATE STUDENT PORTAL · VIEW ONLY")+'</span></footer>';
     const container = document.getElementById("portalChildren");
     let links = [];
     if (role === "student") {
@@ -635,14 +636,7 @@
       picker.insertAdjacentHTML("beforeend", '<p class="auth-message">This account is inactive or has no active portal role. Please contact the administrator.</p>');
       return false;
     }
-    if (profile.role === "student") {
-      await client.auth.signOut();
-      gate.style.display = "grid";
-      showPicker();
-      picker.insertAdjacentHTML("beforeend", '<p class="auth-message">This email is registered as a Student account. This sign-in page has Admin, Parent and Driver portals only. Ask the administrator to assign the correct portal role or use the parent account email.</p>');
-      return false;
-    }
-    const allowedRoles = ["admin","parent","driver"];
+    const allowedRoles = ["admin","parent","student","driver"];
     if (!allowedRoles.includes(String(profile.role))) {
       await client.auth.signOut();
       gate.style.display = "grid";
@@ -666,6 +660,10 @@
     }
     if (profile.role === "parent") {
       await renderReadOnlyPortal("parent", profile, session.user);
+      return true;
+    }
+    if (profile.role === "student") {
+      await renderReadOnlyPortal("student", profile, session.user);
       return true;
     }
     await renderDriverPortal(profile, session.user);

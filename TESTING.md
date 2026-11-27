@@ -81,9 +81,10 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 2. Confirm the three live queue cards load from Supabase: unanswered parent responses, incidents awaiting transcript verification, and verified incidents awaiting parent publication.
 3. Confirm counts reflect the corresponding administrator lists and show zero when there are no matching records.
 4. Select each card and confirm it opens Parent Management or Incident Center as appropriate.
-5. Use the refresh control and confirm the queue reloads without signing out.
-6. At a narrow mobile width, confirm the cards stack in one column and all labels/counts remain readable.
-7. Confirm the dashboard shows counts and category labels only; do not display parent messages, student incident narratives, exact words, transcript text, or temporary audio evidence in this summary.
+5. Use the refresh control and confirm only the queue reloads without re-rendering the dashboard.
+6. Leave Command Center open and confirm the counts update automatically within 60 seconds; navigate to another section and confirm background polling stops.
+7. At a narrow mobile width, confirm the cards stack in one column and all labels/counts remain readable.
+8. Confirm the dashboard shows counts and category labels only; do not display parent messages, student incident narratives, exact words, transcript text, or temporary audio evidence in this summary.
 
 ### Portal invitation retry behaviour
 

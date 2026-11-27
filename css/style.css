@@ -1365,3 +1365,10 @@ table tbody tr:hover{background:#f7f9fc}
 .driver-checkin-tools input{flex:1 1 210px;min-width:160px}
 .driver-checkin-tools select{flex:0 1 170px;min-width:145px}
 @media(max-width:760px){.driver-checkin-tools{align-items:stretch}.driver-checkin-tools input,.driver-checkin-tools select{flex:1 1 100%;max-width:none}.driver-checkin-tools .button{flex:1}}
+
+/* Mark ledger search and export controls */
+.marks-history-tools{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.marks-history-tools .marks-history-tag{white-space:nowrap}
+.marks-history-tools input{flex:1 1 180px;min-width:150px}
+.marks-history-tools select{flex:0 1 160px;min-width:140px}
+@media(max-width:760px){.marks-history-tools{width:100%;justify-content:flex-start}.marks-history-tools input,.marks-history-tools select{flex:1 1 100%;max-width:none}.marks-history-tools .button{flex:1}}

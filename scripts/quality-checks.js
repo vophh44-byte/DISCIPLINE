@@ -19,6 +19,8 @@ const anonAccessMigration = read("supabase/migrations/20261127115000_revoke_anon
 const securityAudit = read("scripts/security-audit.sql");
 const roleSmoke = read("scripts/rls-role-smoke.sql");
 const weeklyPublishMigration = read("supabase/migrations/20261127132000_notify_linked_portals_when_weekly_results_first_published.sql");
+const signupFunction = read("supabase/functions/portal-signup-request/index.ts");
+const signupMigration = read("supabase/migrations/20261128100000_add_parent_driver_signup_requests.sql");
 
 let passed = 0;
 function check(name, callback) {
@@ -38,6 +40,49 @@ check("all four portal choices are present", () => {
   for (const role of ["admin", "parent", "student", "driver"]) {
     assert.match(auth, new RegExp('data-portal="' + role + '"'));
   }
+});
+
+check("main sign-in page offers a parent and driver account request without direct self-activation", () => {
+  assert.match(auth, /id="openSignupPanel"/);
+  assert.match(auth, /id="signupRequestForm"/);
+  assert.match(auth, /<option value="parent">Parent \/ Guardian<\/option>/);
+  assert.match(auth, /<option value="driver">Driver<\/option>/);
+  assert.match(auth, /functions\.invoke\("portal-signup-request"/);
+  assert.match(auth, /This request does not activate portal access/);
+  assert.doesNotMatch(auth, /id="signupPassword"/);
+});
+check("public signup endpoint accepts only parent and driver requests and cannot provision accounts", () => {
+  assert.match(signupFunction, /role !== "parent" && role !== "driver"/);
+  assert.match(signupFunction, /website/);
+  assert.match(signupFunction, /portal_signup_requests/);
+  assert.match(signupFunction, /genericMessage/);
+  assert.match(signupFunction, /SUPABASE_SERVICE_ROLE_KEY/);
+  assert.doesNotMatch(signupFunction, /inviteUserByEmail|auth\.admin\.createUser|from\("profiles"\)\.upsert|parent_student_links|driver_routes/);
+});
+check("public signup request data is private and protected by RLS", () => {
+  assert.match(signupMigration, /create table if not exists public\.portal_signup_requests/);
+  assert.match(signupMigration, /enable row level security/);
+  assert.match(signupMigration, /revoke all on table public\.portal_signup_requests from anon, authenticated/i);
+  assert.match(signupMigration, /grant all on table public\.portal_signup_requests to service_role/i);
+  assert.match(signupMigration, /unique index.*portal_signup_requests_one_open_per_email_role/i);
+});
+check("only active administrators can review public signup requests", () => {
+  const authCheck = accountFunction.indexOf('caller.role !== "admin" || caller.is_active !== true');
+  const listAction = accountFunction.indexOf('input.action === "list_signup_requests"');
+  const updateAction = accountFunction.indexOf('input.action === "update_signup_request"');
+  assert.ok(authCheck >= 0 && listAction > authCheck && updateAction > authCheck);
+  assert.match(accountFunction, /status, reviewed_at: now, reviewed_by: authData\.user\.id/);
+  assert.match(accountFunction, /portal_signup_requests/);
+});
+check("administrator can review requests and complete them through the existing invite workflow", () => {
+  assert.match(app, /id="signupRequestList"/);
+  assert.match(app, /data-review-signup/);
+  assert.match(app, /data-decline-signup/);
+  assert.match(app, /list_signup_requests/);
+  assert.match(app, /update_signup_request/);
+  assert.match(app, /roleSelect\.value=request\.role/);
+  assert.match(app, /updateSignupRequestStatus\(requestId,"fulfilled"\)/);
+  assert.match(app, /Invite someone directly/);
 });
 
 check("only supported roles can open a session", () => {

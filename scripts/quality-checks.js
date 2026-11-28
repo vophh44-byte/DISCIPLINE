@@ -95,7 +95,7 @@ check("application shell starts hidden, inert and unavailable to assistive techn
 
 check("a validated portal session explicitly releases the hidden application shell", () => {
   const start = auth.indexOf("function portalShell(");
-  const end = auth.indexOf("async function renderReadOnlyPortal(", start);
+  const end = auth.indexOf("async function renderParentPortal(", start);
   const shell = auth.slice(start, end);
   assert.ok(start >= 0 && end > start, "portal shell function missing");
   assert.match(shell, /appShell\.hidden = false/);
@@ -1176,7 +1176,7 @@ check("parent journey realtime events are debounced before refreshing the portal
   assert.match(handler, /window\.clearTimeout\(parentJourneyRefreshTimer\)/);
   assert.match(handler, /window\.setTimeout\(/);
   assert.match(handler, /}, 350\)/);
-  assert.match(handler, /renderReadOnlyPortal\("parent", profile, user\)/);
+  assert.match(handler, /renderParentPortal\(profile, user\)/);
   assert.match(handler, /console\.error\("Parent journey refresh failed:"/);
 });
 

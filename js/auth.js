@@ -100,11 +100,14 @@
     picker.hidden = true;
     loginPanel.hidden = true;
     signupPanel.hidden = false;
+    signupMessage.classList.remove("is-success");
+    signupMessage.textContent = "";
     document.getElementById("signupName").focus();
   });
   document.getElementById("backFromSignup").addEventListener("click", showPicker);
   signupForm.addEventListener("submit", async event => {
     event.preventDefault();
+    signupMessage.classList.remove("is-success");
     signupMessage.textContent = "";
     signupSubmit.disabled = true;
     signupSubmit.textContent = "Submitting…";

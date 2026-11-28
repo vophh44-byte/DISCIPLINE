@@ -1202,6 +1202,29 @@ check("parent journey realtime events are debounced before refreshing the portal
 });
 
 
+check("Portal Overview documents all four roles and accurate read-only student access", () => {
+  const start = app.indexOf("function renderPortals(){");
+  const end = app.indexOf("\nfunction renderSettings()", start);
+  assert.ok(start >= 0 && end > start, "Portal Overview renderer missing");
+  const overview = app.slice(start, end);
+  for (const role of ["Administrator portal", "Parent portal", "Student portal · view only", "Driver portal"]) {
+    assert.ok(overview.includes(role), "Portal Overview is missing " + role);
+  }
+  assert.match(overview, /published weekly scores and mark history/);
+  assert.doesNotMatch(overview, /own mark balance|private balance/);
+});
+check("Portal Overview describes driver route and journey controls without exposing unrelated records", () => {
+  const start = app.indexOf("function renderPortals(){");
+  const end = app.indexOf("\nfunction renderSettings()", start);
+  const overview = app.slice(start, end);
+  const driverStart = overview.indexOf("Driver portal");
+  const driverSection = overview.slice(driverStart);
+  assert.match(driverSection, /assigned route roster/);
+  assert.match(driverSection, /start and finish today’s journey/);
+  assert.match(driverSection, /boarding, drop-off/);
+  assert.match(driverSection, /cannot view marks, behaviour reports or parent details/);
+});
+
 async function runPortalPreflightUnitTests() {
   const { pathToFileURL } = require("node:url");
   const moduleUrl = pathToFileURL(path.join(root, "supabase/functions/create-portal-account/portal-account-preflight.mjs")).href;

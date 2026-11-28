@@ -366,17 +366,16 @@ async function renderStudents(){
     const panel=document.getElementById("studentProfilePanel"),body=document.getElementById("studentProfileContent"),guardian=guardianOf(student);
     panel.hidden=false;body.innerHTML='<p class="registry-disclaimer">Loading the saved student record…</p>';panel.scrollIntoView({behavior:"smooth",block:"start"});
     try{
-      const [marks,allMarks,attendance,incidents,weekly,certificates,studentAccount,parentLinks]=await Promise.all([
+      const [marks,allMarks,attendance,incidents,weekly,certificates,parentLinks]=await Promise.all([
         db.from("mark_transactions").select("transaction_type,amount,balance_delta,reason,balance_before,balance_after,occurred_at").eq("student_id",student.id).order("occurred_at",{ascending:false}).limit(15),
         db.from("mark_transactions").select("balance_delta").eq("student_id",student.id),
         db.from("attendance").select("status,notes,recorded_at,journey_sessions(session_type,session_date)").eq("student_id",student.id).order("recorded_at",{ascending:false}).limit(20),
         db.from("incidents").select("category,severity,factual_description,occurred_at,transcript_verified,published_to_parent_at").eq("student_id",student.id).order("occurred_at",{ascending:false}).limit(8),
         db.from("weekly_results").select("week_start,week_end,total_awards,total_deductions,weekly_net,lifetime_balance,published_at").eq("student_id",student.id).order("week_start",{ascending:false}).limit(8),
         db.from("certificates").select("title,description,issued_at,published_at").eq("student_id",student.id).order("issued_at",{ascending:false}).limit(8),
-        db.from("student_accounts").select("user_id").eq("student_id",student.id).maybeSingle(),
         db.from("parent_student_links").select("id").eq("student_id",student.id)
       ]);
-      const failed=[marks,allMarks,attendance,incidents,weekly,certificates,studentAccount,parentLinks].find(x=>x.error);
+      const failed=[marks,allMarks,attendance,incidents,weekly,certificates,parentLinks].find(x=>x.error);
       if(failed)throw failed.error;
       const lifetime=Number(student.starting_marks||0)+(allMarks.data||[]).reduce((sum,row)=>sum+Number(row.balance_delta||0),0);
       const present=(attendance.data||[]).filter(x=>x.status==="present").length;

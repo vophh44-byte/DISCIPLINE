@@ -1547,7 +1547,7 @@ async function renderWeeklyReports(){
   if(resultRecords.some(x=>x.published_at)&&!confirm("This week already has published results. Re-run the official publishing calculation for the selected week?"))return;
   publish.disabled=true;publish.textContent="Publishing…";info.textContent="Calculating the selected week and publishing official results…";
   try{const r=await db.rpc("admin_publish_weekly_results",{p_week_start:input.value});if(r.error)throw r.error;
-   info.textContent="Published "+r.data.students_published+" student result(s) for "+r.data.week_start+" to "+r.data.week_end+". Sent "+Number(r.data.notifications_sent||0)+" portal notification(s) to linked families and students.";
+   info.textContent="Published "+r.data.students_published+" student result(s) for "+r.data.week_start+" to "+r.data.week_end+". Sent "+Number(r.data.notifications_sent||0)+" portal notification(s) to linked parents.";
    showToast("Weekly results published to linked portals.");await load();
   }catch(e){info.textContent="Could not publish: "+e.message;showToast("Publishing failed: "+e.message);}
   finally{publish.disabled=false;publish.textContent="Publish weekly results";}

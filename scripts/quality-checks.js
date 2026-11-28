@@ -1101,7 +1101,7 @@ check("weekly publication notifications target active linked parents only", () =
 
 check("weekly publication notifications are scoped to newly published students and include week dates", () => {
   assert.match(weeklyPublishMigration, /l\.student_id = any\(v_newly_published\)/);
-  assert.match(weeklyPublishMigration, /sa\.student_id = any\(v_newly_published\)/);
+  assert.doesNotMatch(weeklyPublishMigration, /student_accounts|sa\.student_id/);
   assert.match(weeklyPublishMigration, /p_week_start::text/);
   assert.match(weeklyPublishMigration, /v_week_end::text/);
   assert.match(weeklyPublishMigration, /get diagnostics v_notified = row_count/);

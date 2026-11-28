@@ -1529,3 +1529,5 @@ table tbody tr:hover{background:#f7f9fc}
   .signup-request-actions{width:100%}
   .signup-request-actions .button{flex:1}
 }
+
+.auth-card .auth-form select{background:#f8fafc!important;color:#1b2d45!important;border-color:#dfe6ef!important}

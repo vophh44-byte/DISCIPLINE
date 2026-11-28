@@ -18,7 +18,7 @@ const accountPreflight = read("supabase/functions/create-portal-account/portal-a
 const anonAccessMigration = read("supabase/migrations/20261127115000_revoke_anon_public_application_access.sql");
 const securityAudit = read("scripts/security-audit.sql");
 const roleSmoke = read("scripts/rls-role-smoke.sql");
-const weeklyPublishMigration = read("supabase/migrations/20261127132000_notify_linked_portals_when_weekly_results_first_published.sql");
+const weeklyPublishMigration = read("supabase/migrations/20261128134000_parent_only_weekly_publication_notifications.sql");
 const signupFunction = read("supabase/functions/portal-signup-request/index.ts");
 const signupMigration = read("supabase/migrations/20261128122041_add_parent_driver_signup_requests.sql");
 
@@ -35,12 +35,6 @@ for (const file of ["js/auth.js", "js/app.js", "js/supabase-config.js"]) {
     new vm.Script(read(file), { filename: file });
   });
 }
-
-check("all four portal choices are present", () => {
-  for (const role of ["admin", "parent", "student", "driver"]) {
-    assert.match(auth, new RegExp('data-portal="' + role + '"'));
-  }
-});
 
 check("main sign-in page offers a parent and driver account request without direct self-activation", () => {
   assert.match(auth, /id="openSignupPanel"/);
@@ -168,25 +162,6 @@ check("selected portal must match the signed-in account role", () => {
   assert.match(auth, /if \(expectedPortal && profile\.role !== expectedPortal\)/);
 });
 
-check("student route opens the read-only portal", () => {
-  assert.match(auth, /renderReadOnlyPortal\("student", profile, session\.user\)/);
-  assert.match(auth, /PRIVATE STUDENT PORTAL · VIEW ONLY/);
-});
-
-check("student account is linked to the signed-in user", () => {
-  assert.match(
-    auth,
-    /client\.from\("student_accounts"\)\.select\("student_id"\)\.eq\("user_id", user\.id\)/
-  );
-});
-
-check("student dashboard loads only its linked student profiles", () => {
-  assert.match(
-    auth,
-    /client\.from\("students"\)[\s\S]{0,180}\.in\("id", links\)/
-  );
-});
-
 check("weekly score query is student-scoped and published-only", () => {
   assert.match(
     auth,
@@ -215,11 +190,6 @@ check("parent response writes are inside parent-only handling", () => {
   const parentGuard = auth.lastIndexOf('if (role === "parent")', parentInsert);
   assert.ok(parentInsert >= 0, "parent response insert missing");
   assert.ok(parentGuard >= 0 && parentGuard < parentInsert, "parent-only guard missing");
-});
-
-check("student account provisioning is available as view-only", () => {
-  assert.match(app, /option value="student">Student \(view only\)<\/option>/);
-  assert.match(app, /isStudent=roleSelect\.value==="student"/);
 });
 
 check("browser config uses a publishable key and contains no server secret", () => {
@@ -326,11 +296,6 @@ check("portal account function rejects unsupported account roles", () => {
 check("portal account function accepts only active student profiles", () => {
   assert.match(accountFunction, /student\.is_active !== true/);
   assert.match(accountFunction, /routeStudents\.some\(\(s: \{is_active:boolean\}\) => s\.is_active !== true\)/);
-});
-
-check("student account provisioning prevents conflicting user/profile links", () => {
-  assert.match(accountFunction, /\.from\("student_accounts"\)[\s\S]{0,180}\.eq\("student_id", studentId\)/);
-  assert.match(accountFunction, /\.eq\("user_id", userId\)/);
 });
 
 check("portal invitations return to the password setup screen", () => {
@@ -515,12 +480,6 @@ check("Recovered invitations reuse the existing Auth user and skip inviteUserByE
 check("Portal Accounts reports recovered invitations without claiming another email was sent", () => {
   assert.match(app, /data\.recovered_invitation/);
   assert.match(app, /no second email was sent/);
-});
-
-check("Student portal preflight catches an existing student or user link", () => {
-  assert.match(accountPreflight, /from\("student_accounts"\)\.select\("student_id,user_id"\)\.eq\("student_id", studentId\)/);
-  assert.match(accountPreflight, /eq\("user_id", existingUserId\)/);
-  assert.match(accountPreflight, /Student portal link/);
 });
 
 check("Driver preflight blocks students assigned to another active route before invitation", () => {
@@ -1206,37 +1165,6 @@ check("parent response review changes refresh the administrator inbox badge", ()
 });
 
 
-check("student portal queries notifications for the signed-in student account and current linked student", () => {
-  assert.match(auth, /role === "student" \? client\.from\("notifications"\)/);
-  assert.match(auth, /\.eq\("recipient_user_id", user\.id\)\.eq\("related_student_id", student\.id\)/);
-});
-
-check("student portal displays notification titles, messages, timestamps and unread counts", () => {
-  assert.match(auth, /studentNotificationPanelHtml/);
-  assert.match(auth, /studentNotifications\.map/);
-  assert.match(auth, /studentUnreadNotifications/);
-  assert.match(auth, /Updates for this student only/);
-});
-
-check("student portal mark-read actions are restricted to the signed-in recipient", () => {
-  const start=auth.indexOf('if (role !== "parent")');
-  const end=auth.indexOf('const [incidentResult, responseResult',start);
-  const studentBranch=auth.slice(start,end);
-  assert.match(studentBranch, /\.eq\("recipient_user_id", user\.id\)/);
-  assert.match(studentBranch, /\.eq\("id", button\.dataset\.markNotificationRead\)/);
-  assert.match(studentBranch, /\.eq\("related_student_id", studentId\)/);
-});
-
-check("student portal notification controls mark one or all notifications read", () => {
-  const start=auth.indexOf('if (role !== "parent")');
-  const end=auth.indexOf('const [incidentResult, responseResult',start);
-  const studentBranch=auth.slice(start,end);
-  assert.match(studentBranch, /data-mark-notification-read/);
-  assert.match(studentBranch, /data-mark-all-notifications-read/);
-  const panelStart = auth.indexOf("const studentNotificationPanelHtml");
-  assert.notEqual(panelStart, -1);
-  assert.match(auth.slice(panelStart, start), /Mark all read/);
-});
 check("parent journey realtime events are debounced before refreshing the portal", () => {
   assert.match(auth, /let parentJourneyRefreshTimer = null/);
   const start = auth.indexOf("const refreshParentJourney = () =>");

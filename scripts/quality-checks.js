@@ -305,17 +305,17 @@ check("portal invitations return to the password setup screen", () => {
   assert.match(accountFunction, /inviteUserByEmail\(email/);
 });
 check("Portal Accounts shows a live count-only setup readiness snapshot", () => {
-  for (const id of ["accountsReadinessStatus","accountsReadyStudents","accountsReadyStudentLogins","accountsReadyParents","accountsReadyDrivers","accountsReadyRoutes","accountsReadinessNote"]) {
+  for (const id of ["accountsReadinessStatus","accountsReadyStudents","accountsReadyParents","accountsReadyDrivers","accountsReadyRoutes","accountsReadinessNote"]) {
     assert.ok(app.includes('id="' + id + '"'), "missing readiness field: " + id);
   }
-  assert.match(app, /student_accounts"\)\.select\("student_id,user_id"\)/);
+  assert.doesNotMatch(app.slice(app.indexOf("async function renderAccounts()"),app.indexOf("function disciplineToday()")), /student_accounts/);
   assert.match(app, /parent_student_links"\)\.select\("student_id,parent_user_id"\)/);
   assert.match(app, /driver_routes"\)\.select\("id,driver_user_id"\)\.eq\("is_active",true\)/);
   assert.match(app, /driver_route_students"\)\.select\("route_id,student_id,valid_from,valid_to"\)/);
 });
 
 check("Portal readiness counts only active role profiles and current active route assignments", () => {
-  assert.match(app, /profiles"\)\.select\("user_id,role,is_active"\)\.in\("role",\["parent","student","driver"\]\)/);
+  assert.match(app, /profiles"\)\.select\("user_id,role,is_active"\)\.in\("role",\["parent","driver"\]\)/);
   assert.match(app, /profile\.is_active===true/);
   assert.match(app, /assignment\.valid_from<=today&&\(!assignment\.valid_to\|\|assignment\.valid_to>=today\)/);
   assert.match(app, /activeRouteIds\.has\(assignment\.route_id\)/);
@@ -328,7 +328,7 @@ check("Portal readiness displays aggregate totals and does not display emails or
   const block=app.slice(start,end);
   assert.ok(start>=0&&end>start,"readiness loader missing");
   assert.match(block,/textContent=activeStudentIds\.size/);
-  assert.match(block,/textContent=studentLoginCount/);
+  assert.doesNotMatch(block,/studentLoginCount|student_accounts|Student login/);
   assert.match(block,/textContent=activeParentIds\.size/);
   assert.match(block,/textContent=activeDriverIds\.size/);
   assert.match(block,/textContent=activeRoutes\.length/);
@@ -963,7 +963,7 @@ check("student profile lifetime balance adds starting marks to the full saved ma
 check("student profile summarizes recent attendance and portal links", () => {
   assert.match(app, /db\.from\("attendance"\)/);
   assert.match(app, /\.order\("recorded_at",\{ascending:false\}\)\.limit\(20\)/);
-  assert.match(app, /studentAccount\.data\?"Student linked":"No student login"/);
+  assert.match(app, /PARENT CONNECTIONS/);
   assert.match(app, /parentLinks\.data\|\|\[\]/);
 });
 

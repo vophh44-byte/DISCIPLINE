@@ -843,7 +843,7 @@ check("attendance print sheet includes marked, present, absent, late and unmarke
 });
 
 check("attendance print sheet escapes student and note content before opening print view", () => {
-  assert.match(app, /escapeHTML\(student\.full_name\)/);
+  assert.match(app, /escapeHTML\(student\.full_name\|\|"Student"\)/);
   assert.match(app, /escapeHTML\(student\.student_code\)/);
   assert.match(app, /escapeHTML\(entry\.notes\|\|""\)/);
   assert.match(app, /popup\.document\.write\(html\)/);

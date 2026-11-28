@@ -84,6 +84,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [ ] Driver portal browser test with a separate driver account (assigned roster only, start/check-in/finish a route, and parent journey notifications)
 - [x] GitHub Pages build and deploy jobs succeeded for the fail-closed app-code release commit; authenticated browser smoke tests remain outstanding
 - [x] Invite/recovery password setup form requires 12+ characters with uppercase, lowercase, a number and a symbol (application-side check only)
+- [x] Portal Overview documents administrator, parent, student and driver capabilities; student visibility is described as published-only, and driver access is limited to assigned route/journey tasks
 
 ## Portal account onboarding readiness
 

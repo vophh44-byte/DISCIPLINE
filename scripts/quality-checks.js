@@ -984,7 +984,7 @@ check("student profile displays recent weekly results and certificates", () => {
 });
 
 check("student profile print report escapes student and guardian data", () => {
-  assert.match(app, /escapeHTML\(student\.full_name\)/);
+  assert.match(app, /escapeHTML\(student\.full_name\|\|\"Student\"\)/);
   assert.match(app, /escapeHTML\(guardian\.phone\|\|\"—\"\)/);
   assert.match(app, /escapeHTML\(guardian\.email\|\|\"—\"\)/);
   assert.match(app, /popup\.document\.write\([\s\S]*report\.innerHTML/);

@@ -12,7 +12,6 @@
         <div class="portal-choice-grid">
           <button type="button" class="portal-choice" data-portal="admin"><span class="portal-choice-icon">⌘</span><strong>Administrator</strong><small>Manage students, journeys, marks and reports</small><span class="portal-choice-arrow">→</span></button>
           <button type="button" class="portal-choice" data-portal="parent"><span class="portal-choice-icon">♧</span><strong>Parent</strong><small>View your child’s progress and updates</small><span class="portal-choice-arrow">→</span></button>
-          <button type="button" class="portal-choice" data-portal="student"><span class="portal-choice-icon">♙</span><strong>Student</strong><small>View your own score and mark history</small><span class="portal-choice-arrow">→</span></button>
           <button type="button" class="portal-choice" data-portal="driver"><span class="portal-choice-icon">↗</span><strong>Driver</strong><small>View your route and update journey check-ins</small><span class="portal-choice-arrow">→</span></button>
         </div>
         <div class="auth-signup-cta">
@@ -183,12 +182,13 @@
     }
   }
   function showLogin(role) {
+    if (!["admin", "parent", "driver"].includes(role)) return;
     const staleSessionAlert = document.getElementById("authSessionAlert");
     if (staleSessionAlert) staleSessionAlert.remove();
     selectedPortal = role;
     picker.hidden = true;
     loginPanel.hidden = false;
-    const names = { admin: "Administrator", parent: "Parent", student: "Student", driver: "Driver" };
+    const names = { admin: "Administrator", parent: "Parent", driver: "Driver" };
     document.getElementById("loginHeading").textContent = names[role] + " sign in";
     document.getElementById("loginDescription").textContent = "Sign in to your " + names[role].toLowerCase() + " dashboard.";
     message.textContent = "";
@@ -806,7 +806,7 @@
       showSessionAlert("This account is inactive or has no active portal role. Please contact the administrator.", false);
       return false;
     }
-    const allowedRoles = ["admin","parent","student","driver"];
+    const allowedRoles = ["admin","parent","driver"];
     if (!allowedRoles.includes(String(profile.role))) {
       try { await client.auth.signOut(); } catch (_) {}
       hideApplicationShell();
@@ -831,10 +831,6 @@
     try {
       if (profile.role === "parent") {
         await renderReadOnlyPortal("parent", profile, session.user);
-        return true;
-      }
-      if (profile.role === "student") {
-        await renderReadOnlyPortal("student", profile, session.user);
         return true;
       }
       await renderDriverPortal(profile, session.user);

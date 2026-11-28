@@ -972,12 +972,12 @@ async function renderAccounts(){
             :"Invitation sent to "+data.email+". The user must open the email and set a password.";
         if(activeSignupRequestId){
           const requestId=activeSignupRequestId;
+          activeSignupRequestId=null;
           const {data:requestUpdate,error:requestUpdateError}=await updateSignupRequestStatus(requestId,"fulfilled");
           if(!requestUpdateError&&requestUpdate?.success){
-            activeSignupRequestId=null;
             await loadSignupRequests();
           }else{
-            msg.textContent+=" The invitation succeeded, but the request could not be marked complete. Refresh the request list.";
+            msg.textContent+=" The invitation succeeded, but the request could not be marked complete. Refresh the request list and continue the review.";
           }
         }
         e.target.reset();

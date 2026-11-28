@@ -18,7 +18,7 @@ const accountPreflight = read("supabase/functions/create-portal-account/portal-a
 const anonAccessMigration = read("supabase/migrations/20261127115000_revoke_anon_public_application_access.sql");
 const securityAudit = read("scripts/security-audit.sql");
 const roleSmoke = read("scripts/rls-role-smoke.sql");
-const weeklyPublishMigration = read("supabase/migrations/20261127132000_notify_linked_portals_when_weekly_results_first_published.sql");
+const weeklyPublishMigration = read("supabase/migrations/20261128123101_parent_only_weekly_publication_notifications.sql");
 const signupFunction = read("supabase/functions/portal-signup-request/index.ts");
 const signupMigration = read("supabase/migrations/20261128122041_add_parent_driver_signup_requests.sql");
 
@@ -35,12 +35,6 @@ for (const file of ["js/auth.js", "js/app.js", "js/supabase-config.js"]) {
     new vm.Script(read(file), { filename: file });
   });
 }
-
-check("all four portal choices are present", () => {
-  for (const role of ["admin", "parent", "student", "driver"]) {
-    assert.match(auth, new RegExp('data-portal="' + role + '"'));
-  }
-});
 
 check("main sign-in page offers a parent and driver account request without direct self-activation", () => {
   assert.match(auth, /id="openSignupPanel"/);
@@ -89,8 +83,9 @@ check("administrator can review requests and complete them through the existing 
   assert.match(app, /Invite someone directly/);
 });
 
-check("only supported roles can open a session", () => {
-  assert.match(auth, /const allowedRoles = \["admin","parent","student","driver"\]/);
+check("only administrator, parent and driver roles can open a session", () => {
+  assert.match(auth, /const allowedRoles = \["admin","parent","driver"\]/);
+  assert.doesNotMatch(auth, /data-portal="student"/);
 });
 
 check("application shell starts hidden, inert and unavailable to assistive technology", () => {
@@ -100,7 +95,7 @@ check("application shell starts hidden, inert and unavailable to assistive techn
 
 check("a validated portal session explicitly releases the hidden application shell", () => {
   const start = auth.indexOf("function portalShell(");
-  const end = auth.indexOf("async function renderReadOnlyPortal(", start);
+  const end = auth.indexOf("async function renderParentPortal(", start);
   const shell = auth.slice(start, end);
   assert.ok(start >= 0 && end > start, "portal shell function missing");
   assert.match(shell, /appShell\.hidden = false/);
@@ -168,25 +163,6 @@ check("selected portal must match the signed-in account role", () => {
   assert.match(auth, /if \(expectedPortal && profile\.role !== expectedPortal\)/);
 });
 
-check("student route opens the read-only portal", () => {
-  assert.match(auth, /renderReadOnlyPortal\("student", profile, session\.user\)/);
-  assert.match(auth, /PRIVATE STUDENT PORTAL · VIEW ONLY/);
-});
-
-check("student account is linked to the signed-in user", () => {
-  assert.match(
-    auth,
-    /client\.from\("student_accounts"\)\.select\("student_id"\)\.eq\("user_id", user\.id\)/
-  );
-});
-
-check("student dashboard loads only its linked student profiles", () => {
-  assert.match(
-    auth,
-    /client\.from\("students"\)[\s\S]{0,180}\.in\("id", links\)/
-  );
-});
-
 check("weekly score query is student-scoped and published-only", () => {
   assert.match(
     auth,
@@ -201,25 +177,20 @@ check("mark history query is scoped to the linked student", () => {
   );
 });
 
-check("non-parent portal exits before incident and parent-only report queries", () => {
-  const nonParentGuard = auth.indexOf('if (role !== "parent") {');
-  const guardedContinue = auth.indexOf("continue;", nonParentGuard);
-  const incidentQuery = auth.indexOf('client.from("incidents")', guardedContinue);
-  assert.ok(nonParentGuard >= 0, "non-parent guard missing");
-  assert.ok(guardedContinue > nonParentGuard, "non-parent guard must continue");
-  assert.ok(incidentQuery > guardedContinue, "parent incident query must follow the guard");
-});
-
-check("parent response writes are inside parent-only handling", () => {
+check("Parent Portal loads only students linked to the signed-in parent", () => {
+  const start=auth.indexOf("async function renderParentPortal");
+  const end=auth.indexOf("function driverToday",start);
+  const flow=auth.slice(start,end);
+  assert.ok(start>=0&&end>start,"Parent Portal renderer missing");
+  assert.match(flow,/from\("parent_student_links"\)[\s\S]*eq\("parent_user_id", user\.id\)/);
+  assert.match(flow,/from\("students"\)[\s\S]*in\("id", links\)/);
+  assert.match(flow,/from\("incidents"\)/);
+  assert.doesNotMatch(flow,/student_accounts|role === "student"/);
+});check("parent response writes are inside parent-only handling", () => {
   const parentInsert = auth.indexOf('client.from("parent_responses").insert(payload)');
   const parentGuard = auth.lastIndexOf('if (role === "parent")', parentInsert);
   assert.ok(parentInsert >= 0, "parent response insert missing");
   assert.ok(parentGuard >= 0 && parentGuard < parentInsert, "parent-only guard missing");
-});
-
-check("student account provisioning is available as view-only", () => {
-  assert.match(app, /option value="student">Student \(view only\)<\/option>/);
-  assert.match(app, /isStudent=roleSelect\.value==="student"/);
 });
 
 check("browser config uses a publishable key and contains no server secret", () => {
@@ -282,11 +253,11 @@ check("auth status endpoint queries Supabase Auth metadata and returns only mini
   assert.doesNotMatch(branch,/password|recovery_token|confirmation_token|serviceKey/);
 });
 
-check("auth status endpoint filters results to parent, student and driver portal profiles", () => {
+check("auth status endpoint filters results to parent and driver portal profiles", () => {
   const start=accountFunction.indexOf('if (input.action === "list_auth_status")');
   const end=accountFunction.indexOf('const email = (input.email || "")',start);
   const branch=accountFunction.slice(start,end);
-  assert.match(branch,/\.in\("role", \["parent", "student", "driver"\]\)/);
+  assert.match(branch,/\.in\("role", \["parent", "driver"\]\)/);
   assert.match(branch,/portalUserIds\.has\(user\.id\)/);
   assert.match(branch,/filter\(user => portalUserIds\.has\(user\.id\)\)/);
 });
@@ -320,7 +291,8 @@ check("portal account function supports production and local development CORS sa
 });
 
 check("portal account function rejects unsupported account roles", () => {
-  assert.match(accountFunction, /role !== "student" && role !== "parent" && role !== "driver"/);
+  assert.match(accountFunction, /role !== "parent" && role !== "driver"/);
+  assert.doesNotMatch(accountFunction, /student_accounts|role === "student"/);
 });
 
 check("portal account function accepts only active student profiles", () => {
@@ -328,27 +300,22 @@ check("portal account function accepts only active student profiles", () => {
   assert.match(accountFunction, /routeStudents\.some\(\(s: \{is_active:boolean\}\) => s\.is_active !== true\)/);
 });
 
-check("student account provisioning prevents conflicting user/profile links", () => {
-  assert.match(accountFunction, /\.from\("student_accounts"\)[\s\S]{0,180}\.eq\("student_id", studentId\)/);
-  assert.match(accountFunction, /\.eq\("user_id", userId\)/);
-});
-
 check("portal invitations return to the password setup screen", () => {
   assert.match(accountFunction, /redirectTo:\s*"https:\/\/vophh44-byte\.github\.io\/DISCIPLINE\/\?setup=1"/);
   assert.match(accountFunction, /inviteUserByEmail\(email/);
 });
 check("Portal Accounts shows a live count-only setup readiness snapshot", () => {
-  for (const id of ["accountsReadinessStatus","accountsReadyStudents","accountsReadyStudentLogins","accountsReadyParents","accountsReadyDrivers","accountsReadyRoutes","accountsReadinessNote"]) {
+  for (const id of ["accountsReadinessStatus","accountsReadyStudents","accountsReadyParents","accountsReadyDrivers","accountsReadyRoutes","accountsReadinessNote"]) {
     assert.ok(app.includes('id="' + id + '"'), "missing readiness field: " + id);
   }
-  assert.match(app, /student_accounts"\)\.select\("student_id,user_id"\)/);
+  assert.doesNotMatch(app.slice(app.indexOf("async function renderAccounts()"),app.indexOf("function disciplineToday()")), /student_accounts/);
   assert.match(app, /parent_student_links"\)\.select\("student_id,parent_user_id"\)/);
   assert.match(app, /driver_routes"\)\.select\("id,driver_user_id"\)\.eq\("is_active",true\)/);
   assert.match(app, /driver_route_students"\)\.select\("route_id,student_id,valid_from,valid_to"\)/);
 });
 
 check("Portal readiness counts only active role profiles and current active route assignments", () => {
-  assert.match(app, /profiles"\)\.select\("user_id,role,is_active"\)\.in\("role",\["parent","student","driver"\]\)/);
+  assert.match(app, /profiles"\)\.select\("user_id,role,is_active"\)\.in\("role",\["parent","driver"\]\)/);
   assert.match(app, /profile\.is_active===true/);
   assert.match(app, /assignment\.valid_from<=today&&\(!assignment\.valid_to\|\|assignment\.valid_to>=today\)/);
   assert.match(app, /activeRouteIds\.has\(assignment\.route_id\)/);
@@ -361,7 +328,7 @@ check("Portal readiness displays aggregate totals and does not display emails or
   const block=app.slice(start,end);
   assert.ok(start>=0&&end>start,"readiness loader missing");
   assert.match(block,/textContent=activeStudentIds\.size/);
-  assert.match(block,/textContent=studentLoginCount/);
+  assert.doesNotMatch(block,/studentLoginCount|student_accounts|Student login/);
   assert.match(block,/textContent=activeParentIds\.size/);
   assert.match(block,/textContent=activeDriverIds\.size/);
   assert.match(block,/textContent=activeRoutes\.length/);
@@ -379,7 +346,7 @@ check("Portal readiness errors are non-blocking and never pretend a failed query
 });
 
 check("Portal readiness responsive layout includes a two-column mobile state", () => {
-  assert.match(styles,/\.accounts-readiness-grid\{display:grid;grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
+  assert.match(styles,/\.accounts-readiness-grid\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
   const mobileStart=styles.indexOf("@media(max-width:560px){.accounts-readiness-panel");
   assert.ok(mobileStart>=0,"readiness mobile media rule missing");
   const mobileStyles=styles.slice(mobileStart,Math.min(styles.length,mobileStart+700));
@@ -399,7 +366,7 @@ check("Portal account directory loads profiles and all linked record sources", (
   const end=app.indexOf("directorySearch.addEventListener",start);
   const flow=app.slice(start,end);
   assert.ok(start>=0&&end>start,"directory loader missing");
-  for(const source of ['from("profiles")','from("parent_student_links")','from("student_accounts")','from("driver_routes")','from("driver_route_students")','from("students")']) {
+  for(const source of ['from("profiles")','from("parent_student_links")','from("driver_routes")','from("driver_route_students")','from("students")']) {
     assert.ok(flow.includes(source),"directory query missing "+source);
   }
   assert.match(flow,/await Promise\.all\(/);
@@ -425,7 +392,8 @@ check("Portal account directory safely escapes user-controlled profile and route
   const loaderEnd=app.indexOf("directorySearch.addEventListener",loaderStart);
   const loader=app.slice(loaderStart,loaderEnd);
   assert.match(loader,/escapeHTML\(route\.route_name\)/);
-  assert.match(loader,/escapeHTML\(student\.full_name\)/);
+  assert.match(loader,/summary=links\.length\+" student link\(s\)"/);
+  assert.match(loader,/escapeHTML\(route\.route_name\)/);
 });
 
 check("Portal account directory does not imply email delivery or invitation acceptance", () => {
@@ -451,7 +419,7 @@ check("Portal account directory errors are visible and refresh controls recover"
 });
 
 check("Portal directory management actions navigate to the role's existing admin section", () => {
-  assert.match(app,/profile\.role==="parent"\?"parents":profile\.role==="student"\?"students":"driverroutes"/);
+  assert.match(app,/profile\.role==="parent"\?"parents":"driverroutes"/);
   assert.ok(app.includes("data-page=\"'+target+'\">"),"directory row should navigate to the selected admin section");
 });
 
@@ -515,12 +483,6 @@ check("Recovered invitations reuse the existing Auth user and skip inviteUserByE
 check("Portal Accounts reports recovered invitations without claiming another email was sent", () => {
   assert.match(app, /data\.recovered_invitation/);
   assert.match(app, /no second email was sent/);
-});
-
-check("Student portal preflight catches an existing student or user link", () => {
-  assert.match(accountPreflight, /from\("student_accounts"\)\.select\("student_id,user_id"\)\.eq\("student_id", studentId\)/);
-  assert.match(accountPreflight, /eq\("user_id", existingUserId\)/);
-  assert.match(accountPreflight, /Student portal link/);
 });
 
 check("Driver preflight blocks students assigned to another active route before invitation", () => {
@@ -770,7 +732,7 @@ check("administrator inbox updates parent and incident navigation counts", () =>
   assert.match(app, /function updateAdminNavBadges\(parentCount, incidentCount\)/);
 });
 
-check("parent and student portals do not display the administrator inbox", () => {
+check("parent portal does not display the administrator inbox", () => {
   assert.match(auth, /notificationCenter\.hidden = role !== "admin"/);
 });
 
@@ -882,7 +844,7 @@ check("attendance print sheet includes marked, present, absent, late and unmarke
 });
 
 check("attendance print sheet escapes student and note content before opening print view", () => {
-  assert.match(app, /escapeHTML\(student\.full_name\)/);
+  assert.match(app, /escapeHTML\(student\.full_name\|\|"Student"\)/);
   assert.match(app, /escapeHTML\(student\.student_code\)/);
   assert.match(app, /escapeHTML\(entry\.notes\|\|""\)/);
   assert.match(app, /popup\.document\.write\(html\)/);
@@ -989,7 +951,7 @@ check("student registry offers a View profile action and a hidden detail panel",
 });
 
 check("student profile loads marks, attendance, incidents, weekly results and certificates for the selected student", () => {
-  for (const table of ["mark_transactions","attendance","incidents","weekly_results","certificates","student_accounts","parent_student_links"]) {
+  for (const table of ["mark_transactions","attendance","incidents","weekly_results","certificates","parent_student_links"]) {
     assert.ok(app.includes('db.from("' + table + '")'), "student profile missing source: " + table);
   }
   assert.match(app, /\.eq\("student_id",student\.id\)/);
@@ -1002,7 +964,7 @@ check("student profile lifetime balance adds starting marks to the full saved ma
 check("student profile summarizes recent attendance and portal links", () => {
   assert.match(app, /db\.from\("attendance"\)/);
   assert.match(app, /\.order\("recorded_at",\{ascending:false\}\)\.limit\(20\)/);
-  assert.match(app, /studentAccount\.data\?"Student linked":"No student login"/);
+  assert.match(app, /PARENT CONNECTIONS/);
   assert.match(app, /parentLinks\.data\|\|\[\]/);
 });
 
@@ -1023,7 +985,7 @@ check("student profile displays recent weekly results and certificates", () => {
 });
 
 check("student profile print report escapes student and guardian data", () => {
-  assert.match(app, /escapeHTML\(student\.full_name\)/);
+  assert.match(app, /escapeHTML\(student\.full_name\|\|\"Student\"\)/);
   assert.match(app, /escapeHTML\(guardian\.phone\|\|\"—\"\)/);
   assert.match(app, /escapeHTML\(guardian\.email\|\|\"—\"\)/);
   assert.match(app, /popup\.document\.write\([\s\S]*report\.innerHTML/);
@@ -1131,16 +1093,16 @@ check("weekly result publication snapshots only results that have not been publi
   assert.match(weeklyPublishMigration, /v_newly_published uuid\[\]/);
 });
 
-check("weekly publication notifications target active linked parents and student accounts", () => {
+check("weekly publication notifications target active linked parents only", () => {
   assert.match(weeklyPublishMigration, /public\.parent_student_links/);
   assert.match(weeklyPublishMigration, /p\.role = 'parent'::public\.app_role/);
-  assert.match(weeklyPublishMigration, /p\.role = 'student'::public\.app_role/);
+  assert.doesNotMatch(weeklyPublishMigration, /student_accounts|'student'::public\.app_role/);
   assert.match(weeklyPublishMigration, /p\.is_active = true/);
 });
 
 check("weekly publication notifications are scoped to newly published students and include week dates", () => {
   assert.match(weeklyPublishMigration, /l\.student_id = any\(v_newly_published\)/);
-  assert.match(weeklyPublishMigration, /sa\.student_id = any\(v_newly_published\)/);
+  assert.doesNotMatch(weeklyPublishMigration, /student_accounts|sa\.student_id/);
   assert.match(weeklyPublishMigration, /p_week_start::text/);
   assert.match(weeklyPublishMigration, /v_week_end::text/);
   assert.match(weeklyPublishMigration, /get diagnostics v_notified = row_count/);
@@ -1148,7 +1110,7 @@ check("weekly publication notifications are scoped to newly published students a
 
 check("weekly publication success message shows the number of notifications sent", () => {
   assert.match(app, /Number\(r\.data\.notifications_sent\|\|0\)/);
-  assert.match(app, /portal notification\(s\) to linked families and students/);
+  assert.match(app, /portal notification\(s\) to linked parents/);
 });
 
 
@@ -1206,37 +1168,6 @@ check("parent response review changes refresh the administrator inbox badge", ()
 });
 
 
-check("student portal queries notifications for the signed-in student account and current linked student", () => {
-  assert.match(auth, /role === "student" \? client\.from\("notifications"\)/);
-  assert.match(auth, /\.eq\("recipient_user_id", user\.id\)\.eq\("related_student_id", student\.id\)/);
-});
-
-check("student portal displays notification titles, messages, timestamps and unread counts", () => {
-  assert.match(auth, /studentNotificationPanelHtml/);
-  assert.match(auth, /studentNotifications\.map/);
-  assert.match(auth, /studentUnreadNotifications/);
-  assert.match(auth, /Updates for this student only/);
-});
-
-check("student portal mark-read actions are restricted to the signed-in recipient", () => {
-  const start=auth.indexOf('if (role !== "parent")');
-  const end=auth.indexOf('const [incidentResult, responseResult',start);
-  const studentBranch=auth.slice(start,end);
-  assert.match(studentBranch, /\.eq\("recipient_user_id", user\.id\)/);
-  assert.match(studentBranch, /\.eq\("id", button\.dataset\.markNotificationRead\)/);
-  assert.match(studentBranch, /\.eq\("related_student_id", studentId\)/);
-});
-
-check("student portal notification controls mark one or all notifications read", () => {
-  const start=auth.indexOf('if (role !== "parent")');
-  const end=auth.indexOf('const [incidentResult, responseResult',start);
-  const studentBranch=auth.slice(start,end);
-  assert.match(studentBranch, /data-mark-notification-read/);
-  assert.match(studentBranch, /data-mark-all-notifications-read/);
-  const panelStart = auth.indexOf("const studentNotificationPanelHtml");
-  assert.notEqual(panelStart, -1);
-  assert.match(auth.slice(panelStart, start), /Mark all read/);
-});
 check("parent journey realtime events are debounced before refreshing the portal", () => {
   assert.match(auth, /let parentJourneyRefreshTimer = null/);
   const start = auth.indexOf("const refreshParentJourney = () =>");
@@ -1246,20 +1177,21 @@ check("parent journey realtime events are debounced before refreshing the portal
   assert.match(handler, /window\.clearTimeout\(parentJourneyRefreshTimer\)/);
   assert.match(handler, /window\.setTimeout\(/);
   assert.match(handler, /}, 350\)/);
-  assert.match(handler, /renderReadOnlyPortal\("parent", profile, user\)/);
+  assert.match(handler, /renderParentPortal\(profile, user\)/);
   assert.match(handler, /console\.error\("Parent journey refresh failed:"/);
 });
 
 
-check("Portal Overview documents all four roles and accurate read-only student access", () => {
+check("Portal Overview documents parent-managed student access and the three portals", () => {
   const start = app.indexOf("function renderPortals(){");
   const end = app.indexOf("\nfunction renderSettings()", start);
   assert.ok(start >= 0 && end > start, "Portal Overview renderer missing");
   const overview = app.slice(start, end);
-  for (const role of ["Administrator portal", "Parent portal", "Student portal · view only", "Driver portal"]) {
+  for (const role of ["Administrator portal", "Parent portal · student access", "Driver portal"]) {
     assert.ok(overview.includes(role), "Portal Overview is missing " + role);
   }
-  assert.match(overview, /published weekly scores and mark history/);
+  assert.match(overview, /Parents sign in once to view each linked child/);
+  assert.doesNotMatch(overview, /Student portal/);
   assert.doesNotMatch(overview, /own mark balance|private balance/);
 });
 check("Portal Overview describes driver route and journey controls without exposing unrelated records", () => {
@@ -1283,14 +1215,12 @@ async function runPortalPreflightUnitTests() {
   const DRIVER_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
   const DRIVER_B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
   const USER_PARENT = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
-  const USER_STUDENT = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
-  const TODAY = "2026-11-27";
+    const TODAY = "2026-11-27";
 
   function makeClient(seed = {}) {
     const state = {
       profiles: seed.profiles || [],
       students: seed.students || [{ id: STUDENT, is_active: true }, { id: OTHER_STUDENT, is_active: true }],
-      student_accounts: seed.student_accounts || [],
       driver_route_students: seed.assignments || [],
       driver_routes: seed.routes || [],
       authUsers: seed.authUsers || [],
@@ -1413,19 +1343,12 @@ async function runPortalPreflightUnitTests() {
     assert.ok(result.checks.some(x=>x.label==="Existing invitation"&&x.status==="ok"));
     assert.equal(state.writes,0);
   });
-  await expect("Student portal preflight blocks a student already linked to another login", async () => {
-    const {client}=makeClient({student_accounts:[{student_id:STUDENT,user_id:USER_STUDENT}]});
+  await expect("Student role is rejected because students use the Parent Portal", async () => {
+    const {client,state}=makeClient();
     const result=await validatePortalAccountPreflight({...payload({role:"student"}),adminClient:client});
     assert.equal(result.ready,false);
-    assert.match(result.blockers.join(" "),/already linked/);
-  });
-  await expect("Student portal preflight allows an existing matching account link", async () => {
-    const {client}=makeClient({
-      profiles:[{user_id:USER_STUDENT,email:"new.person@example.com",role:"student",is_active:true}],
-      student_accounts:[{student_id:STUDENT,user_id:USER_STUDENT}]
-    });
-    const result=await validatePortalAccountPreflight({...payload({role:"student"}),adminClient:client});
-    assert.equal(result.ready,true);
+    assert.match(result.blockers.join(" "),/Choose Parent or Driver/);
+    assert.equal(state.calls.length,0);
   });
   await expect("Archived student profiles fail closed", async () => {
     const {client}=makeClient({students:[{id:STUDENT,is_active:false}]});

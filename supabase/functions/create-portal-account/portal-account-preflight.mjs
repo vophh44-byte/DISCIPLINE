@@ -26,10 +26,10 @@ export async function validatePortalAccountPreflight({
   };
   const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254;
   const validName = displayName.length >= 1 && displayName.length <= 100;
-  const validRole = role === "parent" || role === "student" || role === "driver";
+  const validRole = role === "parent" || role === "driver";
   addCheck("Email address", validEmail, "The email format is valid.", "Enter a valid email address (254 characters or fewer).");
   addCheck("Name", validName, "A name has been provided.", "Enter a name (100 characters or fewer).");
-  addCheck("Portal type", validRole, "A supported portal type is selected.", "Choose Parent, Student or Driver.");
+  addCheck("Portal type", validRole, "A supported portal type is selected.", "Choose Parent or Driver.");
   if (!validEmail || !validName || !validRole) return { ready: false, checks, blockers, resumeAuthUserId };
 
   const emailPattern = email.replace(/[\\%_]/g, "\\$&");
@@ -150,24 +150,7 @@ export async function validatePortalAccountPreflight({
         .from("students").select("id,is_active").eq("id", studentId).maybeSingle();
       const activeStudent = !studentError && !!student && student.is_active === true;
       addCheck("Student profile", activeStudent, "The selected student profile is active.", "The selected student does not exist or is archived.");
-      if (role === "student") {
-        const { data: byStudent, error: byStudentError } = await adminClient
-          .from("student_accounts").select("student_id,user_id").eq("student_id", studentId).maybeSingle();
-        let byUser = null;
-        let byUserError = null;
-        if (existingUserId) {
-          const result = await adminClient.from("student_accounts").select("student_id,user_id")
-            .eq("user_id", existingUserId).maybeSingle();
-          byUser = result.data;
-          byUserError = result.error;
-        }
-        const slotAvailable = !byStudentError && !byUserError &&
-          (!byStudent || byStudent.user_id === existingUserId) &&
-          (!byUser || byUser.student_id === studentId);
-        addCheck("Student portal link", slotAvailable,
-          "The student portal link is available or already belongs to this account.",
-          "This student or login is already linked to a different student portal account.");
-      }
+
     }
   }
   return { ready: blockers.length === 0, checks, blockers, resumeAuthUserId };

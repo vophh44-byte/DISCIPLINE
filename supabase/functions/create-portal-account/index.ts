@@ -101,7 +101,7 @@ Deno.serve(async (req: Request) => {
   if (input.action === "list_auth_status") {
     const [{ data: authUsers, error: authUsersError }, { data: portalProfiles, error: portalProfilesError }] = await Promise.all([
       adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 }),
-      adminClient.from("profiles").select("user_id").in("role", ["parent", "student", "driver"]),
+      adminClient.from("profiles").select("user_id").in("role", ["parent", "driver"]),
     ]);
     if (authUsersError || !authUsers) {
       return respond({ error: "Could not load authentication setup timestamps." }, 502);
@@ -146,7 +146,7 @@ Deno.serve(async (req: Request) => {
     return respond({ error: "Enter a valid email address." }, 400);
   }
   if (!displayName) return respond({ error: "Enter the person's name." }, 400);
-  if (role !== "student" && role !== "parent" && role !== "driver") {
+  if (role !== "parent" && role !== "driver") {
     return respond({ error: "Choose a valid portal account type." }, 400);
   }
   if (role === "driver") {
@@ -186,29 +186,7 @@ Deno.serve(async (req: Request) => {
       }
       return { error: null, status: 200 };
     }
-    if (role === "student") {
-      const { data: byStudent, error: studentLinkError } = await adminClient
-        .from("student_accounts").select("student_id,user_id")
-        .eq("student_id", studentId).maybeSingle();
-      if (studentLinkError) return { error: studentLinkError.message, status: 500 };
-      if (byStudent && byStudent.user_id !== userId) {
-        return { error: "This student already has a different portal account. No account was changed.", status: 409 };
-      }
-
-      const { data: byUser, error: userLinkError } = await adminClient
-        .from("student_accounts").select("student_id,user_id")
-        .eq("user_id", userId).maybeSingle();
-      if (userLinkError) return { error: userLinkError.message, status: 500 };
-      if (byUser && byUser.student_id !== studentId) {
-        return { error: "This student login is already linked to another student profile.", status: 409 };
-      }
-
-      if (!byStudent) {
-        const { error } = await adminClient.from("student_accounts")
-          .insert({ student_id: studentId, user_id: userId });
-        if (error) return { error: "Could not link the student account: " + error.message, status: 500 };
-      }
-    } else {
+    {
       const { data: existing, error: lookupError } = await adminClient
         .from("parent_student_links").select("id")
         .eq("parent_user_id", userId).eq("student_id", studentId).maybeSingle();
@@ -249,16 +227,6 @@ Deno.serve(async (req: Request) => {
       success: true, existing_account: true, role, email,
       message: "Existing portal account linked to the selected student. No new invitation was sent.",
     }, 200);
-  }
-
-  // Check student-slot conflicts before sending an invitation.
-  if (role === "student") {
-    const { data: assigned, error } = await adminClient
-      .from("student_accounts").select("student_id").eq("student_id", studentId).maybeSingle();
-    if (error) return respond({ error: "Could not check the student's existing portal link: " + error.message }, 500);
-    if (assigned) {
-      return respond({ error: "This student already has a portal account. Select that account's email or review the existing link." }, 409);
-    }
   }
 
   const recoveredInvitation = !!readiness.resumeAuthUserId;

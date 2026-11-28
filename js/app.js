@@ -2,7 +2,7 @@ const pageMeta = {
  dashboard:{title:"Command Center",desc:"Your daily system overview.",icon:"▦"},
  students:{title:"Student Registry",desc:"Create and manage student profiles.",icon:"♙"},
  parents:{title:"Parent Management",desc:"Manage parent accounts and family links.",icon:"♧"},
- accounts:{title:"Portal Accounts",desc:"Create parent, student and driver accounts and assign routes.",icon:"◎"},
+ accounts:{title:"Portal Accounts",desc:"Create parent and driver accounts and assign routes.",icon:"◎"},
  drivercheckins:{title:"Driver Check-ins",desc:"Review morning and evening check-ins submitted by drivers.",icon:"↗"},
  driverroutes:{title:"Drivers & Routes",desc:"Manage driver accounts, routes and assigned students.",icon:"▣"},
  attendance:{title:"Morning Attendance",desc:"Record attendance for the institute-bound journey.",icon:"✓"},
@@ -15,7 +15,7 @@ const pageMeta = {
  analytics:{title:"Performance Analytics",desc:"Understand weekly trends and student improvement.",icon:"⌁"},
  reports:{title:"Weekly Results",desc:"Calculate and publish official Monday–Sunday student results.",icon:"▧"},
  certificates:{title:"Certificates",desc:"Issue and publish student achievement certificates.",icon:"✦"},
- portals:{title:"Portal Previews",desc:"Preview the student and parent experiences.",icon:"◎"},
+ portals:{title:"Portal Overview",desc:"Review administrator, parent and driver access.",icon:"◎"},
  settings:{title:"Settings",desc:"Configure system preferences and security.",icon:"⚙"}
 };
 
@@ -366,17 +366,16 @@ async function renderStudents(){
     const panel=document.getElementById("studentProfilePanel"),body=document.getElementById("studentProfileContent"),guardian=guardianOf(student);
     panel.hidden=false;body.innerHTML='<p class="registry-disclaimer">Loading the saved student record…</p>';panel.scrollIntoView({behavior:"smooth",block:"start"});
     try{
-      const [marks,allMarks,attendance,incidents,weekly,certificates,studentAccount,parentLinks]=await Promise.all([
+      const [marks,allMarks,attendance,incidents,weekly,certificates,parentLinks]=await Promise.all([
         db.from("mark_transactions").select("transaction_type,amount,balance_delta,reason,balance_before,balance_after,occurred_at").eq("student_id",student.id).order("occurred_at",{ascending:false}).limit(15),
         db.from("mark_transactions").select("balance_delta").eq("student_id",student.id),
         db.from("attendance").select("status,notes,recorded_at,journey_sessions(session_type,session_date)").eq("student_id",student.id).order("recorded_at",{ascending:false}).limit(20),
         db.from("incidents").select("category,severity,factual_description,occurred_at,transcript_verified,published_to_parent_at").eq("student_id",student.id).order("occurred_at",{ascending:false}).limit(8),
         db.from("weekly_results").select("week_start,week_end,total_awards,total_deductions,weekly_net,lifetime_balance,published_at").eq("student_id",student.id).order("week_start",{ascending:false}).limit(8),
         db.from("certificates").select("title,description,issued_at,published_at").eq("student_id",student.id).order("issued_at",{ascending:false}).limit(8),
-        db.from("student_accounts").select("user_id").eq("student_id",student.id).maybeSingle(),
         db.from("parent_student_links").select("id").eq("student_id",student.id)
       ]);
-      const failed=[marks,allMarks,attendance,incidents,weekly,certificates,studentAccount,parentLinks].find(x=>x.error);
+      const failed=[marks,allMarks,attendance,incidents,weekly,certificates,parentLinks].find(x=>x.error);
       if(failed)throw failed.error;
       const lifetime=Number(student.starting_marks||0)+(allMarks.data||[]).reduce((sum,row)=>sum+Number(row.balance_delta||0),0);
       const present=(attendance.data||[]).filter(x=>x.status==="present").length;
@@ -389,7 +388,7 @@ async function renderStudents(){
       const weeklyRows=(weekly.data||[]).map(x=>'<tr><td>'+escapeHTML(x.week_start)+' – '+escapeHTML(x.week_end)+'</td><td>+'+Number(x.total_awards||0)+'</td><td>−'+Number(x.total_deductions||0)+'</td><td>'+(Number(x.weekly_net)>0?"+":"")+Number(x.weekly_net||0)+'</td><td>'+Number(x.lifetime_balance||0)+'</td><td>'+(x.published_at?"Published":"Private")+'</td></tr>').join("")||'<tr><td colspan="6">No weekly results saved.</td></tr>';
       const certificateRows=(certificates.data||[]).map(x=>'<tr><td>'+escapeHTML(x.title)+'</td><td>'+escapeHTML(x.description||"—")+'</td><td>'+escapeHTML(new Date(x.issued_at).toLocaleDateString("en-IN"))+'</td><td>'+(x.published_at?"Published":"Private")+'</td></tr>').join("")||'<tr><td colspan="4">No certificates issued.</td></tr>';
       body.innerHTML='<div class="student-profile-head"><div><span class="student-step">STUDENT RECORD / PROFILE SUMMARY</span><h2>'+escapeHTML(student.full_name)+'</h2><p>'+escapeHTML(student.student_code)+' · '+escapeHTML(student.class_group||"Class not set")+'</p></div><div class="student-profile-actions"><button class="button button-outline" type="button" id="printStudentProfile">Print record</button><button class="button button-quiet" type="button" id="closeStudentProfile">Close</button></div></div>'+
-       '<div class="student-profile-report"><div class="student-profile-summary"><article><small>LIFETIME MARK BALANCE</small><strong>'+lifetime+'</strong></article><article><small>RECENT ATTENDANCE · LAST 20</small><strong>'+present+' present · '+absent+' absent</strong><span>'+late+' late</span></article><article><small>PORTAL CONNECTIONS</small><strong>'+(studentAccount.data?"Student linked":"No student login")+'</strong><span>'+(parentLinks.data||[]).length+' parent link(s)</span></article></div>'+
+       '<div class="student-profile-report"><div class="student-profile-summary"><article><small>LIFETIME MARK BALANCE</small><strong>'+lifetime+'</strong></article><article><small>RECENT ATTENDANCE · LAST 20</small><strong>'+present+' present · '+absent+' absent</strong><span>'+late+' late</span></article><article><small>PARENT CONNECTIONS</small><strong>'+(parentLinks.data||[]).length+' linked parent(s)</strong><span>Students are accessed through parent accounts</span></article></div>'+
        '<section class="student-profile-section"><h3>Personal and guardian details</h3><div class="student-profile-details"><p><small>Student ID</small><strong>'+escapeHTML(student.student_code)+'</strong></p><p><small>Class / group</small><strong>'+escapeHTML(student.class_group||"—")+'</strong></p><p><small>Guardian</small><strong>'+escapeHTML(guardian.guardian_name||"—")+'</strong></p><p><small>Guardian phone</small><strong>'+escapeHTML(guardian.phone||"—")+'</strong></p><p><small>Guardian email</small><strong>'+escapeHTML(guardian.email||"—")+'</strong></p><p><small>Profile status</small><strong>'+(student.is_active?"Active":"Archived")+'</strong></p></div></section>'+
        '<section class="student-profile-section"><h3>Recent mark history</h3><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>TYPE</th><th>REASON</th><th>CHANGE</th><th>BEFORE</th><th>AFTER</th></tr></thead><tbody>'+transactionRows+'</tbody></table></div></section>'+
        '<section class="student-profile-section"><h3>Recent attendance · latest 20 entries</h3><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>JOURNEY</th><th>STATUS</th><th>NOTE</th></tr></thead><tbody>'+attendanceRows+'</tbody></table></div></section>'+
@@ -526,9 +525,9 @@ async function renderStudents(){
 async function renderAccounts(){
   if(!window.disciplineSupabase){pageContent.innerHTML='<section class="panel"><h2>Portal Accounts</h2><p>Authentication is not ready. Please refresh the page.</p></section>';return;}
   pageContent.innerHTML=`
-    <div class="accounts-admin-head"><div><div class="eyebrow"><span class="eyebrow-line"></span> ADMINISTRATION / ACCESS CONTROL</div><h1>Portal Accounts</h1><p class="page-intro">Give every parent, student and driver secure access to the right part of DISCIPLINE.</p></div><div class="accounts-secure-tag"><span>✦</span> Secure account setup</div></div>
+    <div class="accounts-admin-head"><div><div class="eyebrow"><span class="eyebrow-line"></span> ADMINISTRATION / ACCESS CONTROL</div><h1>Portal Accounts</h1><p class="page-intro">Give parents and drivers secure access to the right part of DISCIPLINE.</p></div><div class="accounts-secure-tag"><span>✦</span> Secure account setup</div></div>
     <div class="accounts-overview">
-      <div class="accounts-overview-card"><span class="accounts-overview-icon">01</span><div><strong>Choose a role</strong><small>Parent, student or route driver</small></div></div>
+      <div class="accounts-overview-card"><span class="accounts-overview-icon">01</span><div><strong>Choose a role</strong><small>Parent or route driver</small></div></div>
       <div class="accounts-overview-card"><span class="accounts-overview-icon accounts-icon-blue">02</span><div><strong>Connect records</strong><small>Link students or route riders</small></div></div>
       <div class="accounts-overview-card"><span class="accounts-overview-icon accounts-icon-green">03</span><div><strong>Send invitation</strong><small>They create their own password</small></div></div>
     </div>
@@ -539,12 +538,11 @@ async function renderAccounts(){
       </div>
       <div class="accounts-readiness-grid">
         <article><small>ACTIVE STUDENTS</small><strong id="accountsReadyStudents">—</strong><span>Student profiles</span></article>
-        <article><small>STUDENT LOGINS</small><strong id="accountsReadyStudentLogins">—</strong><span>Linked view-only access</span></article>
-        <article><small>PARENT ACCOUNTS</small><strong id="accountsReadyParents">—</strong><span>Active parent portals</span></article>
+                 <article><small>PARENT ACCOUNTS</small><strong id="accountsReadyParents">—</strong><span>Active parent portals</span></article>
         <article><small>DRIVER ACCOUNTS</small><strong id="accountsReadyDrivers">—</strong><span>Active driver portals</span></article>
         <article><small>ACTIVE ROUTES</small><strong id="accountsReadyRoutes">—</strong><span>Routes with active drivers</span></article>
       </div>
-      <p class="accounts-readiness-note" id="accountsReadinessNote" aria-live="polite">Loading access coverage. No invitation is sent by viewing this page.</p>
+      <p class="accounts-readiness-note" id="accountsReadinessNote" aria-live="polite">Loading parent and driver access coverage. No invitation is sent by viewing this page.</p>
     </section>
     <section class="panel signup-requests-panel" aria-labelledby="signupRequestsTitle">
       <div class="accounts-directory-head">
@@ -561,7 +559,7 @@ async function renderAccounts(){
       </div>
       <div class="accounts-directory-filters">
         <div class="field"><label for="portalDirectorySearch">Search accounts</label><input id="portalDirectorySearch" type="search" placeholder="Name or email"></div>
-        <div class="field"><label for="portalDirectoryRole">Portal type</label><select id="portalDirectoryRole"><option value="all">All portals</option><option value="parent">Parent</option><option value="student">Student</option><option value="driver">Driver</option></select></div>
+        <div class="field"><label for="portalDirectoryRole">Portal type</label><select id="portalDirectoryRole"><option value="all">All portals</option><option value="parent">Parent</option> <option value="driver">Driver</option></select></div>
         <div class="field"><label for="portalDirectoryStatusFilter">Profile status</label><select id="portalDirectoryStatusFilter"><option value="all">Active and inactive</option><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
       </div>
       <p class="accounts-directory-status" id="portalDirectoryStatus" role="status">Loading existing portal accounts…</p>
@@ -574,18 +572,18 @@ async function renderAccounts(){
     </section>
     <div class="accounts-workspace">
       <section class="panel accounts-create-panel">
-        <div class="accounts-panel-heading"><div><span class="accounts-step-label">ACCOUNT DETAILS</span><h2>Invite someone directly</h2><p>Use this administrator-only form to invite a parent, student or driver and connect their records.</p></div><span class="accounts-heading-symbol">＋</span></div>
+        <div class="accounts-panel-heading"><div><span class="accounts-step-label">ACCOUNT DETAILS</span><h2>Invite someone directly</h2><p>Use this administrator-only form to invite a parent or driver and connect their records.</p></div><span class="accounts-heading-symbol">＋</span></div>
         <form id="portalAccountForm">
           <div class="accounts-form-section"><div class="accounts-form-section-title"><span>1</span><div><strong>Person and portal</strong><small>Who will sign in to DISCIPLINE?</small></div></div>
             <div class="form-grid accounts-form-grid">
-              <div class="field"><label for="portalRole">Account type</label><select id="portalRole" required><option value="parent">Parent / Guardian</option><option value="student">Student (view only)</option><option value="driver">Driver</option></select></div>
+              <div class="field"><label for="portalRole">Account type</label><select id="portalRole" required><option value="parent">Parent / Guardian</option> <option value="driver">Driver</option></select></div>
               <div class="field"><label for="portalName">Full name</label><input id="portalName" required maxlength="100" placeholder="Full name"></div>
               <div class="field accounts-email-field"><label for="portalEmail">Email address</label><input id="portalEmail" type="email" required maxlength="254" placeholder="name@example.com"></div>
               <div class="field" id="driverRouteFields" hidden><label for="portalRouteName">Route name</label><input id="portalRouteName" maxlength="100" placeholder="e.g. North Route"></div>
               <div class="field" id="driverVehicleFields" hidden><label for="portalVehicleLabel">Vehicle label (optional)</label><input id="portalVehicleLabel" maxlength="80" placeholder="e.g. Van 1"></div>
             </div>
           </div>
-          <div class="accounts-form-section accounts-student-section"><div class="accounts-form-section-title"><span>2</span><div><strong>Student connection</strong><small>Choose the linked child, student profile or route riders.</small></div></div>
+          <div class="accounts-form-section accounts-student-section"><div class="accounts-form-section-title"><span>2</span><div><strong>Student / route connection</strong><small>Link a parent to their child or assign students to a driver route.</small></div></div>
             <div class="field"><label for="portalStudent" id="portalStudentLabel">Link to student</label><select id="portalStudent" required><option value="">Loading student profiles…</option></select><small class="registry-disclaimer" id="portalStudentHint">Choose the child linked to this parent.</small></div>
           </div>
           <div class="accounts-security-note"><span class="accounts-security-icon">✓</span><div><strong>Password safety is built in</strong><p>Users receive an invitation email and create their own password. Never enter or share their password here.</p></div></div>
@@ -609,14 +607,13 @@ async function renderAccounts(){
   const readinessStatus=document.getElementById("accountsReadinessStatus");
   const readinessNote=document.getElementById("accountsReadinessNote");
   try{
-    const [profilesResult,studentLinksResult,parentLinksResult,routesResult,assignmentsResult]=await Promise.all([
-      window.disciplineSupabase.from("profiles").select("user_id,role,is_active").in("role",["parent","student","driver"]),
-      window.disciplineSupabase.from("student_accounts").select("student_id,user_id"),
-      window.disciplineSupabase.from("parent_student_links").select("student_id,parent_user_id"),
+    const [profilesResult,parentLinksResult,routesResult,assignmentsResult]=await Promise.all([
+      window.disciplineSupabase.from("profiles").select("user_id,role,is_active").in("role",["parent","driver"]),
+       window.disciplineSupabase.from("parent_student_links").select("student_id,parent_user_id"),
       window.disciplineSupabase.from("driver_routes").select("id,driver_user_id").eq("is_active",true),
       window.disciplineSupabase.from("driver_route_students").select("route_id,student_id,valid_from,valid_to")
     ]);
-    const readinessResults=[profilesResult,studentLinksResult,parentLinksResult,routesResult,assignmentsResult];
+    const readinessResults=[profilesResult,parentLinksResult,routesResult,assignmentsResult];
     const failedReadiness=readinessResults.some(result=>result.error);
     if(failedReadiness){
       readinessStatus.textContent="Snapshot unavailable";
@@ -626,8 +623,7 @@ async function renderAccounts(){
       const activeParentIds=new Set(activeProfiles.filter(profile=>profile.role==="parent").map(profile=>profile.user_id));
       const activeStudentIds=new Set((students||[]).map(student=>student.id));
       const activeDriverIds=new Set(activeProfiles.filter(profile=>profile.role==="driver").map(profile=>profile.user_id));
-      const studentLoginCount=(studentLinksResult.data||[]).filter(link=>activeStudentIds.has(link.student_id)&&activeProfiles.some(profile=>profile.role==="student"&&profile.user_id===link.user_id)).length;
-      const parentLinkCount=(parentLinksResult.data||[]).filter(link=>activeStudentIds.has(link.student_id)&&activeParentIds.has(link.parent_user_id)).length;
+       const parentLinkCount=(parentLinksResult.data||[]).filter(link=>activeStudentIds.has(link.student_id)&&activeParentIds.has(link.parent_user_id)).length;
       const activeRoutes=(routesResult.data||[]).filter(route=>activeDriverIds.has(route.driver_user_id));
       const activeRouteIds=new Set(activeRoutes.map(route=>route.id));
       const today=disciplineToday();
@@ -635,17 +631,15 @@ async function renderAccounts(){
         .filter(assignment=>activeRouteIds.has(assignment.route_id)&&activeStudentIds.has(assignment.student_id)&&assignment.valid_from<=today&&(!assignment.valid_to||assignment.valid_to>=today))
         .map(assignment=>assignment.student_id));
       document.getElementById("accountsReadyStudents").textContent=activeStudentIds.size;
-      document.getElementById("accountsReadyStudentLogins").textContent=studentLoginCount;
       document.getElementById("accountsReadyParents").textContent=activeParentIds.size;
       document.getElementById("accountsReadyDrivers").textContent=activeDriverIds.size;
       document.getElementById("accountsReadyRoutes").textContent=activeRoutes.length;
       const parts=[
-        studentLoginCount+" student login(s) linked to "+activeStudentIds.size+" active student profile(s)",
-        parentLinkCount+" active parent-to-student link(s)",
+         parentLinkCount+" active parent-to-student link(s)",
         assignedStudentIds.size+" student(s) assigned to "+activeRoutes.length+" active driver route(s)"
       ];
       readinessStatus.textContent="Live totals loaded";
-      readinessNote.textContent=parts.join(" · ")+". Student portals are optional and view-only. Submitting the form sends an invitation or links an existing account.";
+      readinessNote.textContent=parts.join(" · ")+". Students access their information through linked parent accounts. Submitting the form sends an invitation or links an existing account.";
     }
   }catch(readinessError){
     console.error("Portal readiness snapshot failed:",readinessError);
@@ -687,7 +681,7 @@ async function renderAccounts(){
       const setupDate=auth.email_confirmed_at||auth.invited_at;
       const setupDateLabel=setupDate?'<small class="registry-email">'+escapeHTML(new Date(setupDate).toLocaleString("en-IN",{dateStyle:"medium",timeStyle:"short"}))+'</small>':"";
       const lastSignIn=auth.last_sign_in_at?'<small class="registry-email">Last sign-in: '+escapeHTML(new Date(auth.last_sign_in_at).toLocaleDateString("en-IN"))+'</small>':"";
-      const target=profile.role==="parent"?"parents":profile.role==="student"?"students":"driverroutes";
+      const target=profile.role==="parent"?"parents":"driverroutes";
       return '<tr><td><strong>'+name+'</strong><small class="registry-email">'+email+'</small></td>'+
         '<td><span class="accounts-role-label">'+escapeHTML(profile.role.charAt(0).toUpperCase()+profile.role.slice(1))+'</span></td>'+
         '<td><span class="session-status '+statusClass+'">'+statusLabel+'</span></td>'+
@@ -702,15 +696,14 @@ async function renderAccounts(){
     directoryStatus.textContent="Loading portal accounts and linked records…";
     directoryRows.innerHTML='<tr><td colspan="7">Loading accounts…</td></tr>';
     try{
-      const [profilesResult,parentLinksResult,studentLinksResult,routesResult,assignmentsResult,studentsResult]=await Promise.all([
-        window.disciplineSupabase.from("profiles").select("user_id,role,display_name,email,is_active,created_at").in("role",["parent","student","driver"]),
+      const [profilesResult,parentLinksResult,routesResult,assignmentsResult,studentsResult]=await Promise.all([
+        window.disciplineSupabase.from("profiles").select("user_id,role,display_name,email,is_active,created_at").in("role",["parent","driver"]),
         window.disciplineSupabase.from("parent_student_links").select("parent_user_id,student_id,relationship_label"),
-        window.disciplineSupabase.from("student_accounts").select("user_id,student_id"),
-        window.disciplineSupabase.from("driver_routes").select("id,driver_user_id,route_name,vehicle_label,is_active"),
+         window.disciplineSupabase.from("driver_routes").select("id,driver_user_id,route_name,vehicle_label,is_active"),
         window.disciplineSupabase.from("driver_route_students").select("route_id,student_id,valid_from,valid_to"),
         window.disciplineSupabase.from("students").select("id,student_code,full_name,is_active")
       ]);
-      const failed=[profilesResult,parentLinksResult,studentLinksResult,routesResult,assignmentsResult,studentsResult].find(x=>x.error);
+      const failed=[profilesResult,parentLinksResult,routesResult,assignmentsResult,studentsResult].find(x=>x.error);
       if(failed)throw failed.error;
       let authStatusResult={data:null,error:{message:"Authentication timestamps unavailable."}};
       try{
@@ -719,10 +712,8 @@ async function renderAccounts(){
         console.warn("Portal authentication timestamps unavailable:",authStatusError);
       }
       const profiles=profilesResult.data||[];
-      const studentMap=new Map((studentsResult.data||[]).map(student=>[student.id,student]));
       const parentLinks=parentLinksResult.data||[];
-      const studentLinks=studentLinksResult.data||[];
-      const routes=routesResult.data||[];
+       const routes=routesResult.data||[];
       const assignments=assignmentsResult.data||[];
       const authStatusAvailable=!authStatusResult.error&&authStatusResult.data?.success===true&&Array.isArray(authStatusResult.data.accounts);
       const authStatusMap=new Map(authStatusAvailable?authStatusResult.data.accounts.map(account=>[account.user_id,account]):[]);
@@ -733,10 +724,6 @@ async function renderAccounts(){
         if(profile.role==="parent"){
           const links=parentLinks.filter(link=>link.parent_user_id===profile.user_id);
           summary=links.length+" student link(s)";
-        }else if(profile.role==="student"){
-          const link=studentLinks.find(item=>item.user_id===profile.user_id);
-          const student=link?studentMap.get(link.student_id):null;
-          summary=student?escapeHTML(student.full_name)+" ("+escapeHTML(student.student_code)+")":"No student profile linked";
         }else{
           const driverRoutes=routes.filter(route=>route.driver_user_id===profile.user_id);
           const current=driverRoutes.filter(route=>route.is_active).map(route=>{
@@ -773,16 +760,15 @@ async function renderAccounts(){
   const studentHint=document.getElementById("portalStudentHint");
   function updateAccountForm(){
     const isDriver=roleSelect.value==="driver";
-    const isStudent=roleSelect.value==="student";
-    select.multiple=isDriver;
+     select.multiple=isDriver;
     select.size=isDriver?6:1;
     select.value="";
     routeFields.hidden=!isDriver;
     vehicleFields.hidden=!isDriver;
     routeNameInput.required=isDriver;
-    studentLabel.textContent=isDriver?"Students assigned to this driver":"Link to student";
-    studentHint.textContent=isDriver?"Select every student who travels on this route (use Ctrl on Windows or Command on Mac to select more than one).":isStudent?"Choose the student profile for this login. Student access is view-only.":"Choose the child linked to this parent.";
-    select.setAttribute("aria-label",isDriver?"Select students assigned to this driver":isStudent?"Choose the student profile for this login":"Choose the linked student");
+    studentLabel.textContent=isDriver?"Students assigned to this driver":"Link child / children to parent";
+    studentHint.textContent=isDriver?"Select every student who travels on this route (use Ctrl on Windows or Command on Mac to select more than one).":"Choose the child or children linked to this parent account.";
+    select.setAttribute("aria-label",isDriver?"Select students assigned to this driver":"Choose students linked to this parent");
   }
   roleSelect.addEventListener("change",updateAccountForm);
   updateAccountForm();
@@ -1561,7 +1547,7 @@ async function renderWeeklyReports(){
   if(resultRecords.some(x=>x.published_at)&&!confirm("This week already has published results. Re-run the official publishing calculation for the selected week?"))return;
   publish.disabled=true;publish.textContent="Publishing…";info.textContent="Calculating the selected week and publishing official results…";
   try{const r=await db.rpc("admin_publish_weekly_results",{p_week_start:input.value});if(r.error)throw r.error;
-   info.textContent="Published "+r.data.students_published+" student result(s) for "+r.data.week_start+" to "+r.data.week_end+". Sent "+Number(r.data.notifications_sent||0)+" portal notification(s) to linked families and students.";
+   info.textContent="Published "+r.data.students_published+" student result(s) for "+r.data.week_start+" to "+r.data.week_end+". Sent "+Number(r.data.notifications_sent||0)+" portal notification(s) to linked parents.";
    showToast("Weekly results published to linked portals.");await load();
   }catch(e){info.textContent="Could not publish: "+e.message;showToast("Publishing failed: "+e.message);}
   finally{publish.disabled=false;publish.textContent="Publish weekly results";}
@@ -2298,15 +2284,14 @@ async function renderCertificates(){
 }
 
 function renderPortals(){
- pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">ACCESS / ROLE PORTALS</div><h1>Portal Overview</h1><p class="page-intro">DISCIPLINE provides four role-based portals. Each account is routed to the tools and records permitted for that role.</p></div></div>'+
+ pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">ACCESS / ROLE PORTALS</div><h1>Portal Overview</h1><p class="page-intro">DISCIPLINE provides three role-based portals. Students do not sign in separately; parents access their linked children’s information through the Parent Portal.</p></div></div>'+
  '<section class="panel registry-panel"><h3>Administrator portal</h3><p>Administrators manage student profiles, family links, attendance, drivers and routes, journey sessions, mark transactions, incident review, weekly results and achievement certificates.</p></section>'+
- '<section class="panel registry-panel"><h3>Parent portal</h3><p>Parents can view only their linked child’s published results, verified and published behaviour reports, journey updates, certificates and permitted family responses. They cannot change student records or marks.</p></section>'+
- '<section class="panel registry-panel"><h3>Student portal · view only</h3><p>Students can view only their own published weekly scores and mark history, plus permitted notifications and public rankings. They cannot create or change marks, incidents, reports or account links.</p></section>'+
+ '<section class="panel registry-panel"><h3>Parent portal · student access</h3><p>Parents sign in once to view each linked child’s published results, verified and published behaviour reports, journey updates, attendance, certificates, notifications and permitted family responses. Student records remain managed by administrators; parents cannot change marks or student records.</p></section>'+
  '<section class="panel registry-panel"><h3>Driver portal</h3><p>Drivers can view only their assigned route roster, start and finish today’s journey, and submit boarding, drop-off or other permitted check-in updates for assigned students. They cannot view marks, behaviour reports or parent details.</p></section>'+
- '<section class="panel registry-panel"><h3>Manage access</h3><p>Use Portal Accounts to invite a parent, student or driver. The invited person creates their own password. Never ask anyone to share a password.</p><button class="button button-primary" data-page="accounts">Open Portal Accounts</button></section>';
+ '<section class="panel registry-panel"><h3>Manage access</h3><p>Use Portal Accounts to invite a parent or driver. Link each parent to their child’s student profile; the parent then sees that child in the Parent Portal. Drivers are assigned to routes. Never ask anyone to share a password.</p><button class="button button-primary" data-page="accounts">Open Portal Accounts</button></section>';
 }
 function renderSettings(){
- pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">ADMINISTRATION / SYSTEM</div><h1>Settings</h1><p class="page-intro">Current system rules and security boundaries.</p></div></div><section class="panel registry-panel"><h3>Weekly scoring period</h3><p>Monday 00:00 through Sunday 23:59 · Asia/Kolkata. Negative balances are allowed; historical transactions are retained.</p></section><section class="panel registry-panel"><h3>Roles and permissions</h3><p>Administrator: full control. Student: own records, view only. Parent: linked child records, view only. Parent and student accounts are created by the administrator.</p></section><section class="panel registry-panel"><h3>Password setup rules</h3><p>New invitation and recovery passwords in DISCIPLINE must contain at least 12 characters, uppercase and lowercase letters, a number and a symbol. This is an application-side setup check; Supabase Auth remains the authoritative password service.</p></section><section class="panel registry-panel"><h3>Provider security limitation</h3><p>This Supabase organization is on the Free plan. Breached-password screening through HaveIBeenPwned is available on Pro and above, so it remains disabled until the project plan supports it. Do not reuse passwords; consider enabling provider-level screening before production onboarding.</p></section><section class="panel registry-panel"><h3>Data protection</h3><p>Mark changes are stored in the transaction ledger. Incident records start private and are not automatically published to parents. Temporary incident audio is private and deleted after transcript verification. Do not store passwords, private keys or unnecessary personal details in this application.</p></section>';
+ pageContent.innerHTML='<div class="registry-head"><div><div class="eyebrow">ADMINISTRATION / SYSTEM</div><h1>Settings</h1><p class="page-intro">Current system rules and security boundaries.</p></div></div><section class="panel registry-panel"><h3>Weekly scoring period</h3><p>Monday 00:00 through Sunday 23:59 · Asia/Kolkata. Negative balances are allowed; historical transactions are retained.</p></section><section class="panel registry-panel"><h3>Roles and permissions</h3><p>Administrator: full control. Parent: linked child records, view and respond. Driver: assigned route and journey controls only. Student records are accessed through parent accounts; students do not have separate logins.</p></section><section class="panel registry-panel"><h3>Password setup rules</h3><p>New invitation and recovery passwords in DISCIPLINE must contain at least 12 characters, uppercase and lowercase letters, a number and a symbol. This is an application-side setup check; Supabase Auth remains the authoritative password service.</p></section><section class="panel registry-panel"><h3>Provider security limitation</h3><p>This Supabase organization is on the Free plan. Breached-password screening through HaveIBeenPwned is available on Pro and above, so it remains disabled until the project plan supports it. Do not reuse passwords; consider enabling provider-level screening before production onboarding.</p></section><section class="panel registry-panel"><h3>Data protection</h3><p>Mark changes are stored in the transaction ledger. Incident records start private and are not automatically published to parents. Temporary incident audio is private and deleted after transcript verification. Do not store passwords, private keys or unnecessary personal details in this application.</p></section>';
 }
 
 function renderPlaceholder(page){
@@ -2323,7 +2308,7 @@ function renderPlaceholder(page){
     incidents:[["!","New incident","Record what happened, when and during which journey."],["✎","Exact language","Enter verified words with context and attribution."],["◉","Audio transcription","Review a permitted recording's draft transcript before saving."]],
     analytics:[["⌁","Weekly trends","Compare awards, deductions and net marks."],["♙","Student progress","Review individual improvement over time."],["▥","Attendance patterns","Understand morning attendance trends."]],
     reports:[["▧","Weekly parent reports","Prepare clear, respectful summaries for each family."],["✦","Certificates","Recognise improvement, cooperation and achievement."],["⇩","Export","Prepare printable reports for distribution."]],
-    portals:[["♙","Student portal preview","See the view-only student experience."],["♧","Parent portal preview","See private child-specific results and incident reports."],["⌁","Access permissions","Review the intended role-based access model."]],
+    portals:[["♧","Parent portal preview","See private child-specific results and incident reports."],["↗","Driver portal preview","See assigned route and journey controls."],["⌁","Access permissions","Review the intended role-based access model."]],
     settings:[["◷","Weekly scoring","Monday 12:00 AM to Sunday 11:59 PM, Asia/Kolkata."],["♧","User permissions","Administrator control with restricted student and parent access."],["◇","Supabase connection","Backend setup will be completed in a later phase."]]
   }[page] || [];
   pageContent.innerHTML=`<div class="page-placeholder"><div class="eyebrow"><span class="eyebrow-line"></span> DISCIPLINE WORKSPACE</div><div class="placeholder-hero"><h1>${meta.title}</h1><p>${meta.desc} This section is part of the Phase 1 interface preview. Its live data and workflows will be implemented in later development phases.</p><span class="demo-pill"><span class="pulse-dot"></span> INTERFACE PREVIEW</span></div><div class="placeholder-grid">${cards.map(c=>`<article class="placeholder-card"><div class="card-icon">${c[0]}</div><h3>${c[1]}</h3><p>${c[2]}</p></article>`).join("")}</div><div class="panel" style="margin-top:16px"><div class="panel-heading"><div><h3>Development note</h3><p>What happens next</p></div><span class="session-status pending">Coming in next phases</span></div><p style="font-size:11px;color:var(--muted);margin:0">This is a navigation and design preview only. No student, parent, attendance, mark or incident record is being saved yet. The Supabase database and secure role permissions will be connected after the interface is approved.</p></div><footer class="page-footer"><span>© 2026 DISCIPLINE. Built for better journeys.</span><span>LOCAL PREVIEW · NOT CONNECTED TO DATABASE</span></footer></div>`;

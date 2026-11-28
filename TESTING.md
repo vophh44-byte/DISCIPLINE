@@ -7,7 +7,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] Portal Accounts preflight preview is read-only: it does not create Auth users, change profile links or send email; final submit reruns the same server-side checks before provisioning
 - [x] Partial invitation recovery reuses an existing Auth user only when Supabase shows an invitation timestamp; it creates the missing portal profile/link without sending another invitation, while unrelated sign-in records remain blocked for review
 - [x] Separate preflight module is unit-tested with a mocked Supabase client for unused/existing emails, safe invited-user recovery, uninvited Auth-user blocks, inactive/mismatched profiles, student-link conflicts, active/inactive driver-route conflicts and fail-closed database errors; tests assert no write calls occur
-- [ ] Manually verify parent, student and driver preview rendering in a signed-in browser with fictional test records; automated mocked tests already cover server outcomes; do not send real invitations as part of this check
+- [ ] Manually verify parent and driver portal rendering in a signed-in browser with fictional test records; automated mocked tests already cover server outcomes; do not send real invitations as part of this check
 
 - [x] Frontend JavaScript parses: `js/app.js` and `js/auth.js`
 - [x] The workspace starts hidden/inert/aria-hidden; the authenticated portal shell releases it only after the signed-in profile is confirmed active and its role is supported
@@ -15,7 +15,7 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [ ] Manually simulate an offline/profile lookup failure in a browser, restore the connection and confirm Retry account check opens the same session
 - [x] GitHub Actions quality run passed **180 DISCIPLINE checks**, including mocked invitation recovery and no-write assertions ([run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/46033393714))
 - [x] GitHub Pages build and deployment succeeded for commit `ab6c7f77fbbd0be8a0b8afd221c1033f0d691d23` ([deployment run](https://github.com/vophh44-byte/DISCIPLINE/actions/runs/46033393556))
-- [x] Fail-closed startup, session recovery, Portal Accounts readiness, searchable account directory and Auth timestamp indicators are green in CI and deployed; signed-in browser smoke tests for all four roles remain a separate manual release check
+- [x] Fail-closed startup, session recovery, Portal Accounts readiness, searchable account directory and Auth timestamp indicators are green in CI and deployed; signed-in browser smoke tests for all three roles remain a separate manual release check
 - [x] All 24 previously unindexed foreign-key columns now have B-tree indexes; PostgreSQL catalog check confirms 42/42 public foreign-key constraints are indexed
 - [x] Row Level Security is enabled on all 19 public application tables; parent route/assignment/run/check-in visibility has also been exercised under the authenticated parent role with rollback-only fixture records
 - [x] Removed `anon` table privileges from all 19 public application tables; fresh live grant audit confirms zero anonymous SELECT/INSERT/UPDATE/DELETE privileges
@@ -44,13 +44,13 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] Database blocks verification or parent publication while temporary audio remains pending
 - [x] Database blocks attaching new temporary audio to an already verified or published incident
 - [x] Edge Function validates signed-in administrator role, requires permission confirmation for upload, and creates only a 60-second listening URL
-- [x] Parent and student incident/evidence visibility remains governed by existing Row Level Security
+- [x] Parent incident/evidence visibility remains governed by existing Row Level Security
 - [x] Weekly-results RLS exposes only published rows to linked portal accounts; rollback-only checks confirmed parent 0 / admin 1 while unpublished, then parent 1 after publication
 - [x] Incident deductions use a generic shared-ledger reason so factual narratives are not copied into parent/student mark history
 - [ ] Browser microphone test on HTTPS with an appropriately consenting adult
 - [x] Automated regression checks confirm multipart recording uploads forward explicit permission confirmation, the browser blocks recording without consent, consent is reconfirmed before upload, the 60-second stop and 8 MB limit remain in place, and server-side admin, MIME-type and short-lived playback guards remain
 - [x] Administrator inbox loads pending parent responses and incidents awaiting transcript verification; live counts appear in the Parent Management and Incident Center navigation badges
-- [x] Administrator inbox is hidden from parent, student and driver portals and escapes user-provided message/name content before display
+- [x] Administrator inbox is hidden from parent and driver portals and escapes user-provided message/name content before display
 - [x] Weekly results support CSV export and print-ready report output; both respect the current student search and publication-status filters
 - [x] Weekly CSV export quotes text fields, guards formula-like text values, uses UTF-8 BOM and includes the selected Monday in the filename
 - [x] Weekly print report escapes student names/IDs, includes scoring period and totals, and uses a responsive print layout
@@ -71,28 +71,27 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] Incident Center can filter by awaiting verification/verified state as well as parent visibility and search terms
 - [x] Incident CSV and print reports share the active filters and include factual descriptions, review state, publication state and deduction linkage
 - [x] Incident reports exclude exact words, transcript text and temporary audio evidence and escape dynamic student/description content
-- [x] First-time weekly result publication sends in-app notifications to active linked parents and student portal accounts
-- [x] Weekly publication notification migration only notifies students whose result was not previously published; recalculations of already-published weeks do not send duplicate alerts
+- [x] First-time weekly result publication sends in-app notifications to active linked parents only
+- [x] Weekly publication notification migration only notifies linked parents when a student's result is first published; recalculations do not send duplicate alerts
 - [x] Weekly publication result message reports the number of portal notifications created
 - [x] Parent Management exports and prints the currently filtered parent communication history, including parent messages and review state
 - [x] Parent communication reports exclude private administrator notes and safely escape parent, student and message content
 - [x] Parent communication export respects pending/all/reviewed and search filters; administrator inbox count refreshes after review status changes
-- [x] Both deployed Edge Functions are tracked in `supabase/functions`; account provisioning tests administrator authorization, supported roles, active-student validation and student-link conflicts
+- [x] Both deployed Edge Functions are tracked in `supabase/functions`; account provisioning tests administrator authorization, parent/driver roles, active-student validation and parent-link conflicts
 - [ ] Signed-in administrator → upload → review → verify → storage deletion end-to-end test
 - [ ] Separate parent account test after publication
-- [ ] Student portal read-only test with a student test account (portal selection, own published scores and mark history only; no incident narrative, exact words or evidence; no write actions)
 - [ ] Driver portal browser test with a separate driver account (assigned roster only, start/check-in/finish a route, and parent journey notifications)
 - [x] GitHub Pages build and deploy jobs succeeded for the fail-closed app-code release commit; authenticated browser smoke tests remain outstanding
 - [x] Invite/recovery password setup form requires 12+ characters with uppercase, lowercase, a number and a symbol (application-side check only)
-- [x] Portal Overview documents administrator, parent, student and driver capabilities; student visibility is described as published-only, and driver access is limited to assigned route/journey tasks
+- [x] Portal Overview documents administrator, parent-managed student information and driver capabilities; no separate student login is offered
 
 ## Portal account onboarding readiness
 
-- [x] Snapshot queries read active role profiles, student-account links, parent-student links, active driver routes and route assignments; a live read under the authenticated administrator role confirmed access to each summary source and returned aggregate totals only.
-- [x] Live aggregate baseline: 1 active student, 0 student logins, 1 active parent account, 0 active driver accounts, 0 active routes and 0 students assigned to active routes.
+- [x] Snapshot queries read active parent/driver profiles, parent-student links, active driver routes and route assignments; a live read under the authenticated administrator role confirmed access to each summary source and returned aggregate totals only.
+- [x] Live aggregate baseline: 1 active student profile, 1 active parent account, 0 active driver accounts, 0 active routes and 0 students assigned to active routes.
 
-1. Open Portal Accounts and confirm the five setup totals load from Supabase without exposing emails or user IDs.
-2. Compare active student and portal login totals with Student Registry and the account directory.
+1. Open Portal Accounts and confirm the four setup totals load from Supabase without exposing emails or user IDs.
+2. Compare active student profile totals with Student Registry and parent/driver account totals with the account directory.
 3. Confirm parent totals count active parent profiles and driver totals exclude inactive driver profiles.
 4. Confirm route totals include only active routes attached to active driver accounts.
 5. Confirm route coverage counts unique active students with assignments valid for today's Asia/Kolkata date.
@@ -104,12 +103,12 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] `create-portal-account` Edge Function deployed as active version 8 with JWT verification enabled; the `list_auth_status` action runs only after signed-in user and active-administrator checks and returns only user ID plus invitation, email-confirmation and last-sign-in timestamps for portal roles.
 - [x] The Auth timestamp lookup is non-blocking: a lookup/network error leaves the profile and link directory visible and marks authentication setup as unavailable.
 
-1. Open Portal Accounts and confirm the directory lists only parent, student and driver profiles.
+1. Open Portal Accounts and confirm the directory lists only parent and driver profiles.
 2. Search by display name or email; filter separately by portal type and active/inactive profile state.
-3. Confirm parent rows show linked-student counts, student rows show their linked student profile, and driver rows show active route names and current assignment counts.
+3. Confirm parent rows show linked-student counts and driver rows show active route names and current assignment counts.
 4. Confirm the Authentication Setup column distinguishes Email confirmed, Invitation issued · not confirmed, No invitation timestamp and Unavailable; it may show the last sign-in timestamp when Auth provides it.
 5. Confirm the invitation timestamp is described as an invitation record only, not proof of actual inbox delivery.
-6. Open the management action on a parent, student and driver row and confirm it opens Parent Management, Student Registry or Drivers & Routes respectively.
+6. Open the management action on a parent and driver row and confirm it opens Parent Management or Drivers & Routes respectively.
 7. Confirm all user-provided names, emails and route names display as text and cannot inject markup.
 8. Temporarily block one directory query in a local development copy. Confirm Account list unavailable appears, the page does not crash and Refresh list can retry.
 9. Confirm the directory is read-only and cannot activate/deactivate users, resend invitations or change account roles.
@@ -178,9 +177,9 @@ Run [`scripts/security-audit.sql`](scripts/security-audit.sql) in the Supabase S
 
 ### Weekly publication notifications
 
-1. Use a fictional test week and test student with a linked parent/student portal account.
+1. Use a fictional test week and test student with a linked parent account.
 2. Publish that Monday–Sunday result period.
-3. Confirm an in-app notification is created for each active linked parent and active linked student account.
+3. Confirm an in-app notification is created for each active linked parent only.
 4. Re-run publication for the same already-published week and confirm no duplicate notification is created for those existing published rows.
 5. Confirm the administrator result message shows the number of notifications sent.
 
@@ -228,13 +227,13 @@ Run [`scripts/security-audit.sql`](scripts/security-audit.sql) in the Supabase S
 2. Use keyboard Tab navigation and a screen reader to confirm the hidden workspace is not focusable or exposed before sign-in.
 3. In a local development copy only, block the Supabase config script or Supabase client CDN and reload. Confirm the authentication error remains visible and the workspace stays hidden.
 4. Try an inactive test account and a role-mismatched portal sign-in. Confirm neither reveals the workspace.
-5. Sign in with a valid test account for each role. Confirm the correct portal appears; sign out and reload, then confirm the workspace is hidden again until authentication.
+5. Sign in with valid administrator, parent and driver test accounts. Confirm the correct portal appears; sign out and reload, then confirm the workspace is hidden again until authentication. Students have no separate login.
 
 ### 1. Administrator incident workflow
 
 1. Sign in using a dedicated administrator test account.
 2. Open Incident Center and create an incident using fictional details and a test student profile.
-3. Confirm the new record remains private and is not visible to parent or student accounts.
+3. Confirm the new record remains private and is not visible to parent or driver accounts.
 4. For audio testing only, use a consenting adult speaker. Confirm the required institutional permission/notice checkbox, start recording, speak a short test phrase, and stop.
 5. Preview the recording. Save the incident and confirm the audio appears as temporary evidence.
 6. Open Review & verify, play the short-lived recording link, and enter the correct test transcript.
@@ -253,14 +252,14 @@ Run [`scripts/security-audit.sql`](scripts/security-audit.sql) in the Supabase S
 6. Sign in as a different parent test account and confirm the report is not visible.
 7. Confirm parent accounts cannot edit incidents, mark transactions, student profiles, or evidence.
 
-### 3. Student access
+### 3. Student information through the Parent Portal
 
-1. From Portal Accounts, create a Student (view only) invitation for a fictional test student and an email inbox controlled by the tester. Complete password setup from the invitation.
-2. Choose Student on the welcome screen and sign in using that separate student test account linked to the test student.
-3. Confirm the student can view only their own published weekly score and mark history; any incident-related mark entry uses only the generic “Incident deduction” label.
-4. Confirm the student cannot see incident narratives, exact words, parent-only responses, or evidence.
-5. Confirm the student cannot create or modify incidents, exact words, marks, parent publication, or evidence.
-6. Confirm the student cannot list or download temporary audio.
+1. Sign in using a separate parent test account linked to the fictional test student.
+2. Confirm the parent can see only the student profiles linked to that parent account.
+3. Confirm published weekly results, attendance, journey updates, certificates and notifications appear in the linked student's section.
+4. Confirm verified and published behaviour reports appear only after administrator publication.
+5. Confirm the parent cannot edit student records, marks, incidents, driver routes or evidence.
+6. Confirm there is no Student option on the welcome screen and student-role accounts cannot open a portal.
 
 ### 4. Negative tests
 

@@ -20,7 +20,7 @@ const securityAudit = read("scripts/security-audit.sql");
 const roleSmoke = read("scripts/rls-role-smoke.sql");
 const weeklyPublishMigration = read("supabase/migrations/20261127132000_notify_linked_portals_when_weekly_results_first_published.sql");
 const signupFunction = read("supabase/functions/portal-signup-request/index.ts");
-const signupMigration = read("supabase/migrations/20261128100000_add_parent_driver_signup_requests.sql");
+const signupMigration = read("supabase/migrations/20261128122041_add_parent_driver_signup_requests.sql");
 
 let passed = 0;
 function check(name, callback) {

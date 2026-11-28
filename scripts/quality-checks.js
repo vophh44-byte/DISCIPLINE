@@ -1204,7 +1204,7 @@ check("parent journey realtime events are debounced before refreshing the portal
 
 check("Portal Overview documents all four roles and accurate read-only student access", () => {
   const start = app.indexOf("function renderPortals(){");
-  const end = app.indexOf("\\nfunction renderSettings()", start);
+  const end = app.indexOf("\nfunction renderSettings()", start);
   assert.ok(start >= 0 && end > start, "Portal Overview renderer missing");
   const overview = app.slice(start, end);
   for (const role of ["Administrator portal", "Parent portal", "Student portal · view only", "Driver portal"]) {
@@ -1215,7 +1215,7 @@ check("Portal Overview documents all four roles and accurate read-only student a
 });
 check("Portal Overview describes driver route and journey controls without exposing unrelated records", () => {
   const start = app.indexOf("function renderPortals(){");
-  const end = app.indexOf("\\nfunction renderSettings()", start);
+  const end = app.indexOf("\nfunction renderSettings()", start);
   const overview = app.slice(start, end);
   const driverStart = overview.indexOf("Driver portal");
   const driverSection = overview.slice(driverStart);

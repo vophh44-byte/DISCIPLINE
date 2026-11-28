@@ -57,9 +57,44 @@ Deno.serve(async (req: Request) => {
     return respond({ error: "Administrator permission required." }, 403);
   }
 
-  let input: { action?: string; email?: string; display_name?: string; role?: string; student_id?: string; route_name?: string; vehicle_label?: string; student_ids?: string[] };
+  let input: { action?: string; email?: string; display_name?: string; role?: string; student_id?: string; route_name?: string; vehicle_label?: string; student_ids?: string[]; request_id?: string; status?: string };
   try { input = await req.json(); }
   catch { return respond({ error: "Invalid request body." }, 400); }
+
+  // Public self-registration creates requests only. This administrator-only branch
+  // lets the existing Portal Accounts workflow review and fulfil those requests.
+  if (input.action === "list_signup_requests") {
+    const { data: requests, error } = await adminClient
+      .from("portal_signup_requests")
+      .select("id,display_name,email,role,phone,status,created_at,reviewed_at")
+      .in("status", ["pending", "reviewed"])
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (error) return respond({ error: "Could not load parent and driver registration requests." }, 502);
+    return respond({ success: true, requests: requests || [] }, 200);
+  }
+
+  if (input.action === "update_signup_request") {
+    const requestId = (input.request_id || "").trim();
+    const status = input.status;
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(requestId)) {
+      return respond({ error: "Choose a valid registration request." }, 400);
+    }
+    if (!["reviewed", "declined", "fulfilled"].includes(status || "")) {
+      return respond({ error: "Choose a valid registration request status." }, 400);
+    }
+    const now = new Date().toISOString();
+    const { data: updated, error } = await adminClient
+      .from("portal_signup_requests")
+      .update({ status, reviewed_at: now, reviewed_by: authData.user.id, updated_at: now })
+      .eq("id", requestId)
+      .in("status", ["pending", "reviewed"])
+      .select("id,status")
+      .maybeSingle();
+    if (error) return respond({ error: "Could not update the registration request." }, 502);
+    if (!updated) return respond({ error: "This request is no longer open. Refresh the registration request list." }, 409);
+    return respond({ success: true, request: updated }, 200);
+  }
 
   // Expose only the small Auth timestamps needed by the administrator account directory.
   // This branch is available only after the bearer token and active administrator role checks above.

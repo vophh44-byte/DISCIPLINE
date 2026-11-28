@@ -18,7 +18,7 @@ const accountPreflight = read("supabase/functions/create-portal-account/portal-a
 const anonAccessMigration = read("supabase/migrations/20261127115000_revoke_anon_public_application_access.sql");
 const securityAudit = read("scripts/security-audit.sql");
 const roleSmoke = read("scripts/rls-role-smoke.sql");
-const weeklyPublishMigration = read("supabase/migrations/20261128134000_parent_only_weekly_publication_notifications.sql");
+const weeklyPublishMigration = read("supabase/migrations/20261128123101_parent_only_weekly_publication_notifications.sql");
 const signupFunction = read("supabase/functions/portal-signup-request/index.ts");
 const signupMigration = read("supabase/migrations/20261128122041_add_parent_driver_signup_requests.sql");
 

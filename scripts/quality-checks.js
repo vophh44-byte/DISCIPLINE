@@ -731,7 +731,7 @@ check("administrator inbox updates parent and incident navigation counts", () =>
   assert.match(app, /function updateAdminNavBadges\(parentCount, incidentCount\)/);
 });
 
-check("parent and student portals do not display the administrator inbox", () => {
+check("parent portal does not display the administrator inbox", () => {
   assert.match(auth, /notificationCenter\.hidden = role !== "admin"/);
 });
 
@@ -1092,10 +1092,10 @@ check("weekly result publication snapshots only results that have not been publi
   assert.match(weeklyPublishMigration, /v_newly_published uuid\[\]/);
 });
 
-check("weekly publication notifications target active linked parents and student accounts", () => {
+check("weekly publication notifications target active linked parents only", () => {
   assert.match(weeklyPublishMigration, /public\.parent_student_links/);
   assert.match(weeklyPublishMigration, /p\.role = 'parent'::public\.app_role/);
-  assert.match(weeklyPublishMigration, /p\.role = 'student'::public\.app_role/);
+  assert.doesNotMatch(weeklyPublishMigration, /student_accounts|'student'::public\.app_role/);
   assert.match(weeklyPublishMigration, /p\.is_active = true/);
 });
 
@@ -1181,15 +1181,16 @@ check("parent journey realtime events are debounced before refreshing the portal
 });
 
 
-check("Portal Overview documents all four roles and accurate read-only student access", () => {
+check("Portal Overview documents parent-managed student access and the three portals", () => {
   const start = app.indexOf("function renderPortals(){");
   const end = app.indexOf("\nfunction renderSettings()", start);
   assert.ok(start >= 0 && end > start, "Portal Overview renderer missing");
   const overview = app.slice(start, end);
-  for (const role of ["Administrator portal", "Parent portal", "Student portal · view only", "Driver portal"]) {
+  for (const role of ["Administrator portal", "Parent portal · student access", "Driver portal"]) {
     assert.ok(overview.includes(role), "Portal Overview is missing " + role);
   }
-  assert.match(overview, /published weekly scores and mark history/);
+  assert.match(overview, /parents access their linked children/);
+  assert.doesNotMatch(overview, /Student portal/);
   assert.doesNotMatch(overview, /own mark balance|private balance/);
 });
 check("Portal Overview describes driver route and journey controls without exposing unrelated records", () => {

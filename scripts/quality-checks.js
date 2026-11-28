@@ -48,7 +48,11 @@ check("main sign-in page offers a parent and driver account request without dire
   assert.match(auth, /<option value="parent">Parent \/ Guardian<\/option>/);
   assert.match(auth, /<option value="driver">Driver<\/option>/);
   assert.match(auth, /functions\.invoke\("portal-signup-request"/);
-  assert.match(auth, /This request does not activate portal access/);
+  assert.match(auth, /does not create an active login/);
+  const formStart = auth.indexOf('id="signupRequestForm"');
+  const formEnd = auth.indexOf("</form>", formStart);
+  assert.ok(formStart >= 0 && formEnd > formStart, "public registration form missing");
+  assert.doesNotMatch(auth.slice(formStart, formEnd), /type="password"/);
   assert.doesNotMatch(auth, /id="signupPassword"/);
 });
 check("public signup endpoint accepts only parent and driver requests and cannot provision accounts", () => {

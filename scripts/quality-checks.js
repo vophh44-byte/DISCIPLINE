@@ -177,16 +177,16 @@ check("mark history query is scoped to the linked student", () => {
   );
 });
 
-check("non-parent portal exits before incident and parent-only report queries", () => {
-  const nonParentGuard = auth.indexOf('if (role !== "parent") {');
-  const guardedContinue = auth.indexOf("continue;", nonParentGuard);
-  const incidentQuery = auth.indexOf('client.from("incidents")', guardedContinue);
-  assert.ok(nonParentGuard >= 0, "non-parent guard missing");
-  assert.ok(guardedContinue > nonParentGuard, "non-parent guard must continue");
-  assert.ok(incidentQuery > guardedContinue, "parent incident query must follow the guard");
-});
-
-check("parent response writes are inside parent-only handling", () => {
+check("Parent Portal loads only students linked to the signed-in parent", () => {
+  const start=auth.indexOf("async function renderParentPortal");
+  const end=auth.indexOf("function driverToday",start);
+  const flow=auth.slice(start,end);
+  assert.ok(start>=0&&end>start,"Parent Portal renderer missing");
+  assert.match(flow,/from\("parent_student_links"\)[\s\S]*eq\("parent_user_id", user\.id\)/);
+  assert.match(flow,/from\("students"\)[\s\S]*in\("id", links\)/);
+  assert.match(flow,/from\("incidents"\)/);
+  assert.doesNotMatch(flow,/student_accounts|role === "student"/);
+});check("parent response writes are inside parent-only handling", () => {
   const parentInsert = auth.indexOf('client.from("parent_responses").insert(payload)');
   const parentGuard = auth.lastIndexOf('if (role === "parent")', parentInsert);
   assert.ok(parentInsert >= 0, "parent response insert missing");

@@ -80,7 +80,6 @@ Use test accounts and fictional data only. Do not create, record, or publish an 
 - [x] Both deployed Edge Functions are tracked in `supabase/functions`; account provisioning tests administrator authorization, parent/driver roles, active-student validation and parent-link conflicts
 - [ ] Signed-in administrator → upload → review → verify → storage deletion end-to-end test
 - [ ] Separate parent account test after publication
-- [ ] Student portal read-only test with a student test account (portal selection, own published scores and mark history only; no incident narrative, exact words or evidence; no write actions)
 - [ ] Driver portal browser test with a separate driver account (assigned roster only, start/check-in/finish a route, and parent journey notifications)
 - [x] GitHub Pages build and deploy jobs succeeded for the fail-closed app-code release commit; authenticated browser smoke tests remain outstanding
 - [x] Invite/recovery password setup form requires 12+ characters with uppercase, lowercase, a number and a symbol (application-side check only)
@@ -228,7 +227,7 @@ Run [`scripts/security-audit.sql`](scripts/security-audit.sql) in the Supabase S
 2. Use keyboard Tab navigation and a screen reader to confirm the hidden workspace is not focusable or exposed before sign-in.
 3. In a local development copy only, block the Supabase config script or Supabase client CDN and reload. Confirm the authentication error remains visible and the workspace stays hidden.
 4. Try an inactive test account and a role-mismatched portal sign-in. Confirm neither reveals the workspace.
-5. Sign in with a valid test account for each role. Confirm the correct portal appears; sign out and reload, then confirm the workspace is hidden again until authentication. There is no separate Student portal.
+5. Sign in with valid administrator, parent and driver test accounts. Confirm the correct portal appears; sign out and reload, then confirm the workspace is hidden again until authentication. Students have no separate login.
 
 ### 1. Administrator incident workflow
 

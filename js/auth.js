@@ -379,14 +379,14 @@
     addSignOut();
   }
 
-  async function renderReadOnlyPortal(role, profile, user) {
-    if (role === "parent" && parentJourneyChannel) {
+  async function renderParentPortal(profile, user) {
+    if (parentJourneyChannel) {
       const oldChannel = parentJourneyChannel;
       parentJourneyChannel = null;
       await client.removeChannel(oldChannel);
     }
-    const name = profile.display_name || user.email || (role === "parent" ? "Parent" : "Student");
-    portalShell(role, name);
+    const name = profile.display_name || user.email || "Parent";
+    portalShell("parent", name);
     const page = document.getElementById("pageContent");
     page.innerHTML = '<div class="registry-head"><div><div class="eyebrow">DISCIPLINE / '+role.toUpperCase()+'</div><h1>Welcome, '+esc(name)+'</h1><p class="page-intro">'+(role==="parent"?"Private updates for the student profiles linked to your account.":"Your personal, read-only score and progress dashboard.")+'</p></div></div><div class="registry-stats"><article class="stat-card"><div class="stat-label">Linked profile(s)</div><div class="stat-value" id="linkedCount">…</div></article><article class="stat-card"><div class="stat-label">Portal access</div><div class="stat-value" style="font-size:18px">'+(role==="parent"?"View & respond":"View only")+'</div></article></div><div id="portalChildren"></div><footer class="page-footer"><span>© 2026 DISCIPLINE.</span><span>'+(role==="parent"?"PRIVATE PARENT PORTAL":"PRIVATE STUDENT PORTAL · VIEW ONLY")+'</span></footer>';
     const container = document.getElementById("portalChildren");
@@ -566,7 +566,7 @@
         if (parentJourneyRefreshTimer) window.clearTimeout(parentJourneyRefreshTimer);
         parentJourneyRefreshTimer = window.setTimeout(() => {
           parentJourneyRefreshTimer = null;
-          renderReadOnlyPortal("parent", profile, user).catch(error => {
+          renderParentPortal(profile, user).catch(error => {
             console.error("Parent journey refresh failed:", error);
           });
         }, 350);
@@ -775,7 +775,7 @@
     }
     try {
       if (profile.role === "parent") {
-        await renderReadOnlyPortal("parent", profile, session.user);
+        await renderParentPortal(profile, session.user);
         return true;
       }
       await renderDriverPortal(profile, session.user);

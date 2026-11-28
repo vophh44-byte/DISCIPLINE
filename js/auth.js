@@ -390,16 +390,10 @@
     const page = document.getElementById("pageContent");
     page.innerHTML = '<div class="registry-head"><div><div class="eyebrow">DISCIPLINE / '+role.toUpperCase()+'</div><h1>Welcome, '+esc(name)+'</h1><p class="page-intro">'+(role==="parent"?"Private updates for the student profiles linked to your account.":"Your personal, read-only score and progress dashboard.")+'</p></div></div><div class="registry-stats"><article class="stat-card"><div class="stat-label">Linked profile(s)</div><div class="stat-value" id="linkedCount">…</div></article><article class="stat-card"><div class="stat-label">Portal access</div><div class="stat-value" style="font-size:18px">'+(role==="parent"?"View & respond":"View only")+'</div></article></div><div id="portalChildren"></div><footer class="page-footer"><span>© 2026 DISCIPLINE.</span><span>'+(role==="parent"?"PRIVATE PARENT PORTAL":"PRIVATE STUDENT PORTAL · VIEW ONLY")+'</span></footer>';
     const container = document.getElementById("portalChildren");
-    let links = [];
-    if (role === "student") {
-      const { data, error } = await client.from("student_accounts").select("student_id").eq("user_id", user.id);
-      if (error) { container.textContent = "Unable to load your student link. Please contact the administrator."; return; }
-      links = (data || []).map(x => x.student_id);
-    } else {
-      const { data, error } = await client.from("parent_student_links").select("student_id,relationship_label").eq("parent_user_id", user.id);
-      if (error) { container.textContent = "Unable to load linked student profiles. Please contact the administrator."; return; }
-      links = (data || []).map(x => x.student_id);
-    }
+    const { data: parentLinks, error: parentLinkError } = await client.from("parent_student_links")
+      .select("student_id,relationship_label").eq("parent_user_id", user.id);
+    if (parentLinkError) { container.textContent = "Unable to load linked student profiles. Please contact the administrator."; return; }
+    const links = (parentLinks || []).map(x => x.student_id);
     document.getElementById("linkedCount").textContent = links.length;
     if (!links.length) {
       container.innerHTML = '<section class="panel registry-panel"><h3>No linked profile yet</h3><p class="page-intro">Your account is active, but the administrator has not linked a student profile yet.</p></section>';
@@ -417,13 +411,11 @@
     }
 
     for (const student of (students || [])) {
-      const commonQueries = [
+      const [weeklyResult, txResult] = await Promise.all([
         client.from("weekly_results").select("id,weekly_net,lifetime_balance,week_start,week_end,published_at,total_awards,total_deductions,total_received,total_transferred").eq("student_id", student.id).not("published_at", "is", null).order("week_start", { ascending: false }).limit(8),
-        client.from("mark_transactions").select("transaction_type,amount,balance_delta,balance_after,reason,occurred_at").eq("student_id", student.id).order("occurred_at", { ascending: false }).limit(8),
-        role === "student" ? client.from("notifications").select("id,title,message,read_at,created_at").eq("recipient_user_id", user.id).eq("related_student_id", student.id).order("created_at", { ascending: false }).limit(20) : Promise.resolve({ data: [], error: null })
-      ];
-      const [weeklyResult, txResult, studentNotificationResult] = await Promise.all(commonQueries);
-      if (weeklyResult.error || txResult.error || studentNotificationResult.error) {
+        client.from("mark_transactions").select("transaction_type,amount,balance_delta,balance_after,reason,occurred_at").eq("student_id", student.id).order("occurred_at", { ascending: false }).limit(8)
+      ]);
+      if (weeklyResult.error || txResult.error) {
         container.insertAdjacentHTML("beforeend", '<section class="panel registry-panel"><h3>'+esc(student.full_name)+'</h3><p>Unable to load this profile’s results. Please contact the administrator.</p></section>');
         continue;
       }
@@ -432,40 +424,6 @@
       const latestWeekly = weeklyRows[0] || null;
       const lifetimeBalance = tx.length ? tx[0].balance_after : (student.starting_marks || 0);
       const history = tx.map(t => '<tr><td>'+esc(new Date(t.occurred_at).toLocaleDateString("en-IN"))+'</td><td>'+esc(t.reason || t.transaction_type)+'</td><td>'+esc(t.balance_delta > 0 ? "+" : "")+esc(t.balance_delta)+'</td></tr>').join("");
-      const studentNotifications = studentNotificationResult.data || [];
-      const studentUnreadNotifications = studentNotifications.filter(x => !x.read_at).length;
-      const studentNotificationHtml = studentNotifications.map(x => '<li><strong>'+esc(x.title)+'</strong><p>'+esc(x.message)+'</p><small>'+esc(new Date(x.created_at).toLocaleString("en-IN"))+'</small>'+(x.read_at ? '<span class="session-status completed">Read</span>' : '<button class="button button-quiet" type="button" data-mark-notification-read="'+esc(x.id)+'">Mark read</button>')+'</li>').join("");
-      const studentNotificationPanelHtml = '<div class="panel-heading parent-notification-heading"><div><h3>Notifications</h3><p><span data-unread-count="'+esc(student.id)+'" data-count="' + studentUnreadNotifications +'">' + studentUnreadNotifications +' unread</span> · Updates for this student only</p></div>'+(studentUnreadNotifications ? '<button class="button button-quiet" type="button" data-mark-all-notifications-read="'+esc(student.id)+'">Mark all read</button>' : '')+'</div><ul class="simple-list">'+(studentNotificationHtml || '<li>No notifications yet.</li>')+'</ul>';
-
-      if (role !== "parent") {
-        container.insertAdjacentHTML("beforeend",
-          '<section class="panel registry-panel"><div class="panel-heading"><div><h3>'+esc(student.full_name)+'</h3><p>'+esc(student.student_code)+' · '+esc(student.class_group || "Student")+'</p></div></div><div class="registry-stats"><article class="stat-card"><div class="stat-label">Latest published weekly score</div><div class="stat-value">'+(latestWeekly ? esc(latestWeekly.weekly_net) : "—")+'</div></article><article class="stat-card"><div class="stat-label">Lifetime balance</div><div class="stat-value">'+esc(lifetimeBalance)+'</div></article></div><h3>Recent mark history</h3><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>ACTIVITY</th><th>CHANGE</th></tr></thead><tbody>'+(history || '<tr><td colspan="3">No mark records yet.</td></tr>')+'</tbody></table></div>'+studentNotificationPanelHtml+'</section>');
-        container.addEventListener("click", async event => {
-          const markAll = event.target.closest("[data-mark-all-notifications-read]");
-          if (markAll) {
-            markAll.disabled = true;
-            const studentId = markAll.dataset.markAllNotificationsRead;
-            const { error } = await client.from("notifications").update({ read_at: new Date().toISOString() }).eq("recipient_user_id", user.id).eq("related_student_id", studentId).is("read_at", null);
-            if (error) { markAll.disabled = false; markAll.textContent = "Could not mark all read"; return; }
-            const panel = markAll.closest("section.panel");
-            panel.querySelectorAll("[data-mark-notification-read]").forEach(button => button.replaceWith(Object.assign(document.createElement("span"), { className: "session-status completed", textContent: "Read" })));
-            const count = panel.querySelector("[data-unread-count]");
-            if (count) { count.dataset.count = "0"; count.textContent = "0 unread"; }
-            markAll.remove(); return;
-          }
-          const button = event.target.closest("[data-mark-notification-read]");
-          if (!button) return;
-          button.disabled = true;
-          const { error } = await client.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", button.dataset.markNotificationRead).eq("recipient_user_id", user.id);
-          if (error) { button.disabled = false; button.textContent = "Could not mark read"; return; }
-          const panel = button.closest("section.panel");
-          button.replaceWith(Object.assign(document.createElement("span"), { className: "session-status completed", textContent: "Read" }));
-          const count = panel.querySelector("[data-unread-count]");
-          if (count) { const remaining = Math.max(0, Number(count.dataset.count || 0) - 1); count.dataset.count = String(remaining); count.textContent = remaining + " unread"; if (remaining === 0) panel.querySelector("[data-mark-all-notifications-read]")?.remove(); }
-        });
-        continue;
-      }
-
       const [incidentResult, responseResult, certificateResult, attendanceResult, notificationResult, driverJourneyResult, driverRunResult, driverRouteAssignmentResult] = await Promise.all([
         client.from("incidents").select("id,category,severity,factual_description,exact_words,action_taken,occurred_at").eq("student_id", student.id).order("occurred_at", { ascending: false }).limit(50),
         client.from("parent_responses").select("id,incident_id,weekly_result_id,response_type,message,created_at").eq("parent_user_id", user.id).eq("student_id", student.id).order("created_at", { ascending: false }).limit(50),
@@ -526,19 +484,6 @@
         '<h3>Your previous responses</h3><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>ABOUT</th><th>RESPONSE</th><th>MESSAGE</th></tr></thead><tbody>'+(responseHtml || '<tr><td colspan="4">No responses submitted yet.</td></tr>')+'</tbody></table></div>'+
         '<div class="panel-heading parent-notification-heading"><div><h3>Notifications</h3><p><span data-unread-count="'+esc(student.id)+'" data-count="'+unreadNotifications+'">'+unreadNotifications+' unread</span> · Updates for this student only</p></div>'+(unreadNotifications ? '<button class="button button-quiet" type="button" data-mark-all-notifications-read="'+esc(student.id)+'">Mark all read</button>' : '')+'</div><ul class="simple-list">'+(notificationHtml || '<li>No notifications yet.</li>')+'</ul>'+
         '<h3>Recent mark history</h3><div class="table-scroll"><table class="registry-table"><thead><tr><th>DATE</th><th>ACTIVITY</th><th>CHANGE</th></tr></thead><tbody>'+(history || '<tr><td colspan="3">No mark records yet.</td></tr>')+'</tbody></table></div></section>'
-      );
-    }
-
-    if (role === "student") {
-      const weekStart = disciplineMonday(disciplineToday());
-      const board = await client.rpc("get_published_student_leaderboard", { p_week_start: weekStart, p_limit: 10 });
-      const entries = board.data || [];
-      const boardRows = entries.map(x => '<tr><td><strong>#'+esc(x.rank)+'</strong></td><td><strong>'+esc(x.full_name)+'</strong><small class="registry-email">'+esc(x.student_code)+'</small></td><td class="'+(x.weekly_net >= 0 ? "positive-text" : "negative-text")+'">'+(x.weekly_net > 0 ? "+" : "")+esc(x.weekly_net)+'</td></tr>').join("");
-      container.insertAdjacentHTML("beforeend",
-        '<section class="panel registry-panel"><div class="panel-heading"><div><h3>Hall of Excellence</h3><p>Public rankings · week starting '+esc(weekStart)+'</p></div></div>' +
-        (board.error ? '<p>Leaderboard unavailable: '+esc(board.error.message)+'</p>' :
-        '<div class="table-scroll"><table class="registry-table"><thead><tr><th>RANK</th><th>STUDENT</th><th>WEEKLY SCORE</th></tr></thead><tbody>'+(boardRows || '<tr><td colspan="3">No published weekly results yet.</td></tr>')+'</tbody></table></div>') +
-        '<p class="registry-disclaimer">Only published weekly scores and basic student identifiers appear here. Private balances and incident details are not shown.</p></section>'
       );
     }
 

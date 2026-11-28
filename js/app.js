@@ -608,7 +608,7 @@ async function renderAccounts(){
   const readinessStatus=document.getElementById("accountsReadinessStatus");
   const readinessNote=document.getElementById("accountsReadinessNote");
   try{
-    const [profilesResult,studentLinksResult,parentLinksResult,routesResult,assignmentsResult]=await Promise.all([
+    const [profilesResult,parentLinksResult,routesResult,assignmentsResult]=await Promise.all([
       window.disciplineSupabase.from("profiles").select("user_id,role,is_active").in("role",["parent","driver"]),
        window.disciplineSupabase.from("parent_student_links").select("student_id,parent_user_id"),
       window.disciplineSupabase.from("driver_routes").select("id,driver_user_id").eq("is_active",true),
@@ -632,7 +632,6 @@ async function renderAccounts(){
         .filter(assignment=>activeRouteIds.has(assignment.route_id)&&activeStudentIds.has(assignment.student_id)&&assignment.valid_from<=today&&(!assignment.valid_to||assignment.valid_to>=today))
         .map(assignment=>assignment.student_id));
       document.getElementById("accountsReadyStudents").textContent=activeStudentIds.size;
-      document.getElementById("accountsReadyStudentLogins").textContent=studentLoginCount;
       document.getElementById("accountsReadyParents").textContent=activeParentIds.size;
       document.getElementById("accountsReadyDrivers").textContent=activeDriverIds.size;
       document.getElementById("accountsReadyRoutes").textContent=activeRoutes.length;
@@ -714,7 +713,6 @@ async function renderAccounts(){
         console.warn("Portal authentication timestamps unavailable:",authStatusError);
       }
       const profiles=profilesResult.data||[];
-      const studentMap=new Map((studentsResult.data||[]).map(student=>[student.id,student]));
       const parentLinks=parentLinksResult.data||[];
        const routes=routesResult.data||[];
       const assignments=assignmentsResult.data||[];
@@ -769,7 +767,7 @@ async function renderAccounts(){
     routeFields.hidden=!isDriver;
     vehicleFields.hidden=!isDriver;
     routeNameInput.required=isDriver;
-    studentLabel.textContent=isDriver?"Students assigned to this driver":"Link to student";
+    studentLabel.textContent=isDriver?"Students assigned to this driver":"Link child / children to parent";
     studentHint.textContent=isDriver?"Select every student who travels on this route (use Ctrl on Windows or Command on Mac to select more than one).":"Choose the child or children linked to this parent account.";
     select.setAttribute("aria-label",isDriver?"Select students assigned to this driver":"Choose students linked to this parent");
   }

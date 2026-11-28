@@ -1507,3 +1507,25 @@ table tbody tr:hover{background:#f7f9fc}
 #signupRequestMessage.is-success{color:#26865b}
 .auth-card #signupPanel .auth-note{font-size:10px}
 @media(max-width:560px){.auth-signup-cta{margin-top:14px}.auth-signup-cta small{text-align:left}}
+
+
+/* Administrator review of public parent and driver registration requests */
+.signup-requests-panel{margin-bottom:16px}
+.signup-request-list{display:grid;gap:10px;margin-top:12px}
+.signup-request-card{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 15px;border:1px solid var(--border);border-radius:11px;background:var(--surface-2,rgba(127,127,127,.035))}
+.signup-request-main{display:flex;align-items:center;justify-content:space-between;gap:18px;min-width:0;flex:1}
+.signup-request-main>div:first-child{display:grid;gap:4px;min-width:0}
+.signup-request-main>div:first-child strong{font:700 12px Manrope,sans-serif;color:var(--text)}
+.signup-request-main>div:first-child span,.signup-request-main>div:first-child small{font-size:10px;color:var(--muted);overflow-wrap:anywhere}
+.signup-request-meta{display:grid;justify-items:start;gap:5px;flex-shrink:0}
+.signup-request-meta>small{font-size:9px;color:var(--muted)}
+.signup-request-reviewed{font-size:9px;color:#8a6a2d;background:rgba(196,154,80,.13);border-radius:20px;padding:4px 7px}
+.signup-request-actions{display:flex;align-items:center;gap:7px;flex-shrink:0}
+.signup-request-actions .button{white-space:nowrap}
+@media(max-width:760px){
+  .signup-request-card{align-items:stretch;flex-direction:column}
+  .signup-request-main{align-items:flex-start;flex-direction:column;gap:9px}
+  .signup-request-meta{display:flex;align-items:center;flex-wrap:wrap}
+  .signup-request-actions{width:100%}
+  .signup-request-actions .button{flex:1}
+}

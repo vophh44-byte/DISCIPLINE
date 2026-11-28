@@ -346,7 +346,7 @@ check("Portal readiness errors are non-blocking and never pretend a failed query
 });
 
 check("Portal readiness responsive layout includes a two-column mobile state", () => {
-  assert.match(styles,/\.accounts-readiness-grid\{display:grid;grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
+  assert.match(styles,/\.accounts-readiness-grid\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
   const mobileStart=styles.indexOf("@media(max-width:560px){.accounts-readiness-panel");
   assert.ok(mobileStart>=0,"readiness mobile media rule missing");
   const mobileStyles=styles.slice(mobileStart,Math.min(styles.length,mobileStart+700));
@@ -366,7 +366,7 @@ check("Portal account directory loads profiles and all linked record sources", (
   const end=app.indexOf("directorySearch.addEventListener",start);
   const flow=app.slice(start,end);
   assert.ok(start>=0&&end>start,"directory loader missing");
-  for(const source of ['from("profiles")','from("parent_student_links")','from("student_accounts")','from("driver_routes")','from("driver_route_students")','from("students")']) {
+  for(const source of ['from("profiles")','from("parent_student_links")','from("driver_routes")','from("driver_route_students")','from("students")']) {
     assert.ok(flow.includes(source),"directory query missing "+source);
   }
   assert.match(flow,/await Promise\.all\(/);
@@ -950,7 +950,7 @@ check("student registry offers a View profile action and a hidden detail panel",
 });
 
 check("student profile loads marks, attendance, incidents, weekly results and certificates for the selected student", () => {
-  for (const table of ["mark_transactions","attendance","incidents","weekly_results","certificates","student_accounts","parent_student_links"]) {
+  for (const table of ["mark_transactions","attendance","incidents","weekly_results","certificates","parent_student_links"]) {
     assert.ok(app.includes('db.from("' + table + '")'), "student profile missing source: " + table);
   }
   assert.match(app, /\.eq\("student_id",student\.id\)/);
@@ -1189,7 +1189,7 @@ check("Portal Overview documents parent-managed student access and the three por
   for (const role of ["Administrator portal", "Parent portal · student access", "Driver portal"]) {
     assert.ok(overview.includes(role), "Portal Overview is missing " + role);
   }
-  assert.match(overview, /parents access their linked children/);
+  assert.match(overview, /Parents sign in once to view each linked child/);
   assert.doesNotMatch(overview, /Student portal/);
   assert.doesNotMatch(overview, /own mark balance|private balance/);
 });
@@ -1214,14 +1214,12 @@ async function runPortalPreflightUnitTests() {
   const DRIVER_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
   const DRIVER_B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
   const USER_PARENT = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
-  const USER_STUDENT = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
-  const TODAY = "2026-11-27";
+    const TODAY = "2026-11-27";
 
   function makeClient(seed = {}) {
     const state = {
       profiles: seed.profiles || [],
       students: seed.students || [{ id: STUDENT, is_active: true }, { id: OTHER_STUDENT, is_active: true }],
-      student_accounts: seed.student_accounts || [],
       driver_route_students: seed.assignments || [],
       driver_routes: seed.routes || [],
       authUsers: seed.authUsers || [],
@@ -1344,19 +1342,12 @@ async function runPortalPreflightUnitTests() {
     assert.ok(result.checks.some(x=>x.label==="Existing invitation"&&x.status==="ok"));
     assert.equal(state.writes,0);
   });
-  await expect("Student portal preflight blocks a student already linked to another login", async () => {
-    const {client}=makeClient({student_accounts:[{student_id:STUDENT,user_id:USER_STUDENT}]});
+  await expect("Student role is rejected because students use the Parent Portal", async () => {
+    const {client,state}=makeClient();
     const result=await validatePortalAccountPreflight({...payload({role:"student"}),adminClient:client});
     assert.equal(result.ready,false);
-    assert.match(result.blockers.join(" "),/already linked/);
-  });
-  await expect("Student portal preflight allows an existing matching account link", async () => {
-    const {client}=makeClient({
-      profiles:[{user_id:USER_STUDENT,email:"new.person@example.com",role:"student",is_active:true}],
-      student_accounts:[{student_id:STUDENT,user_id:USER_STUDENT}]
-    });
-    const result=await validatePortalAccountPreflight({...payload({role:"student"}),adminClient:client});
-    assert.equal(result.ready,true);
+    assert.match(result.blockers.join(" "),/Choose Parent or Driver/);
+    assert.equal(state.calls.length,0);
   });
   await expect("Archived student profiles fail closed", async () => {
     const {client}=makeClient({students:[{id:STUDENT,is_active:false}]});

@@ -310,7 +310,7 @@
         isPasswordRecovery = false;
         history.replaceState({}, document.title, window.location.pathname);
         const roleHint = accountRole === "student"
-          ? " This email is registered as a Student account, not a Parent account. Ask the administrator to change its portal role if Parent access is intended."
+          ? " Student accounts are not used. Ask the administrator to link your child to a Parent account."
           : "";
         card.querySelector("#loginHeading").textContent = "Password updated";
         card.querySelector("#loginDescription").textContent = "Your new password has been saved successfully." + roleHint;
@@ -380,6 +380,7 @@
   }
 
   async function renderParentPortal(profile, user) {
+    const role = "parent";
     if (parentJourneyChannel) {
       const oldChannel = parentJourneyChannel;
       parentJourneyChannel = null;

@@ -1441,7 +1441,7 @@ table tbody tr:hover{background:#f7f9fc}
 .accounts-readiness-head h2{margin:5px 0 3px;color:#263b55;font:800 17px Manrope,sans-serif;letter-spacing:-.3px}
 .accounts-readiness-head p{margin:0;color:#8793a3;font-size:9px;line-height:1.5}
 .accounts-readiness-status{padding:6px 9px;border:1px solid #e3e9ef;border-radius:20px;color:#718096;font-size:9px;font-weight:700;white-space:nowrap}
-.accounts-readiness-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}
+.accounts-readiness-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
 .accounts-readiness-grid article{min-width:0;padding:12px 13px;border:1px solid #e9edf2;border-radius:10px;background:#fbfcfd}
 .accounts-readiness-grid small{display:block;color:#8390a1;font-size:8px;letter-spacing:.55px;font-weight:800}
 .accounts-readiness-grid strong{display:block;margin:7px 0 2px;color:#263b55;font:800 22px Manrope,sans-serif;font-variant-numeric:tabular-nums}

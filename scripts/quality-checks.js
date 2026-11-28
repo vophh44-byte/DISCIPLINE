@@ -83,8 +83,9 @@ check("administrator can review requests and complete them through the existing 
   assert.match(app, /Invite someone directly/);
 });
 
-check("only supported roles can open a session", () => {
-  assert.match(auth, /const allowedRoles = \["admin","parent","student","driver"\]/);
+check("only administrator, parent and driver roles can open a session", () => {
+  assert.match(auth, /const allowedRoles = \["admin","parent","driver"\]/);
+  assert.doesNotMatch(auth, /data-portal="student"/);
 });
 
 check("application shell starts hidden, inert and unavailable to assistive technology", () => {
@@ -252,11 +253,11 @@ check("auth status endpoint queries Supabase Auth metadata and returns only mini
   assert.doesNotMatch(branch,/password|recovery_token|confirmation_token|serviceKey/);
 });
 
-check("auth status endpoint filters results to parent, student and driver portal profiles", () => {
+check("auth status endpoint filters results to parent and driver portal profiles", () => {
   const start=accountFunction.indexOf('if (input.action === "list_auth_status")');
   const end=accountFunction.indexOf('const email = (input.email || "")',start);
   const branch=accountFunction.slice(start,end);
-  assert.match(branch,/\.in\("role", \["parent", "student", "driver"\]\)/);
+  assert.match(branch,/\.in\("role", \["parent", "driver"\]\)/);
   assert.match(branch,/portalUserIds\.has\(user\.id\)/);
   assert.match(branch,/filter\(user => portalUserIds\.has\(user\.id\)\)/);
 });
@@ -290,7 +291,8 @@ check("portal account function supports production and local development CORS sa
 });
 
 check("portal account function rejects unsupported account roles", () => {
-  assert.match(accountFunction, /role !== "student" && role !== "parent" && role !== "driver"/);
+  assert.match(accountFunction, /role !== "parent" && role !== "driver"/);
+  assert.doesNotMatch(accountFunction, /student_accounts|role === "student"/);
 });
 
 check("portal account function accepts only active student profiles", () => {

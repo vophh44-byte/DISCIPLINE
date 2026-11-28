@@ -392,7 +392,8 @@ check("Portal account directory safely escapes user-controlled profile and route
   const loaderEnd=app.indexOf("directorySearch.addEventListener",loaderStart);
   const loader=app.slice(loaderStart,loaderEnd);
   assert.match(loader,/escapeHTML\(route\.route_name\)/);
-  assert.match(loader,/escapeHTML\(student\.full_name\)/);
+  assert.match(loader,/summary=links\.length\+" student link\(s\)"/);
+  assert.match(loader,/escapeHTML\(route\.route_name\)/);
 });
 
 check("Portal account directory does not imply email delivery or invitation acceptance", () => {

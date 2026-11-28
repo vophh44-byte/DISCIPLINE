@@ -419,7 +419,7 @@ check("Portal account directory errors are visible and refresh controls recover"
 });
 
 check("Portal directory management actions navigate to the role's existing admin section", () => {
-  assert.match(app,/profile\.role==="parent"\?"parents":profile\.role==="student"\?"students":"driverroutes"/);
+  assert.match(app,/profile\.role==="parent"\?"parents":"driverroutes"/);
   assert.ok(app.includes("data-page=\"'+target+'\">"),"directory row should navigate to the selected admin section");
 });
 

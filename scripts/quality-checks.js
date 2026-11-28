@@ -1110,7 +1110,7 @@ check("weekly publication notifications are scoped to newly published students a
 
 check("weekly publication success message shows the number of notifications sent", () => {
   assert.match(app, /Number\(r\.data\.notifications_sent\|\|0\)/);
-  assert.match(app, /portal notification\(s\) to linked families and students/);
+  assert.match(app, /portal notification\(s\) to linked parents/);
 });
 
 

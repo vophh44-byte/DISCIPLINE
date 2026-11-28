@@ -1494,3 +1494,16 @@ table tbody tr:hover{background:#f7f9fc}
 .accounts-preflight-result li b{color:#344a63}
 .accounts-preflight-result small{display:block;margin-top:8px;color:#78879a;font-size:8px}
 @media(max-width:560px){.accounts-preflight-actions{align-items:stretch;flex-direction:column}.accounts-preflight-actions .button{width:100%}}
+
+
+/* Public parent and driver registration request */
+.auth-signup-cta{display:grid;gap:8px;margin-top:18px}
+.auth-signup-cta .button{width:100%}
+.auth-signup-cta small{color:var(--muted);font-size:10px;line-height:1.55;text-align:center}
+.auth-card #signupPanel>p{margin-bottom:18px;line-height:1.6}
+.auth-card .auth-form select{width:100%;padding:12px;background:#0c1521;border:1px solid var(--border);border-radius:9px;color:var(--text);outline:none}
+.auth-card .auth-form select:focus{border-color:var(--gold)}
+.auth-card .signup-honeypot{position:absolute!important;left:-10000px!important;width:1px!important;height:1px!important;overflow:hidden!important}
+#signupRequestMessage.is-success{color:#26865b}
+.auth-card #signupPanel .auth-note{font-size:10px}
+@media(max-width:560px){.auth-signup-cta{margin-top:14px}.auth-signup-cta small{text-align:left}}

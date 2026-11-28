@@ -546,6 +546,14 @@ async function renderAccounts(){
       </div>
       <p class="accounts-readiness-note" id="accountsReadinessNote" aria-live="polite">Loading access coverage. No invitation is sent by viewing this page.</p>
     </section>
+    <section class="panel signup-requests-panel" aria-labelledby="signupRequestsTitle">
+      <div class="accounts-directory-head">
+        <div><span class="accounts-readiness-kicker">PUBLIC REGISTRATION</span><h2 id="signupRequestsTitle">Parent &amp; Driver account requests</h2><p>Review requests submitted from the main sign-in page. No account is active until you connect the records and send an invitation.</p></div>
+        <button class="button button-outline" type="button" id="refreshSignupRequests">↻ Refresh requests</button>
+      </div>
+      <p class="accounts-directory-status" id="signupRequestsStatus" role="status">Loading registration requests…</p>
+      <div class="signup-request-list" id="signupRequestList" aria-live="polite"><p class="registry-empty">Loading requests…</p></div>
+    </section>
     <section class="panel accounts-directory-panel" aria-labelledby="portalDirectoryTitle">
       <div class="accounts-directory-head">
         <div><span class="accounts-readiness-kicker">ACCESS MANAGEMENT</span><h2 id="portalDirectoryTitle">Existing portal accounts</h2><p>Review profile status, available authentication timestamps and connected records. An invitation timestamp does not prove inbox delivery.</p></div>
@@ -566,7 +574,7 @@ async function renderAccounts(){
     </section>
     <div class="accounts-workspace">
       <section class="panel accounts-create-panel">
-        <div class="accounts-panel-heading"><div><span class="accounts-step-label">ACCOUNT DETAILS</span><h2>Create or link an account</h2><p>Enter the person's details, then connect their student records.</p></div><span class="accounts-heading-symbol">＋</span></div>
+        <div class="accounts-panel-heading"><div><span class="accounts-step-label">ACCOUNT DETAILS</span><h2>Invite someone directly</h2><p>Use this administrator-only form to invite a parent, student or driver and connect their records.</p></div><span class="accounts-heading-symbol">＋</span></div>
         <form id="portalAccountForm">
           <div class="accounts-form-section"><div class="accounts-form-section-title"><span>1</span><div><strong>Person and portal</strong><small>Who will sign in to DISCIPLINE?</small></div></div>
             <div class="form-grid accounts-form-grid">
@@ -782,6 +790,100 @@ async function renderAccounts(){
   const preflightButton=document.getElementById("checkPortalReadiness");
   const preflightResult=document.getElementById("portalPreflightResult");
   const accountMessage=document.getElementById("portalAccountMessage");
+  const signupRequestList=document.getElementById("signupRequestList");
+  const signupRequestsStatus=document.getElementById("signupRequestsStatus");
+  const signupRequestsRefresh=document.getElementById("refreshSignupRequests");
+  let signupRequests=[];
+  let activeSignupRequestId=null;
+
+  function renderSignupRequests(){
+    if(!signupRequests.length){
+      signupRequestList.innerHTML='<p class="registry-empty">No open parent or driver registration requests.</p>';
+      return;
+    }
+    signupRequestList.innerHTML=signupRequests.map(request=>{
+      const name=escapeHTML(request.display_name||"Unnamed requester");
+      const email=escapeHTML(request.email||"");
+      const phone=request.phone?'<small>'+escapeHTML(request.phone)+'</small>':"";
+      const role=escapeHTML(request.role==="driver"?"Driver":"Parent / Guardian");
+      const date=request.created_at?escapeHTML(new Date(request.created_at).toLocaleString("en-IN",{dateStyle:"medium",timeStyle:"short"})):"Date unavailable";
+      const reviewed=request.status==="reviewed"?' <span class="signup-request-reviewed">Under review</span>':"";
+      return '<article class="signup-request-card"><div class="signup-request-main"><div><strong>'+name+'</strong><span>'+email+'</span>'+phone+'</div><div class="signup-request-meta"><span class="accounts-role-label">'+role+'</span>'+reviewed+'<small>Received '+date+'</small></div></div><div class="signup-request-actions"><button type="button" class="button button-outline" data-review-signup="'+escapeHTML(request.id)+'">'+(request.status==="reviewed"?"Continue review":"Review & invite")+'</button><button type="button" class="button button-quiet" data-decline-signup="'+escapeHTML(request.id)+'">Decline</button></div></article>';
+    }).join("");
+  }
+
+  async function loadSignupRequests(){
+    signupRequestsRefresh.disabled=true;
+    signupRequestsRefresh.textContent="Loading…";
+    signupRequestsStatus.textContent="Loading registration requests…";
+    try{
+      const {data,error}=await window.disciplineSupabase.functions.invoke("create-portal-account",{body:{action:"list_signup_requests"}});
+      if(error||!data||data.success!==true)throw new Error(data?.error||error?.message||"Could not load registration requests.");
+      signupRequests=Array.isArray(data.requests)?data.requests:[];
+      renderSignupRequests();
+      signupRequestsStatus.textContent=signupRequests.length+" open request(s). Review each request, connect the correct student or route, then send the invitation.";
+    }catch(error){
+      signupRequests=[];
+      renderSignupRequests();
+      signupRequestsStatus.textContent=error?.message||"Registration requests are unavailable. Refresh and try again.";
+    }finally{
+      signupRequestsRefresh.disabled=false;
+      signupRequestsRefresh.textContent="↻ Refresh requests";
+    }
+  }
+
+  function updateSignupRequestStatus(requestId,status){
+    return window.disciplineSupabase.functions.invoke("create-portal-account",{body:{
+      action:"update_signup_request",request_id:requestId,status
+    }});
+  }
+
+  signupRequestsRefresh.addEventListener("click",loadSignupRequests);
+  signupRequestList.addEventListener("click",async event=>{
+    const reviewButton=event.target.closest("[data-review-signup]");
+    const declineButton=event.target.closest("[data-decline-signup]");
+    if(!reviewButton&&!declineButton)return;
+    const requestId=(reviewButton||declineButton).dataset.reviewSignup||(reviewButton||declineButton).dataset.declineSignup;
+    const request=signupRequests.find(item=>item.id===requestId);
+    if(!request)return;
+    if(declineButton){
+      if(!window.confirm("Decline this "+(request.role==="driver"?"driver":"parent")+" account request?"))return;
+      declineButton.disabled=true;
+      try{
+        const {data,error}=await updateSignupRequestStatus(requestId,"declined");
+        if(error||!data?.success)throw new Error(data?.error||error?.message||"Could not decline this request.");
+        if(activeSignupRequestId===requestId)activeSignupRequestId=null;
+        await loadSignupRequests();
+      }catch(error){
+        signupRequestsStatus.textContent=error?.message||"Could not decline this request.";
+        declineButton.disabled=false;
+      }
+      return;
+    }
+    reviewButton.disabled=true;
+    reviewButton.textContent="Opening…";
+    try{
+      const {data,error}=await updateSignupRequestStatus(requestId,"reviewed");
+      if(error||!data?.success)throw new Error(data?.error||error?.message||"Could not update this request.");
+      activeSignupRequestId=requestId;
+      roleSelect.value=request.role;
+      roleSelect.dispatchEvent(new Event("change"));
+      document.getElementById("portalName").value=request.display_name||"";
+      document.getElementById("portalEmail").value=request.email||"";
+      accountMessage.textContent=request.role==="driver"
+        ?"Request loaded. Enter the route name and select the students assigned to this driver before inviting."
+        :"Request loaded. Select the correct student profile before inviting this parent.";
+      accountMessage.style.color="";
+      preflightResult.hidden=true;
+      document.querySelector(".accounts-create-panel").scrollIntoView({behavior:"smooth",block:"start"});
+      await loadSignupRequests();
+    }catch(error){
+      signupRequestsStatus.textContent=error?.message||"Could not open this request.";
+      reviewButton.disabled=false;
+      reviewButton.textContent="Review & invite";
+    }
+  });
+
   function collectPortalAccountPayload(){
     const role=roleSelect.value;
     const payload={
@@ -862,12 +964,22 @@ async function renderAccounts(){
         msg.style.color="";
         msg.textContent=(data&&data.error)||error?.message||"Could not create or link account. Please try again.";
       }else{
-        msg.style.color="#7ed6a5";
+        msg.style.color="#26865b";
         msg.textContent=data.recovered_invitation
           ?"Recovered the earlier invitation for "+data.email+". The account is now linked; no second email was sent."
           :data.existing_account
             ?"Existing "+data.role+" account for "+data.email+" is linked. No new invitation was sent."
             :"Invitation sent to "+data.email+". The user must open the email and set a password.";
+        if(activeSignupRequestId){
+          const requestId=activeSignupRequestId;
+          activeSignupRequestId=null;
+          const {data:requestUpdate,error:requestUpdateError}=await updateSignupRequestStatus(requestId,"fulfilled");
+          if(!requestUpdateError&&requestUpdate?.success){
+            await loadSignupRequests();
+          }else{
+            msg.textContent+=" The invitation succeeded, but the request could not be marked complete. Refresh the request list and continue the review.";
+          }
+        }
         e.target.reset();
         updateAccountForm();
         preflightResult.hidden=true;
@@ -883,6 +995,7 @@ async function renderAccounts(){
       btn.textContent="Create / link account";
     }
   });
+  await loadSignupRequests();
 }
 
 function disciplineToday(){

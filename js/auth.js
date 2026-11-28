@@ -15,7 +15,31 @@
           <button type="button" class="portal-choice" data-portal="student"><span class="portal-choice-icon">♙</span><strong>Student</strong><small>View your own score and mark history</small><span class="portal-choice-arrow">→</span></button>
           <button type="button" class="portal-choice" data-portal="driver"><span class="portal-choice-icon">↗</span><strong>Driver</strong><small>View your route and update journey check-ins</small><span class="portal-choice-arrow">→</span></button>
         </div>
-        <div class="auth-note">Use the account provided by the DISCIPLINE administrator. Your access is based on your assigned role.</div>
+        <div class="auth-signup-cta">
+          <button type="button" class="button button-outline" id="openSignupPanel">Create a Parent / Driver Account</button>
+          <small>New here? Submit a request. The administrator will verify and connect your family or route records before access is activated.</small>
+        </div>
+        <div class="auth-note">Already have an account? Choose your portal above and sign in. Your access is based on your assigned role.</div>
+      </div>
+      <div id="signupPanel" hidden>
+        <button type="button" class="auth-back" id="backFromSignup">← All portals</button>
+        <h1>Request your account.</h1>
+        <p>Parents and drivers can request access here. An administrator reviews each request before sending a secure invitation.</p>
+        <form class="auth-form" id="signupRequestForm">
+          <label>Account type
+            <select id="signupRole" required>
+              <option value="parent">Parent / Guardian</option>
+              <option value="driver">Driver</option>
+            </select>
+          </label>
+          <label>Full name<input id="signupName" type="text" maxlength="100" autocomplete="name" required placeholder="Your full name"></label>
+          <label>Email address<input id="signupEmail" type="email" maxlength="254" autocomplete="email" required placeholder="name@example.com"></label>
+          <label>Phone number (optional)<input id="signupPhone" type="tel" maxlength="30" autocomplete="tel" placeholder="Your contact number"></label>
+          <label class="signup-honeypot" aria-hidden="true">Leave this field empty<input id="signupWebsite" type="text" tabindex="-1" autocomplete="off"></label>
+          <button class="button button-primary" id="submitSignupRequest" type="submit">Submit account request</button>
+          <div class="auth-message" id="signupRequestMessage" role="status" aria-live="polite"></div>
+        </form>
+        <div class="auth-note">Submitting a request does not create an active login. The administrator must connect the parent to a student or assign the driver to a route, then send the invitation email.</div>
       </div>
       <div id="loginPanel" hidden>
         <button type="button" class="auth-back" id="backToPortals">← All portals</button>
@@ -51,7 +75,11 @@
 
   const picker = document.getElementById("portalPicker");
   const loginPanel = document.getElementById("loginPanel");
+  const signupPanel = document.getElementById("signupPanel");
   const form = document.getElementById("loginForm");
+  const signupForm = document.getElementById("signupRequestForm");
+  const signupMessage = document.getElementById("signupRequestMessage");
+  const signupSubmit = document.getElementById("submitSignupRequest");
   const message = document.getElementById("authMessage");
   const button = document.getElementById("loginButton");
   const forgotButton = document.getElementById("forgotPasswordButton");
@@ -65,7 +93,53 @@
     selectedPortal = null;
     picker.hidden = false;
     loginPanel.hidden = true;
+    signupPanel.hidden = true;
   }
+
+  document.getElementById("openSignupPanel").addEventListener("click", () => {
+    picker.hidden = true;
+    loginPanel.hidden = true;
+    signupPanel.hidden = false;
+    signupMessage.classList.remove("is-success");
+    signupMessage.textContent = "";
+    document.getElementById("signupName").focus();
+  });
+  document.getElementById("backFromSignup").addEventListener("click", showPicker);
+  signupForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    signupMessage.classList.remove("is-success");
+    signupMessage.textContent = "";
+    signupSubmit.disabled = true;
+    signupSubmit.textContent = "Submitting…";
+    const payload = {
+      role: document.getElementById("signupRole").value,
+      display_name: document.getElementById("signupName").value.trim(),
+      email: document.getElementById("signupEmail").value.trim().toLowerCase(),
+      phone: document.getElementById("signupPhone").value.trim(),
+      website: document.getElementById("signupWebsite").value.trim()
+    };
+    if (!["parent", "driver"].includes(payload.role)) {
+      signupMessage.textContent = "Choose Parent / Guardian or Driver.";
+      signupSubmit.disabled = false;
+      signupSubmit.textContent = "Submit account request";
+      return;
+    }
+    try {
+      const { data, error } = await client.functions.invoke("portal-signup-request", { body: payload });
+      if (error || !data || data.success !== true) {
+        signupMessage.textContent = data?.error || error?.message || "Your request could not be submitted. Please try again.";
+      } else {
+        signupForm.reset();
+        signupMessage.classList.add("is-success");
+        signupMessage.textContent = data.message || "Your request has been received. The administrator will review it.";
+      }
+    } catch (error) {
+      signupMessage.textContent = error?.message || "Could not contact the registration service. Please try again.";
+    } finally {
+      signupSubmit.disabled = false;
+      signupSubmit.textContent = "Submit account request";
+    }
+  });
 
   function hideApplicationShell() {
     const appShell = document.querySelector(".app-shell");
